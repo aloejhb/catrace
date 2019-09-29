@@ -1,6 +1,6 @@
 import os
 import sys
-import dataio
+import pandas as pd
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
@@ -8,9 +8,10 @@ from scipy.stats import sem
 from scipy.ndimage.filters import gaussian_filter1d
 from importlib import reload
 
-import nrnpca
-import plot_trace
-sys.path.append('../Spikefinder-Elephant/')
+from .dataio import load_trace_file
+from .trace_dataframe import get_colname 
+# import plot_trace
+sys.path.append('../../external_packages/Spikefinder-Elephant/')
 from elephant.c2s_preprocessing import preprocess
 
 def load_trace_from_planes(data_root_dir, exp_name, plane_num_list, cell_list=[]):
@@ -108,8 +109,10 @@ def detect_onset(y, thresh, xwindow, sigma=0, normalize=True, plotfig=False):
     return onset
 
 
-def detect_trace_onset(trace, thresh, xwindow, sigma):
-    onset_list = [detect_onset(x, thresh, xwindow, sigma) for x in np.mean(trace, axis=1)]
+def detect_trace_onset(trace, **onset_param):
+    if isinstance(trace, pd.core.series.Series):
+        trace = np.stack(trace)
+    onset_list = [detect_onset(x, **onset_param) for x in np.mean(trace, axis=1)]
     return onset_list
 
 
@@ -197,6 +200,18 @@ def align_trace(trace, onset_list, pre_time, post_time, frame_rate):
                      for i,onset in enumerate(onset_list)]
     trace_aligned = np.stack(trace_aligned)
     return trace_aligned
+
+
+def align_tracedf(tracedf, plane_nb_list, pre_time, post_time, frame_rate):
+    pre_nframe = int(pre_time * frame_rate)
+    post_nframe = int(post_time * frame_rate)
+    for i, plane_nb in enumerate(plane_nb_list):
+        onset_list = tracedf[get_colname('onset', plane_nb)]
+        trace = tracedf[get_colname('dfovf', plane_nb)]
+        trace_aligned = [tracemat[:, int(onset)-pre_nframe:int(onset)+post_nframe]
+                         for tracemat, onset in zip(trace, onset_list)]
+        tracedf[get_colname('dfovf', plane_nb)] = trace_aligned
+    return tracedf
 
 
 def analyze_ob_data(data_root_dir, ob_exp, plane_num):
