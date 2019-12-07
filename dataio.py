@@ -4,12 +4,14 @@ import scipy.io as sio
 import glob
 import pandas as pd
 
+# plane_num in Python environment start with 0, plane_num in MATLAB files start with 1
+
 
 def get_time_trace_file(root_dir, exp_name, plane_num):
     """Get file path of time trace data based on the directory structure of neuRoi"""
     exp_dir = os.path.join(root_dir, exp_name)
     time_trace_dir = os.path.join(exp_dir, 'time_trace')
-    plane_string = 'plane{0:02d}'.format(plane_num)
+    plane_string = 'plane{0:02d}'.format(plane_num+1)
     plane_dir = os.path.join(time_trace_dir, plane_string)
     trace_file = os.path.join(plane_dir, 'timetrace.mat')
     return trace_file
@@ -19,7 +21,7 @@ def get_spike_dir(root_dir, exp_name, plane_num):
     """Get directory of spike prediction based on the directory structure of neuRoi"""
     exp_dir = os.path.join(root_dir, exp_name)
     spike_root_dir = os.path.join(exp_dir, 'deconvolution')
-    plane_string = 'plane{0:02d}'.format(plane_num)
+    plane_string = 'plane{0:02d}'.format(plane_num+1)
     spike_dir = os.path.join(spike_root_dir, plane_string)
     return spike_dir
 
@@ -43,22 +45,17 @@ def read_spike(spike_dir):
     return spike_array
 
 
-def load_trace_file(root_dir, exp_name, plane_nb_list):
+def load_trace_file(root_dir, exp_name, plane_nb_list, num_trial):
+    df_list = [None] * len(plane_nb_list)
     for i, plane_nb in enumerate(plane_nb_list):
         trace_file = get_time_trace_file(root_dir, exp_name, plane_nb)
         trace_dict = read_trace(trace_file)
-        trace_colname = 'raw_trace_plane{0:02d}'.format(plane_nb)
-        if i == 0:
-            tracedf = pd.DataFrame(list(zip(trace_dict['odor_cat'],
-                                            trace_dict['raw_trace'])),
-                                   columns=['odor', trace_colname])
-            cat_dtype = pd.api.types.CategoricalDtype(categories=trace_dict['odor_list'], ordered=True)
-            tracedf['odor'] = tracedf['odor'].astype(cat_dtype)
-            tracedf['odor_code'] = tracedf['odor'].cat.codes
-            col_titles = ['odor_code', 'odor', trace_colname]
-            tracedf = tracedf.reindex(columns=col_titles)
-        else:
-            tracedf[trace_colname] = list(trace_dict['raw_trace'])
+        # trace_colname = 'raw_trace_plane{0:02d}'.format(plane_nb)
+        index_iter = [trace_dict['odor_list'], np.arange(num_trial)]
+        index = pd.MultiIndex.from_product(index_iter)
+        df_list[i] = pd.concat([pd.DataFrame(x) for x in trace_dict['raw_trace']],
+                               keys=index, names=['odor', 'trial', 'neuron'])
+    tracedf = pd.concat(df_list, keys=plane_nb_list, names=['plane']+df_list[0].index.names)
     return tracedf
 
 
