@@ -11,7 +11,8 @@ from importlib import reload
 from .dataio import load_trace_file
 from .trace_dataframe import get_colname 
 # import plot_trace
-sys.path.append('../../external_packages/Spikefinder-Elephant/')
+# sys.path.append('../../external_packages/Spikefinder-Elephant/')
+sys.path.append('../../../external_packages/Spikefinder-Elephant/')
 from elephant.c2s_preprocessing import preprocess
 
 def load_trace_from_planes(data_root_dir, exp_name, plane_num_list, cell_list=[]):
@@ -106,6 +107,8 @@ def detect_onset(y, thresh, xwindow, sigma=0, normalize=True, plotfig=False):
         plt.plot(y)
         plt.plot(dy)
         plt.vlines(onset, 0, 1)
+        # plt.xlim(xwindow)
+        plt.ylim(-0.01, 1.8)
     return onset
 
 
@@ -116,7 +119,24 @@ def detect_trace_onset(trace, **onset_param):
     return onset_list
 
 
-def plot_pattern_correlation(pattern, ax, clim=None, odor_list=[], color_list=[], title=''):
+def detect_tracedf_onset(tracedf, plane_nb, onset_param, num_trial=3, plotfig=False):
+    onset_param = onset_param
+    if plotfig:
+        plt.figure()
+        onset_param['plotfig'] = True
+    onset_list = detect_trace_onset(tracedf[get_colname('dfovf',plane_nb)][:-num_trial], **onset_param)
+    onset_list = onset_list + [np.median(onset_list)] * num_trial
+    tracedf['onset'] = onset_list
+    if plotfig:
+        print(onset_list)
+    return tracedf
+
+
+def plot_pattern_correlation(pattern, ax, clim=None, odor_list=[], color_list=[], title='', perc=0):
+    if perc:
+        cellidx = filter_cell_based_on_response(pattern, perc)
+        pattern = pattern[:, cellidx]
+
     corrmat = calc_pattern_correlation(pattern)
     im = ax.imshow(corrmat, cmap='RdBu_r')
     tick_pos = np.arange(corrmat.shape[0])
@@ -180,7 +200,7 @@ def calc_decorrelation(corrmat_tvec, odor_range, ax, frame_rate=1, colors=['blue
                  line_label=labels[1])
 
 
-def calc_cross_odor_group_corr(corrmat_tvec, aa_range, bb_range):
+def calc_cross_odor_group_corr(corrmat_tvec, aa_range, bb_range, n_trial):
     corr = [get_paired_odor_avgcorr(corrmat_tvec, odp, n_trial)
             for odp in itertools.product(aa_range, bb_range)]
     corr_avg = np.mean(corr, axis=0)
@@ -205,8 +225,8 @@ def align_trace(trace, onset_list, pre_time, post_time, frame_rate):
 def align_tracedf(tracedf, plane_nb_list, pre_time, post_time, frame_rate):
     pre_nframe = int(pre_time * frame_rate)
     post_nframe = int(post_time * frame_rate)
+    onset_list = tracedf['onset']
     for i, plane_nb in enumerate(plane_nb_list):
-        onset_list = tracedf[get_colname('onset', plane_nb)]
         trace = tracedf[get_colname('dfovf', plane_nb)]
         trace_aligned = [tracemat[:, int(onset)-pre_nframe:int(onset)+post_nframe]
                          for tracemat, onset in zip(trace, onset_list)]
@@ -310,9 +330,9 @@ def get_dp_onset_list():
 
 
 def filter_cell_based_on_response(pattern, perc):
-    abspattern = abs(pattern)
-    thresh = np.percentile(abspattern, perc)
-    cellidx = np.max(abspattern, axis=0) >= thresh
+    max_response = np.max(abs(pattern), axis=0)
+    thresh = np.percentile(max_response, perc)
+    cellidx =  max_response>= thresh
     return cellidx
 
 
@@ -335,7 +355,42 @@ def plot_region_avg(trace, odor_idx, frame_rate, sigma, region_text_dict={}, col
             kwargs = dict(color=color)
         plot_avg_std(xvec, avg_trace, sem_trace, line_label=region_text, **kwargs)
 
-    
+
+def plot_decorrelation(trace, ax, sigma0=0, aa_range = range(3), bb_range=range(3,6), num_trial=3, frame_rate=7.5, perc=0, time_window=[5, 10]):
+    if perc:
+        pattern = convert_trace_to_pattern(trace, time_window, frame_rate)
+        cellidx = filter_cell_based_on_response(pattern, perc)
+        print(trace.shape)
+        trace = trace[:, cellidx, :]
+        print(trace.shape)
+
+    fig, ax = plt.subplots(1, 2, figsize=[10, 5], sharex=True, sharey=True)
+    corrmat_tvec = calc_correlation_tvec(gaussian_filter1d(trace, sigma0, axis=2))
+    cc_corr_avg, cc_corr_std = calc_cross_odor_group_corr(corrmat_tvec, aa_range, bb_range, num_trial)
+    xvec = np.arange(len(cc_corr_avg)) / frame_rate
+    cc_color = 'gray'
+    cc_label = 'a.a. vs b.a'
+
+    aa_colors = ['blue', 'orange']
+    aa_labels = ['a.a. same', 'a.a. diff']
+    calc_decorrelation(corrmat_tvec, aa_range, ax[0], frame_rate,
+                       aa_colors, aa_labels)
+    plot_avg_std(xvec, cc_corr_avg, cc_corr_std, ax[0],
+                 color=cc_color, line_label=cc_label)
+
+    bb_colors = ['purple', 'green']
+    bb_labels = ['b.a. same', 'b.a. diff']
+    calc_decorrelation(corrmat_tvec, bb_range, ax[1], frame_rate,
+                       bb_colors, bb_labels)
+    plot_avg_std(xvec, cc_corr_avg, cc_corr_std, ax[1],
+                 color=cc_color, line_label=cc_label)
+
+    for i in range(2):
+        ax[i].set_xlabel('Time (s)')
+        ax[i].xaxis.set_tick_params(labelsize=18)
+    ax[0].set_ylabel('Corr. coef.')
+
+
 if __name__ == '__main__':
     data_root_dir = '/home/hubo/Projects/Ca_imaging/results/'
     dp_exp = '2019-09-03-OBfastZ'
@@ -467,7 +522,7 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(nrows=3, ncols=2, figsize=[10, 12], sharex=True, sharey='row')
     for i, region_name in enumerate(mytrace.keys()):
         corrmat_tvec = calc_correlation_tvec(gaussian_filter1d(mytrace[region_name], sigma0, axis=2))
-        cc_corr_avg, cc_corr_std = calc_cross_odor_group_corr(corrmat_tvec, aa_range, bb_range)
+        cc_corr_avg, cc_corr_std = calc_cross_odor_group_corr(corrmat_tvec, aa_range, bb_range, n_trial)
         xvec = np.arange(len(cc_corr_avg)) / frame_rate
         cc_color = 'gray'
         cc_label = 'a.a. vs b.a'

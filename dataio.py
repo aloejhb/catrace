@@ -29,7 +29,6 @@ def read_trace(trace_file):
     trace_dict = {}
     trace_dict['raw_trace'] = np.stack(time_trace['timeTraceMatList'][0])
     trace_dict['odor_cat'] = np.stack(time_trace['odorArraySorted'].squeeze()).squeeze()
-    # trace_dict['df_trace'] = np.stack(time_trace['timeTraceDfMatList'][0])
     trace_dict['odor_list'] = np.stack(time_trace['odorList'][0]).squeeze()
     return trace_dict
 
@@ -69,9 +68,11 @@ def load_spike_file(root_dir, exp_name, plane_num):
     return spike_array
 
 
-def load_experiment(root_dir, exp_name):
-    exp_file_name = 'experimentConfig_struct_{}.mat'.format(exp_name)
-    exp_file = os.path.join(root_dir, exp_name, exp_file_name)
+def load_experiment(root_dir, exp_subdir, exp_name=None):
+    if exp_name is None:
+        exp_name = exp_subdir
+    exp_file_name = 'experimentConfig_{}.mat'.format(exp_name)
+    exp_file = os.path.join(root_dir, exp_subdir, exp_file_name)
     foo = sio.loadmat(exp_file)
     myexp_struct = foo['myexpStruct']
 
