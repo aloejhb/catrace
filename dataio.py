@@ -4,6 +4,8 @@ import scipy.io as sio
 import glob
 import pandas as pd
 
+import itertools
+
 # plane_num in Python environment start with 0, plane_num in MATLAB files start with 1
 
 
@@ -30,8 +32,15 @@ def read_trace(trace_file):
     time_trace = sio.loadmat(trace_file)
     trace_dict = {}
     trace_dict['raw_trace'] = np.stack(time_trace['timeTraceMatList'][0])
-    trace_dict['odor_cat'] = np.stack(time_trace['odorArraySorted'].squeeze()).squeeze()
+
     trace_dict['odor_list'] = np.stack(time_trace['odorList'][0]).squeeze()
+    if 'odorArraySorted' in time_trace.keys():
+        trace_dict['odor_cat'] = np.stack(time_trace['odorArraySorted'].squeeze()).squeeze()
+    else:
+        # output of older version of neuRoi, assume 3 trial
+        # TODO deprecate this part for future neuRoi
+        num_trial = 3
+        trace_dict['odor_cat'] = list(itertools.chain.from_iterable(itertools.repeat(i, num_trial) for i in trace_dict['odor_list'])) 
     return trace_dict
 
 
@@ -45,7 +54,7 @@ def read_spike(spike_dir):
     return spike_array
 
 
-def load_trace_file(root_dir, exp_name, plane_nb_list, num_trial):
+def load_trace_file(root_dir, exp_name, plane_nb_list, num_trial, odor_list):
     df_list = [None] * len(plane_nb_list)
     for i, plane_nb in enumerate(plane_nb_list):
         trace_file = get_time_trace_file(root_dir, exp_name, plane_nb)
@@ -55,7 +64,10 @@ def load_trace_file(root_dir, exp_name, plane_nb_list, num_trial):
         index = pd.MultiIndex.from_product(index_iter)
         df_list[i] = pd.concat([pd.DataFrame(x) for x in trace_dict['raw_trace']],
                                keys=index, names=['odor', 'trial', 'neuron'])
-    tracedf = pd.concat(df_list, keys=plane_nb_list, names=['plane']+df_list[0].index.names)
+    tracedf = pd.concat(df_list, keys=plane_nb_list,
+                        names=['plane']+df_list[0].index.names)
+    tracedf = tracedf.reorder_levels(['odor', 'trial', 'plane', 'neuron'])
+    tracedf = tracedf.reindex(odor_list, level='odor')
     return tracedf
 
 

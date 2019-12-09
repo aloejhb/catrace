@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.ndimage.filters import gaussian_filter1d
+
 from .trace_dataframe import get_colname, concatenate_planes
 
 
@@ -19,21 +21,23 @@ def plot_trace_heatmap(trace, ax):
     return im
 
 
-def plot_tracedf_heatmap(tracedf, num_trial, num_odor, plane_nb_list, cut_window, climit):
-    fig, axes = plt.subplots(num_trial, num_odor, sharex=True, sharey=True,figsize=[10, 4])
-    for i in range(len(tracedf)):
-        trace = [tracedf[get_colname('dfovf', k)][i] for k in plane_nb_list]
-        trace = np.concatenate(trace)[:, cut_window[0]:cut_window[1]]
-        odor_nb = tracedf['odor_code'][i]
-        trial_nb = i % num_trial
+def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, cut_window=None):
+    num_odor = len(odor_list)
+    fig, axes = plt.subplots(num_trial, num_odor, sharex=True,
+                             sharey=True, figsize=[10, 4])
+    for name, group in tracedf.groupby(level=['odor', 'trial']):
+        if cut_window:
+            trace = group.iloc[:, cut_window[0]:cut_window[1]]
+        else:
+            trace = group
+        odor_nb = odor_list.index(name[0])
+        trial_nb = name[1]
         ax = axes[trial_nb, odor_nb]
         im = plot_trace_heatmap(trace, ax)
-        if i == len(tracedf) - 1:
-            plt.colorbar(im)
         im.set_clim(climit)
         if not trial_nb:
-            ax.set_title(tracedf['odor'][i])
-    
+            ax.set_title(name[0])
+    plt.colorbar(im)
 
 
 def plot_trace_avg(tracedf, plane_nb_list, frame_rate):
@@ -50,3 +54,7 @@ def plot_trace_avg(tracedf, plane_nb_list, frame_rate):
     plt.legend()
 
 
+
+# plot trial avg
+# xx = [plt.plot(r) for ind,r in dfovf_cut.groupby(['odor','trial']).mean().iterrows()]
+# xx = [plt.plot(gaussian_filter1d(r,3)) for ind,r in dfovf_cut.groupby(['odor','trial']).mean().iterrows()]

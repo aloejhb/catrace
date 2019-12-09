@@ -5,15 +5,14 @@ import numpy as np
 import itertools
 import matplotlib.pyplot as plt
 from scipy.stats import sem
-from scipy.ndimage.filters import gaussian_filter1d
 from importlib import reload
 
 from .dataio import load_trace_file
 from .trace_dataframe import get_colname 
 # import plot_trace
 # sys.path.append('../../external_packages/Spikefinder-Elephant/')
-sys.path.append('../../../external_packages/Spikefinder-Elephant/')
-from elephant.c2s_preprocessing import preprocess
+# sys.path.append('../../../external_packages/Spikefinder-Elephant/')
+# from elephant.c2s_preprocessing import preprocess
 
 def load_trace_from_planes(data_root_dir, exp_name, plane_num_list, cell_list=[]):
     trace = []
@@ -86,50 +85,6 @@ def plot_avg_trace(trace, onset_list=[]):
     [plt.plot(np.mean(x, axis=0)) for x in trace]
     if onset_list:
         [plt.vlines(x, 0, 1, color=colors[i % len(colors)]) for i, x in enumerate(onset_list)]
-
-
-def detect_onset(y, thresh, xwindow, sigma=0, normalize=True, plotfig=False):
-    if sigma:
-        y = gaussian_filter1d(y, sigma)
-    if normalize:
-        miny = min(y[xwindow[0]:xwindow[1]])
-        maxy = max(y[xwindow[0]:xwindow[1]])
-        y = (y - miny)/(maxy - miny)
-    dy = np.gradient(y)
-    xvec = np.arange(len(y))
-    onset = xvec[(dy > thresh) & (xvec >= xwindow[0]) & (xvec <=xwindow[1])]
-    if len(onset) == 0:
-        onset = np.nan
-    else:
-        onset = onset[0]
-
-    if plotfig:
-        plt.plot(y)
-        plt.plot(dy)
-        plt.vlines(onset, 0, 1)
-        # plt.xlim(xwindow)
-        plt.ylim(-0.01, 1.8)
-    return onset
-
-
-def detect_trace_onset(trace, **onset_param):
-    if isinstance(trace, pd.core.series.Series):
-        trace = np.stack(trace)
-    onset_list = [detect_onset(x, **onset_param) for x in np.mean(trace, axis=1)]
-    return onset_list
-
-
-def detect_tracedf_onset(tracedf, plane_nb, onset_param, num_trial=3, plotfig=False):
-    onset_param = onset_param
-    if plotfig:
-        plt.figure()
-        onset_param['plotfig'] = True
-    onset_list = detect_trace_onset(tracedf[get_colname('dfovf',plane_nb)][:-num_trial], **onset_param)
-    onset_list = onset_list + [np.median(onset_list)] * num_trial
-    tracedf['onset'] = onset_list
-    if plotfig:
-        print(onset_list)
-    return tracedf
 
 
 def plot_pattern_correlation(pattern, ax, clim=None, odor_list=[], color_list=[], title='', perc=0):
@@ -211,27 +166,6 @@ def calc_cross_odor_group_corr(corrmat_tvec, aa_range, bb_range, n_trial):
 def plot_df_histogram(trace, time_window, frame_rate, **kwargs):
     pattern = convert_trace_to_pattern(trace, time_window, frame_rate)
     plt.hist(pattern.flatten(), **kwargs)
-
-
-def align_trace(trace, onset_list, pre_time, post_time, frame_rate):
-    pre_nframe = int(pre_time * frame_rate)
-    post_nframe = int(post_time * frame_rate)
-    trace_aligned = [trace[i, :, onset-pre_nframe:onset+post_nframe]
-                     for i,onset in enumerate(onset_list)]
-    trace_aligned = np.stack(trace_aligned)
-    return trace_aligned
-
-
-def align_tracedf(tracedf, plane_nb_list, pre_time, post_time, frame_rate):
-    pre_nframe = int(pre_time * frame_rate)
-    post_nframe = int(post_time * frame_rate)
-    onset_list = tracedf['onset']
-    for i, plane_nb in enumerate(plane_nb_list):
-        trace = tracedf[get_colname('dfovf', plane_nb)]
-        trace_aligned = [tracemat[:, int(onset)-pre_nframe:int(onset)+post_nframe]
-                         for tracemat, onset in zip(trace, onset_list)]
-        tracedf[get_colname('dfovf', plane_nb)] = trace_aligned
-    return tracedf
 
 
 def analyze_ob_data(data_root_dir, ob_exp, plane_num):
