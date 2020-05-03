@@ -7,7 +7,8 @@ import pandas as pd
 import itertools
 
 # plane_num in Python environment start with 0, plane_num in MATLAB files start with 1
-
+# Useful way of deleting a neuron in all trials
+# yy = xx.drop(xx.loc[idx[:, :, 0, 2],:].index)
 
 def get_time_trace_file(root_dir, exp_name, plane_num):
     """Get file path of time trace data based on the directory structure of neuRoi"""
@@ -60,8 +61,11 @@ def load_trace_file(root_dir, exp_name, plane_nb_list, num_trial, odor_list):
         trace_file = get_time_trace_file(root_dir, exp_name, plane_nb)
         trace_dict = read_trace(trace_file)
         # trace_colname = 'raw_trace_plane{0:02d}'.format(plane_nb)
-        index_iter = [trace_dict['odor_list'], np.arange(num_trial)]
-        index = pd.MultiIndex.from_product(index_iter)
+        # index_iter = [trace_dict['odor_list'], np.arange(num_trial)]
+        # index = pd.MultiIndex.from_product(index_iter)
+        odordf = pd.DataFrame(trace_dict['odor_cat'],columns=['odor_cat'])
+        odordfi = odordf.groupby('odor_cat').apply(lambda x: x.reset_index()).sort_values('index')
+        index = odordfi.index
         df_list[i] = pd.concat([pd.DataFrame(x) for x in trace_dict['raw_trace']],
                                keys=index, names=['odor', 'trial', 'neuron'])
     tracedf = pd.concat(df_list, keys=plane_nb_list,

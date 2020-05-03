@@ -3,36 +3,34 @@ import matplotlib.pyplot as plt
 from sklearn import datasets
 
 
+def plot_embed(embeddf):
+    groups = embeddf.groupby(['odor'])
+    fig, ax = plt.subplots()
+    ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
+    for name, group in groups:
+        ax.plot(group.x, group.y, marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
+    ax.legend()
 
-def plot_embedding(X, title=None):
-    x_min, x_max = np.min(X, 0), np.max(X, 0)
-    X = (X - x_min) / (x_max - x_min)
 
-    plt.figure()
-    ax = plt.subplot(111)
-    for i in range(X.shape[0]):
-        plt.text(X[i, 0], X[i, 1], str(y[i]),
-                 color=plt.cm.Set1(y[i] / 10.),
-                 fontdict={'weight': 'bold', 'size': 9})
+def plot_embed_timecourse_all(embeddf, odor_list, select_odor):
+    groups = embeddf.groupby(['odor'])
+    clr_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    fig, ax = plt.subplots()
+    ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
+    for name, group in groups:
+        if name in select_odor:
+            cidx = odor_list.index(name)
+            points = plot_embed_timecourse(ax, group, name, clr_cycle[cidx])
+    ax.legend()
 
-    if hasattr(offsetbox, 'AnnotationBbox'):
-        # only print thumbnails with matplotlib > 1.0
-        shown_images = np.array([[1., 1.]])  # just something big
-        for i in range(X.shape[0]):
-            dist = np.sum((X[i] - shown_images) ** 2, 1)
-            if np.min(dist) < 4e-3:
-                # don't show points that are too close
-                continue
-            shown_images = np.r_[shown_images, [X[i]]]
-            imagebox = offsetbox.AnnotationBbox(
-                offsetbox.OffsetImage(digits.images[i], cmap=plt.cm.gray_r),
-                X[i])
-            ax.add_artist(imagebox)
-    plt.xticks([]), plt.yticks([])
-    if title is not None:
-        plt.title(title)
 
-        
+def plot_embed_timecourse(ax, group, name, color):
+    total_t = len(group.index.unique('time'))
+    points = [ax.scatter(row['x'], row['y'], color=color, marker='o', alpha=index[2]/total_t) for index, row in group.iterrows()]
+    points[0].label = name
+    return points
+
+
 if __name__ == '__main__':
     digits = datasets.load_digits(n_class=6)
     X = digits.data
