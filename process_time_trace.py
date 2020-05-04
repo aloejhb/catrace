@@ -74,6 +74,20 @@ def align_tracedf(tracedf, onsetdf, pre_time, post_time, frame_rate):
     cut_df = pd.concat(cut_df)
     return cut_df
 
+def select_response(tracedf, snr_thresh, base_window, response_window, frame_rate):
+    base_fwindow = convert_sec_to_frame(base_window, frame_rate)
+    response_fwindow = convert_sec_to_frame(response_window, frame_rate)
+    base = tracedf.loc[:,base_fwindow[0]:base_fwindow[1]]
+    response = tracedf.loc[:,response_fwindow[0]:response_fwindow[1]]
+    tracedf['response'] = (response.max(axis=1) > snr_thresh[0]*base.std(axis=1)) & (response.max(axis=1) < snr_thresh[1]*base.std(axis=1))
+
+    select = tracedf['response'].groupby(level=[2,3]).max()
+    tracedf = tracedf.merge(select,left_on=('plane','neuron'),
+                            left_index=True,right_on=('plane','neuron'),
+                            right_index=True)
+    tracedf = tracedf[tracedf['response_y']].drop(columns=['response_x','response_y'])
+    return tracedf
+
 
 def bin_tracedf(tracedf, bin_factor):
     bindf = tracedf.groupby(np.arange(len(tracedf.columns))//bin_factor, axis=1).mean()

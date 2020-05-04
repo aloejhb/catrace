@@ -87,11 +87,20 @@ def plot_avg_trace(trace, onset_list=[]):
         [plt.vlines(x, 0, 1, color=colors[i % len(colors)]) for i, x in enumerate(onset_list)]
 
 
-def plot_pattern_correlation(pattern, ax, clim=None, odor_list=[], color_list=[], title='', perc=0):
+def plot_pattern_correlation(pattern, ax, clim=None, title='', perc=0):
     if perc:
         cellidx = filter_cell_based_on_response(pattern, perc)
         pattern = pattern[:, cellidx]
 
+    cat_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+    
+    odor_list = pattern.index.get_level_values('odor') #.unique()
+    cldf = pd.DataFrame(data=dict(color=cat_color_list,odor=odor_list.unique()))
+    idxdf = pattern.index.to_frame()
+    idxdf = idxdf.reset_index(drop=True)
+    idxdf = idxdf.merge(cldf)
+    color_list = idxdf.loc[:,'color']
+    
     corrmat = calc_pattern_correlation(pattern)
     im = ax.imshow(corrmat, cmap='RdBu_r')
     tick_pos = np.arange(corrmat.shape[0])
@@ -110,6 +119,7 @@ def plot_pattern_correlation(pattern, ax, clim=None, odor_list=[], color_list=[]
         im.set_clim(clim)
     if title:
         ax.set_title(title)
+    plt.colorbar(im)
     return im
 
 

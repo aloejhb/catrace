@@ -38,14 +38,16 @@ def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, cut_window=None)
         if not trial_nb:
             ax.set_title(name[0])
     plt.colorbar(im)
+    return fig
 
 
 def plot_trace_avg(trace, odor_list, frame_rate):
+    fig, ax = plt.subplots()
     odor_avg = trace.groupby(level=['odor']).mean()
     odor_avg = odor_avg.reindex(odor_list)
     xvec = np.arange(len(odor_avg.columns)) / frame_rate
     odor_avg.columns = xvec
-    odor_avg.transpose().plot()
+    odor_avg.transpose().plot(ax=ax)
     # trace_list = concatenate_planes(tracedf, plane_nb_list)
     # trace_avg = [np.mean(x, axis=0) for x in trace_list]
     # newdf = tracedf[['odor']]
@@ -58,6 +60,7 @@ def plot_trace_avg(trace, odor_list, frame_rate):
     # plt.xlabel('# Frame')
     plt.ylabel('dF/F')
     plt.legend()
+    return fig
 
 
 

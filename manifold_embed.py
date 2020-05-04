@@ -10,6 +10,7 @@ def plot_embed(embeddf):
     for name, group in groups:
         ax.plot(group.x, group.y, marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
     ax.legend()
+    return fig
 
 
 def plot_embed_timecourse_all(embeddf, odor_list, select_odor):
