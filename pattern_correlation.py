@@ -8,7 +8,7 @@ from scipy.stats import sem
 from importlib import reload
 
 from .dataio import load_trace_file
-from .trace_dataframe import get_colname 
+from .trace_dataframe import get_colname
 # import plot_trace
 # sys.path.append('../../external_packages/Spikefinder-Elephant/')
 # sys.path.append('../../../external_packages/Spikefinder-Elephant/')
@@ -58,7 +58,7 @@ def get_paired_odor_idxpair(odor_pair, n_trial):
     idxpair = itertools.product(idx1, idx2)
     return idxpair
 
-    
+
 def get_avgcorr(corrmat_tvec, idxpair, sigma):
     corr_tvec_array = [gaussian_filter1d(corrmat_tvec[:, idxp[0], idxp[1]], sigma)
                        for idxp in idxpair]
@@ -93,15 +93,16 @@ def plot_pattern_correlation(pattern, ax, clim=None, title='', perc=0):
         pattern = pattern[:, cellidx]
 
     cat_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
-    
-    odor_list = pattern.index.get_level_values('odor') #.unique()
-    cldf = pd.DataFrame(data=dict(color=cat_color_list,odor=odor_list.unique()))
-    idxdf = pattern.index.to_frame()
-    idxdf = idxdf.reset_index(drop=True)
-    idxdf = idxdf.merge(cldf)
-    color_list = idxdf.loc[:,'color']
-    
-    corrmat = calc_pattern_correlation(pattern)
+
+    odor_list = pattern.odor
+    # cldf = pd.DataFrame(data=dict(color=cat_color_list, odor=odor_list.unique()))
+    # idxdf = pattern.index.to_frame()
+    # idxdf = idxdf.reset_index(drop=True)
+    # idxdf = idxdf.merge(cldf)
+    # color_list = idxdf.loc[:,'color']
+    color_list = []
+
+    corrmat = calc_pattern_correlation(pattern.drop(columns=['odor', 'trial']))
     im = ax.imshow(corrmat, cmap='RdBu_r')
     tick_pos = np.arange(corrmat.shape[0])
     if len(odor_list):
@@ -119,7 +120,7 @@ def plot_pattern_correlation(pattern, ax, clim=None, title='', perc=0):
         im.set_clim(clim)
     if title:
         ax.set_title(title)
-    plt.colorbar(im)
+    # plt.colorbar(im)
     return im
 
 
@@ -132,14 +133,14 @@ def plot_avg_std(xvec, yavg, std, ax=None, line_label=None, **kwargs):
         plt.plot(xvec, yavg, **kwargs)
     plt.fill_between(xvec, yavg-std, yavg+std, alpha=0.4, **kwargs)
 
-        
+
 def calc_decorrelation(corrmat_tvec, odor_range, ax, frame_rate=1, colors=['blue', 'orange'], labels=['same', 'diff']):
     n_trial = 3
     n_odor = 8
-    
+
 
     sigma = 0
-    
+
     samecorr = [get_same_odor_avgcorr(corrmat_tvec, od, n_trial, sigma)
                 for od in odor_range]
     # samecorr = np.stack(samecorr)
@@ -209,7 +210,7 @@ def analyze_ob_data(data_root_dir, ob_exp, plane_num):
     # plot_df_histogram(trace_aligned, time_window, frame_rate, bins=20)
     # plt.figure()
     # plot_df_histogram(trace_aligned[:,:80,:], time_window, frame_rate, bins=20)
-    
+
     aa_range = range(3)
     bb_range = range(3,6)
     cc_range = range(6)
@@ -217,7 +218,7 @@ def analyze_ob_data(data_root_dir, ob_exp, plane_num):
     calc_decorrelation(trace_aligned[:,:70], aa_range)
     plt.figure()
     calc_decorrelation(trace_aligned[:,:70], bb_range)
-    
+
     ## Pattern correlation
     time_window = np.array([5, 10])
     corrmat = calc_pattern_correlation(trace_aligned, time_window, frame_rate)
@@ -232,7 +233,7 @@ def analyze_ob_data(data_root_dir, ob_exp, plane_num):
     # spike_array_list = []
     # roi_number = 50
 
-    
+
     # bin_factor = 1
     # for plane_num in range(4, 5):
     #     # for plane_num in range(2, 3):
@@ -256,7 +257,7 @@ def analyze_ob_data(data_root_dir, ob_exp, plane_num):
 
     # calc_decorrelation(spike_array_aligned[:,:60,:], aa_range)
     # plt.show()
-    
+
     # # To get accurate spike frame rate
     # trace_dict = dataio.load_trace_file(data_root_dir, ob_exp, plane_num)
     # tracex, fsx = preprocess(trace_dict['df_trace'][0], frame_rate)
@@ -351,7 +352,7 @@ if __name__ == '__main__':
     trace_aligned = {}
     time_window_dict = dict(ob_outer=[5, 10], ob_deep=[5, 10], dp=[4.8, 6.5])
 
-    
+
     # get odor list
     trc_dict = dataio.load_trace_file(data_root_dir, ob_exp, 4)
     odor_list = trc_dict['odor_list']
@@ -361,7 +362,7 @@ if __name__ == '__main__':
 
     # cell_cut = dict(ob_outer=80, ob_deep=275, dp=348)
 
-    
+
     ## OB data
     trace['ob_outer'] = load_trace_from_planes(data_root_dir, ob_exp, [4], [70])
     trace['ob_deep'] = load_trace_from_planes(data_root_dir, ob_exp, [2])
@@ -408,7 +409,7 @@ if __name__ == '__main__':
     fig_file = os.path.join(outdir, 'sample_avg.svg')
     plt.savefig(fig_file)
     plt.show()
-    
+
     perc = 0
     # region_name = 'ob_outer'
 
@@ -457,7 +458,7 @@ if __name__ == '__main__':
     # fig_file = os.path.join(outdir, 'corrmat.svg')
     # plt.savefig(fig_file)
     # plt.show()
-    # 
+    #
 
     aa_range = range(3)
     bb_range = range(3, 6)
@@ -497,11 +498,11 @@ if __name__ == '__main__':
     fig_file = os.path.join(outdir, 'corr_tvec2.svg')
     plt.savefig(fig_file)
     plt.show()
-    
+
     # # plt.plot(np.mean(trace_aligned[:9, :, :], axis=(0, 1)))
     # # plt.plot(np.mean(trace_aligned[10:18, :, :], axis=(0, 1)))
 
- 
+
 
     # cc_range = range(6)
 

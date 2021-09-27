@@ -7,7 +7,7 @@ from .trace_dataframe import get_colname, concatenate_planes
 
 def get_plot_idx(i, n_trial, n_odor):
     idx = (i % n_trial) * n_odor + np.floor(i/n_trial) + 1
-    return idx 
+    return idx
 
 
 def plot_trace(trace, n_trial, n_odor):
@@ -41,26 +41,24 @@ def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, cut_window=None)
     return fig
 
 
-def plot_trace_avg(trace, odor_list, frame_rate):
-    fig, ax = plt.subplots()
+def plot_trace_avg(trace, odor_list, frame_rate, ax=None):
+    if ax is None:
+        new_ax_flag = 1
+        fig, ax = plt.subplots()
+    else:
+        new_ax_flag = 0
     odor_avg = trace.groupby(level=['odor']).mean()
     odor_avg = odor_avg.reindex(odor_list)
     xvec = np.arange(len(odor_avg.columns)) / frame_rate
     odor_avg.columns = xvec
     odor_avg.transpose().plot(ax=ax)
-    # trace_list = concatenate_planes(tracedf, plane_nb_list)
-    # trace_avg = [np.mean(x, axis=0) for x in trace_list]
-    # newdf = tracedf[['odor']]
-    # newdf['trace_avg'] = trace_avg
-    # grouped = newdf.groupby(['odor'])
-    # xvec = np.arange(len(trace_avg[0])) / frame_rate
-    # for name, group in grouped:
-    #     plt.plot(np.stack(group['trace_avg']).mean(axis=0), label=name)
-    plt.xlabel('Time (s)')
-    # plt.xlabel('# Frame')
-    plt.ylabel('dF/F')
-    plt.legend()
-    return fig
+    if new_ax_flag:
+        plt.xlabel('Time (s)')
+        plt.ylabel('dF/F')
+        plt.legend()
+        return fig
+    else:
+        ax.legend().remove()
 
 
 

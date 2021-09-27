@@ -1,16 +1,32 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from sklearn import datasets
 
 
 def plot_embed(embeddf):
     groups = embeddf.groupby(['odor'])
-    fig, ax = plt.subplots()
-    ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
-    for name, group in groups:
-        ax.plot(group.x, group.y, marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
+    if 'z' in embeddf.columns:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        for name, group in groups:
+            ax.plot(group.x, group.y, zs=group.z, marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
+    else:
+        fig, ax = plt.subplots()
+        ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
+        for name, group in groups:
+            ax.plot(group.x, group.y, marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
     ax.legend()
     return fig
+
+
+def plot_embed_trial(embeddf):
+    odor_list = embeddf['odor'].unique()
+    clr_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    for trial in embeddf:
+        cidx = odor_list.index(trial.odor)
+        ax.plot(trial.x, trial.y, marker='o', linestyle='-', ms=4, label=name, alpha=0.7, color=clr_cycle[cidx])
+    pass
 
 
 def plot_embed_timecourse_all(embeddf, odor_list, select_odor):
