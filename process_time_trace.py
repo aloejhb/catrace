@@ -101,3 +101,9 @@ def restack_as_pattern(tracedf):
     newdf = newdf.unstack(['plane', 'neuron'])
     newdf = newdf.reindex(index.unique('odor'), level='odor')
     return newdf
+
+
+def bin_and_restack(dfovf, tbin):
+    dfovf_bin = bin_tracedf(dfovf, tbin)
+    pattern = restack_as_pattern(dfovf_bin)
+    return pattern

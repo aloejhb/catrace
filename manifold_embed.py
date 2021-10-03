@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn import datasets
+from sklearn import decomposition
 
 
 def plot_embed(embeddf):
@@ -46,6 +48,70 @@ def plot_embed_timecourse(ax, group, name, color):
     points = [ax.scatter(row['x'], row['y'], color=color, marker='o', alpha=index[2]/total_t) for index, row in group.iterrows()]
     points[0].label = name
     return points
+
+
+# def svd(X):
+#   # Compute full SVD
+#   U, Sigma, Vh = np.linalg.svd(X,
+#       full_matrices=False, # It's not necessary to compute the full matrix of U or V
+#       compute_uv=True)
+  # X_svd = np.dot(U, np.diag(Sigma))
+  # return X_svd
+
+
+def svd(x):
+    u, sigma, vh = np.linalg.svd(x, full_matrices=False, compute_uv=True)
+    return u, sigma, vh
+
+def compute_svd_latent(u, sigma, n_comp=None):
+    if n_comp is None:
+        n_comp = len(sigma)
+    latent = np.dot(u[:,:n_comp], np.diag(sigma[:n_comp]))
+    return latent
+
+
+def compute_svd(pattern, n_components):
+    u, sigma, vh = svd(pattern)
+    latent = compute_svd_latent(u, sigma, n_components)
+    results = dict(latent=latent, u=u, sigma=sigma, vh=vh,
+                   index=pattern.index)
+    return results
+
+
+def compute_pca(pattern, n_components, tbin=5):
+    pca = decomposition.PCA(n_components)
+    latent = pca.fit_transform(pattern)
+    results = dict(latent=latent, index=pattern.index)
+    return results
+
+
+def plot_embed_2d(results, component_idx, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    embeddf = pd.DataFrame(results['latent'][:,component_idx],
+                           columns=['x', 'y'],
+                           index=results['index'])
+    groups = embeddf.groupby(['odor'])
+    ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
+    for name, group in groups:
+        ax.plot(group.x, group.y, marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
+
+
+def plot_embed_1d(results, component_idx, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    embeddf = pd.DataFrame(results['latent'][:,component_idx],
+                           columns=['x'],
+                           index=results['index'])
+    df = embeddf.unstack().transpose()
+    ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
+
+    color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    odor_list = list(df.columns.levels[0])
+    for label, content in df.iteritems():
+        color = color_cycle[odor_list.index(label[0])]
+        ax.plot(content.to_numpy(), color=color, linestyle='-', ms=4, label=label[0], alpha=0.7)
+
 
 
 if __name__ == '__main__':
