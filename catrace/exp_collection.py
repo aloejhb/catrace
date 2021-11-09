@@ -77,7 +77,7 @@ def plot_explist(data_list, plot_func, sharex, sharey, *args, **kwargs):
 def plot_explist_decorator(plot_func, csplus_dict, data_dict, sharex=False, sharey=False):
     def plot_explist_wrapper(csplus, region, *args, **kwargs):
         csexp_list = csplus_dict[csplus]
-        data_list = [data_dict[exp][region] for exp in csexp_list]
+        data_list = [data_dict[region][exp] for exp in csexp_list]
         return plot_explist(data_list, plot_func, sharex, sharey, *args, **kwargs)
     return plot_explist_wrapper
 
@@ -86,13 +86,13 @@ def plot_explist_decorator(plot_func, csplus_dict, data_dict, sharex=False, shar
 def get_data_dict_decorator(exp_list, region_list, dfovf_dict, data_func):
     def get_data_dict(*args, **kwargs):
         data_dict = dict()
-        for exp in exp_list:
-            exp_name = exp[0]
-            data_dict[exp_name] = dict()
-            for region in region_list:
+        for region in region_list:
+            data_dict[region] = dict()
+            for exp in exp_list:
+                exp_name = exp[0]
                 print(exp_name, region)
-                dfovf = dfovf_dict[exp_name][region]
-                data_dict[exp_name][region] = data_func(dfovf,
+                dfovf = dfovf_dict[region][exp_name]
+                data_dict[region][exp_name] = data_func(dfovf,
                                                         *args, **kwargs)
         return data_dict
     return get_data_dict
