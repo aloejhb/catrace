@@ -9,10 +9,10 @@ from importlib import reload
 
 from .dataio import load_trace_file
 from .trace_dataframe import get_colname
-# import plot_trace
-# sys.path.append('../../external_packages/Spikefinder-Elephant/')
-# sys.path.append('../../../external_packages/Spikefinder-Elephant/')
-# from elephant.c2s_preprocessing import preprocess
+
+
+
+
 
 def load_trace_from_planes(data_root_dir, exp_name, plane_num_list, cell_list=[]):
     trace = []

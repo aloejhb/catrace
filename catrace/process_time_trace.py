@@ -5,6 +5,8 @@ from scipy.ndimage.filters import gaussian_filter1d
 
 from .frame_time import convert_sec_to_frame
 from .import process_time_trace as ptt
+from . import frame_time
+
 
 
 def compute_dfovf(trace, fzero_twindow, frame_rate=1, intensity_offset=0,
@@ -110,6 +112,17 @@ def bin_and_restack(dfovf, tbin):
     return pattern
 
 
+def mean_pattern_in_time_window(dfovf, time_window, frame_rate):
+    time_window = np.array(time_window)
+    fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
+    dfrestack = ptt.restack_as_pattern(dfovf.iloc[:, fwindow[0]:fwindow[1]])
+    response_df = dfovf.iloc[:, fwindow[0]:fwindow[1]]
+    pat = response_df.mean(axis=1).unstack(level=['fish_id','plane','neuron'])
+    pat = pat.reindex(dfovf.index.unique('odor'), level='odor')
+    return pat
+
+
+
 def select_neuron(dfovf, thresh):
     dfovf_restack = ptt.restack_as_pattern(dfovf)
     deviation = (dfovf_restack - dfovf_restack.mean()).abs().max() \
@@ -118,3 +131,7 @@ def select_neuron(dfovf, thresh):
     dfovf_select_restack = dfovf_restack.loc[:,idx]
     dfovf_select = dfovf_select_restack.stack(level=['plane','neuron']).unstack(level='time')
     return dfovf_select
+
+
+def average_trials(tracedf):
+    pass

@@ -12,10 +12,7 @@ from . import frame_time
 
 def plot_exp_pattern_correlation(dfovf_cut, odor_list, frame_rate,
                                  time_window=[5.3,7.3], ax=None):
-    time_window = np.array(time_window)
-    fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
-    dfrestack = ptt.restack_as_pattern(dfovf_cut.iloc[:, fwindow[0]:fwindow[1]])
-    pat = dfrestack.mean(level=[0, 1])
+    pat = ptt.mean_pattern_in_time_window(dfovf_cut, time_window, frame_rate)
 
     pat = pat.reset_index()
     pat['odor'] = pd.Categorical(pat.odor, ordered=True,
