@@ -41,7 +41,7 @@ def read_trace(trace_file):
         # output of older version of neuRoi, assume 3 trial
         # TODO deprecate this part for future neuRoi
         num_trial = 3
-        trace_dict['odor_cat'] = list(itertools.chain.from_iterable(itertools.repeat(i, num_trial) for i in trace_dict['odor_list'])) 
+        trace_dict['odor_cat'] = list(itertools.chain.from_iterable(itertools.repeat(i, num_trial) for i in trace_dict['odor_list']))
     return trace_dict
 
 

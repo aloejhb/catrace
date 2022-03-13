@@ -4,7 +4,7 @@ import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn import datasets
 from sklearn import decomposition
-from sklearn.preprocessing import StandardScaler, minmax_scale
+from sklearn.model_selection import cross_val_score
 
 def plot_embed(embeddf):
     groups = embeddf.groupby(['odor'])
@@ -78,7 +78,7 @@ def compute_svd(pattern, n_components):
     return results
 
 
-def compute_pca(pattern, n_components, tbin=5):
+def compute_pca(pattern, n_components):
     pca = decomposition.PCA(n_components)
     latent = pca.fit_transform(pattern)
     results = dict(latent=latent, index=pattern.index, pca=pca)
@@ -112,37 +112,45 @@ def plot_embed_1d(results, component_idx, ax=None):
         color = color_cycle[odor_list.index(label[0])]
         ax.plot(content.to_numpy(), color=color, linestyle='-', ms=4, label=label[0], alpha=0.7)
 
-
-def standardize_all(df):
-    scaler = StandardScaler(copy=True, with_mean=True, with_std=False)
-    scaler.fit(df)
-    df_centered = scaler.transform(df)
-    df_scaled = df_centered / df_centered.std(ddof=1)
-    df_out = pd.DataFrame(data=df_scaled, columns=df.columns, index=df.index)
-    return df_out
-
-
-def standard_scale(df):
-    scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
-    scaler.fit(df)
-    df_scaled = scaler.transform(df)
-    df_out = pd.DataFrame(data=df_scaled, columns=df.columns, index=df.index)
-    return df_out
+def compute_fa(pattern, n_components):
+    """
+    Factor analysis of neuronal activity
+    """
+    fa = decomposition.FactorAnalysis(n_components=n_components)
+    latent = fa.fit_transform(pattern)
+    results = dict(latent=latent, index=pattern.index, fa=fa)
+    return results
 
 
-def min_max_scale(df):
-    df_scaled = minmax_scale(df)
-    df_out = pd.DataFrame(data=df_scaled, columns=df.columns, index=df.index)
-    return df_out
+def _compute_scores(X, ncomp_list):
+    pca = decomposition.PCA(svd_solver="full")
+    fa = decomposition.FactorAnalysis()
+
+    pca_scores, fa_scores = [], []
+    for n in ncomp_list:
+        print(n)
+        pca.n_components = n
+        fa.n_components = n
+        pca_scores.append(np.mean(cross_val_score(pca, X)))
+        fa_scores.append(np.mean(cross_val_score(fa, X)))
+    return pca_scores, fa_scores
 
 
-def quantile_all(df, q=0.999):
-    scaler = StandardScaler(copy=True, with_mean=True, with_std=False)
-    scaler.fit(df)
-    df_centered = scaler.transform(df)
-    df_scaled = df_centered / np.quantile(np.absolute(df_centered),q=q)
-    df_out = pd.DataFrame(data=df_scaled, columns=df.columns, index=df.index)
-    return df_out
+def compute_cv_scores(pattern, max_ncomp, step):
+    """
+    Compute cross validation scores for choosing best n_components parameters
+    for PCA and FA
+    """
+    ncomp_list = np.arange(0, max_ncomp, step)
+    pca_scores, fa_scores = _compute_scores(pattern, ncomp_list)
+    results = dict(ncomp_list=ncomp_list, pca_scores=pca_scores,
+                   fa_scores=fa_scores)
+    return results
+
+
+def get_best_ncomp(ncomp_list, scores):
+    best_ncomp = n_components[np.argmax(scores)]
+    return best_ncomp
 
 
 if __name__ == '__main__':

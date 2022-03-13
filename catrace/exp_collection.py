@@ -2,6 +2,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import pymongo
+import gridfs
 from sklearn import decomposition
 
 from . import pattern_correlation as pcr
@@ -24,7 +26,7 @@ def plot_exp_pattern_correlation(dfovf_cut, odor_list, frame_rate,
     im = pcr.plot_pattern_correlation(pat, ax, clim=(0, 1))
 
 
-def load_dfovf(data_root_dir, exp_name, region_name):
+def load_dfovf(exp_name, region_name, data_root_dir):
     plane_nb_list = np.array([1,2,3,4]) - 1
     num_trial = 3
     odor_list = ['phe', 'trp', 'arg', 'tdca', 'tca', 'gca', 'acsf', 'spont']
@@ -93,3 +95,53 @@ def get_data_dict_decorator(exp_list, region_list, dfovf_dict, data_func):
                                                         *args, **kwargs)
         return data_dict
     return get_data_dict
+
+
+def process_data_dict_decorator(data_func, exp_list, region_list,
+                                db_dir, in_collect_name):
+    def get_data_dict(*args, **kwargs):
+        data_dict = dict()
+        for exp in exp_list:
+            exp_name = exp[0]
+            data_dict[exp_name] = dict()
+            for region in region_list:
+                print(exp_name, region)
+                df = read_df(in_collect_name, exp_name, region, db_dir)
+                data_dict[exp_name][region] = data_func(df, *args, **kwargs)
+        return data_dict
+    return get_data_dict
+
+
+def process_data_db_decorator(data_func, exp_list, region_list,
+                              out_collect_name, db_dir, in_collect_name=None):
+    def process_data_db(*args, **kwargs):
+        for exp in exp_list:
+            exp_name = exp[0]
+            for region in region_list:
+                print(exp_name, region)
+                if in_collect_name:
+                    df = read_df(in_collect_name, exp_name, region, db_dir)
+                    outdf = data_func(df, *args, **kwargs)
+                else:
+                    outdf = data_func(exp_name, region, *args, **kwargs)
+                update_df(outdf, out_collect_name, exp_name, region, db_dir)
+    return process_data_db
+
+
+def read_df(collect_name, exp_name, region, db_dir):
+    filename = get_filename(exp_name, region, 'pkl')
+    df_file = os.path.join(db_dir, collect_name, filename)
+    df = pd.read_pickle(df_file)
+    return df
+
+def update_df(df, collect_name, exp_name, region, db_dir):
+    collect_dir = os.path.join(db_dir, collect_name)
+    if not os.path.exists(collect_dir):
+        os.mkdir(collect_dir)
+    filename = get_filename(exp_name, region, 'pkl')
+    df_file = os.path.join(collect_dir, filename)
+    df.to_pickle(df_file)
+
+
+def get_filename(exp_name, region, ext):
+    return '{}_{}.{}'.format(exp_name, region, ext)

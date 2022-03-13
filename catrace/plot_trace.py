@@ -41,27 +41,23 @@ def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, cut_window=None)
     return fig
 
 
-# def plot_trace_avg(trace, odor_list, frame_rate, ax=None):
-#     if ax is None:
-#         new_ax_flag = 1
-#         fig, ax = plt.subplots()
-#     else:
-#         new_ax_flag = 0
-#     odor_avg = trace.groupby(level=['odor']).mean()
-#     odor_avg = odor_avg.reindex(odor_list)
-#     xvec = np.arange(len(odor_avg.columns)) / frame_rate
-#     odor_avg.columns = xvec
-#     odor_avg.transpose().plot(ax=ax)
-#     if new_ax_flag:
-#         plt.xlabel('Time (s)')
-#         plt.ylabel('dF/F')
-#         plt.legend()
-#         return fig
-#     else:
-#         ax.legend().remove()
+def plot_trace_avg(trace, frame_rate, odor_list=None, ax=None):
+    """
+    Plot averaged time trace for each odor
 
-
-def plot_trace_avg(trace, odor_list, frame_rate, ax=None):
+    Args:
+        trace (pandas.DataFrame): the dataframe that contains value of dF/F of
+                                  all neurons at different time point.
+                                  The shape is as follows:
+                                      row multi-indices: odor, trial, neuron
+                                      column multi-indices: time
+        frame_rate (float): the frame rate (how many time points per second) of
+                            the time course.
+        odor_list (list of strings, optional): Default is None. If not None, the
+                            odors will be sorted according to the order in the list.
+        ax (axis object): Default is None. If ax is not provided, it will create
+                          a new figure. Otherwise it will plot on the given axis.
+    """
     if ax is None:
         new_ax_flag = 1
         fig, ax = plt.subplots()
@@ -69,7 +65,8 @@ def plot_trace_avg(trace, odor_list, frame_rate, ax=None):
         new_ax_flag = 0
     # trace = trace.stack(level=['plane','neuron']).unstack(level='time')
     odor_avg = trace.groupby(level=['odor']).mean()
-    odor_avg = odor_avg.reindex(odor_list)
+    if odor_list:
+        odor_avg = odor_avg.reindex(odor_list)
     xvec = np.arange(len(odor_avg.columns)) / frame_rate
     odor_avg.columns = xvec
     odor_avg.transpose().plot(ax=ax)
