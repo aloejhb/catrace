@@ -158,7 +158,7 @@ def get_best_ncomp(results):
     best_results = dict()
     for method in ['pca', 'fa']:
         best_ncomp, best_score = _get_best_ncomp(results['ncomp_list'],
-                                                results[method+'_scores'])
+                                                 results[method+'_scores'])
         best_results[method] = dict(best_ncomp=best_ncomp, best_score=best_score)
     return best_results
 

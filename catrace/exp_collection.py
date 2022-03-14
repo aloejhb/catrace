@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pymongo
 import gridfs
+import itertools
 from sklearn import decomposition
 
 from . import pattern_correlation as pcr
@@ -129,6 +130,7 @@ def process_data_db_decorator(data_func, exp_list, region_list,
 
 
 def read_df(collect_name, exp_name, region, db_dir):
+    print(exp_name, region)
     filename = get_filename(exp_name, region, 'pkl')
     df_file = os.path.join(db_dir, collect_name, filename)
     df = pd.read_pickle(df_file)
@@ -147,6 +149,15 @@ def get_filename(exp_name, region, ext):
     return '{}_{}.{}'.format(exp_name, region, ext)
 
 
-def concatenate_df():
-    # all_dfovf_select = pd.concat(plist, keys=dfovf_select_dict[region].keys(), names=['fish_id'])
-    pass
+def concatenate_df_from_db(exp_list, region_list, in_collect_name, db_dir):
+    expkey_list = get_expkey_list(exp_list, region_list)
+    df_list = [read_df(in_collect_name, expkey[0], expkey[1], db_dir)\
+               for expkey in expkey_list]
+    all_df = pd.concat(df_list, axis=1, keys=expkey_list, names=['fish_id', 'region', 'cond'])
+    return all_df
+
+
+def get_expkey_list(exp_list, region_list):
+    prod = itertools.product(exp_list, region_list)
+    expkey_list = [(key[0][0], key[1], key[0][1]) for key in prod]
+    return expkey_list
