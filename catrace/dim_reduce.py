@@ -148,9 +148,19 @@ def compute_cv_scores(pattern, max_ncomp, step):
     return results
 
 
-def get_best_ncomp(ncomp_list, scores):
-    best_ncomp = n_components[np.argmax(scores)]
-    return best_ncomp
+def _get_best_ncomp(ncomp_list, scores):
+    best_ncomp = ncomp_list[np.argmax(scores)]
+    best_score = scores[np.argmax(scores)]
+    return best_ncomp, best_score
+
+
+def get_best_ncomp(results):
+    best_results = dict()
+    for method in ['pca', 'fa']:
+        best_ncomp, best_score = _get_best_ncomp(results['ncomp_list'],
+                                                results[method+'_scores'])
+        best_results[method] = dict(best_ncomp=best_ncomp, best_score=best_score)
+    return best_results
 
 
 if __name__ == '__main__':

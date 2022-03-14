@@ -145,3 +145,8 @@ def update_df(df, collect_name, exp_name, region, db_dir):
 
 def get_filename(exp_name, region, ext):
     return '{}_{}.{}'.format(exp_name, region, ext)
+
+
+def concatenate_df():
+    # all_dfovf_select = pd.concat(plist, keys=dfovf_select_dict[region].keys(), names=['fish_id'])
+    pass
