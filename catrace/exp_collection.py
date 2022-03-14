@@ -5,6 +5,7 @@ import pandas as pd
 import pymongo
 import gridfs
 import itertools
+import pickle
 from sklearn import decomposition
 
 from . import pattern_correlation as pcr
@@ -142,7 +143,8 @@ def update_df(df, collect_name, exp_name, region, db_dir):
         os.mkdir(collect_dir)
     filename = get_filename(exp_name, region, 'pkl')
     df_file = os.path.join(collect_dir, filename)
-    df.to_pickle(df_file)
+    # df.to_pickle(df_file)
+    pickle.dump(df, open(df_file, 'wb'))
 
 
 def get_filename(exp_name, region, ext):
