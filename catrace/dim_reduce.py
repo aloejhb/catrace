@@ -112,6 +112,10 @@ def plot_embed_1d(results, component_idx, ax=None):
         color = color_cycle[odor_list.index(label[0])]
         ax.plot(content.to_numpy(), color=color, linestyle='-', ms=4, label=label[0], alpha=0.7)
 
+
+def get_dimred_df(dimred):
+    return pd.DataFrame(dimred['latent'], index=dimred['index'])
+
 def compute_fa(pattern, n_components):
     """
     Factor analysis of neuronal activity

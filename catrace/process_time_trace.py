@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -136,3 +137,9 @@ def select_neuron(dfovf, thresh):
 
 def average_trials(tracedf):
     pass
+
+
+def permute_odors(df):
+    odor_list = df.index.unique('odor').tolist()
+    random.shuffle(odor_list)
+    return df.reindex(odor_list, level='odor')
