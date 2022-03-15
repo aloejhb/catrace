@@ -62,17 +62,52 @@ def load_dfovf(exp_name, region_name, data_root_dir):
     # dfovf_restack = ptt.restack_as_pattern(dfovf_cut)
     return dfovf_cut
 
-def plot_explist(data_list, plot_func, sharex, sharey, *args, **kwargs):
-        ncol = 5
-        nrow = int(np.ceil(len(data_list) / ncol))
-        figsize=[17, 3.4*nrow]
-        fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
-                                 sharey=sharey, figsize=figsize)
-        for idx, data in enumerate(data_list):
-            ax = axes.flatten()[idx]
-            plot_func(data, *args, **kwargs, ax=ax)
-        plt.tight_layout()
-        return fig
+def plot_explist(data_list, plot_func, sharex=False,
+                 sharey=False, *args, **kwargs):
+    ncol = 5
+    nrow = int(np.ceil(len(data_list) / ncol))
+    figsize=[17, 3.4*nrow]
+    fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
+                             sharey=sharey, figsize=figsize)
+    for idx, data in enumerate(data_list):
+        ax = axes.flatten()[idx]
+        plot_func(data, *args, **kwargs, ax=ax)
+    plt.tight_layout()
+    return fig
+
+
+def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
+                           sharey=False, *args, **kwargs):
+    total_exp = len(data_list)
+    cond_list = list(dict.fromkeys(exp_cond_list))
+    cond_count = [exp_cond_list.count(cond) for cond in cond_list]
+    cond_cumsum = np.cumsum(cond_count)
+
+    ncol = 5
+    nrow_list = [int(np.ceil(ct/ncol)) for ct in cond_count]
+    total_nrow = sum(nrow_list)
+
+    axidx_list = [_get_axidx(k, cond_cumsum, nrow_list, ncol) for k in range(total_exp)]
+
+    figsize=[17, 3.4*total_nrow]
+    fig, axes = plt.subplots(total_nrow, ncol, sharex=sharex,
+                             sharey=sharey, figsize=figsize)
+    for idx, data in enumerate(data_list):
+        axidx = axidx_list[idx]
+        ax = axes.flatten()[axidx]
+        plot_func(data, *args, **kwargs, ax=ax)
+    plt.tight_layout()
+    return fig
+
+def _get_axidx(k, cond_cumsum, nrow_list, ncol):
+    ncond = sum(cond_cumsum<=k)
+    if ncond == 0:
+        shift = 0
+        nrow_shift = 0
+    else:
+        shift = cond_cumsum[ncond-1]
+        nrow_shift = np.sum(nrow_list[:ncond])
+    return nrow_shift*ncol + k - shift
 
 
 def plot_explist_decorator(plot_func, csplus_dict, data_dict, sharex=False, sharey=False):
@@ -163,3 +198,21 @@ def get_expkey_list(exp_list, region_list):
     prod = itertools.product(exp_list, region_list)
     expkey_list = [(key[0][0], key[1], key[0][1]) for key in prod]
     return expkey_list
+
+
+def read_data_dict(db_dir, collect_name, exp_list, region_list):
+    data_dict = dict()
+    for exp in exp_list:
+        exp_name = exp[0]
+        data_dict[exp_name] = dict()
+        for region in region_list:
+            print(exp_name, region)
+            df = read_df(collect_name, exp_name, region, db_dir)
+            data_dict[exp_name][region] = df
+    return data_dict
+
+
+def sort_exp_list(exp_list, cond_list):
+    cond_list = ['phe-arg', 'arg-phe', 'phe-trp', 'naive']
+    exp_list.sort(key=lambda y: cond_list.index(y[1]))
+    return exp_list
