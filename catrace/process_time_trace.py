@@ -107,6 +107,10 @@ def restack_as_pattern(tracedf):
     return newdf
 
 
+def unstack_pattern(df):
+    return df.transpose().stack(level=['odor', 'trial'])
+
+
 def bin_and_restack(dfovf, tbin):
     dfovf_bin = bin_tracedf(dfovf, tbin)
     pattern = restack_as_pattern(dfovf_bin)

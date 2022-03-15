@@ -17,12 +17,10 @@ from . import frame_time
 def plot_exp_pattern_correlation(dfovf_cut, odor_list, frame_rate,
                                  time_window=[5.3,7.3], ax=None):
     pat = ptt.mean_pattern_in_time_window(dfovf_cut, time_window, frame_rate)
-
-    pat = pat.reset_index()
-    pat['odor'] = pd.Categorical(pat.odor, ordered=True,
-                                 categories=odor_list)
-    pat = pat.sort_values('odor')
-
+    pat = pat.reindex(odor_list, level='odor').reset_index()
+    # pat['odor'] = pd.Categorical(pat.odor, ordered=True,
+    #                              categories=odor_list)
+    # pat = pat.sort_values('odor')
     if ax is None:
         fig, ax = plt.subplots()
     im = pcr.plot_pattern_correlation(pat, ax, clim=(0, 1))
@@ -186,11 +184,13 @@ def get_filename(exp_name, region, ext):
     return '{}_{}.{}'.format(exp_name, region, ext)
 
 
-def concatenate_df_from_db(exp_list, region_list, in_collect_name, db_dir):
+def concatenate_df_from_db(exp_list, region_list, in_collect_name, db_dir, axis=1):
     expkey_list = get_expkey_list(exp_list, region_list)
     df_list = [read_df(in_collect_name, expkey[0], expkey[1], db_dir)\
                for expkey in expkey_list]
-    all_df = pd.concat(df_list, axis=1, keys=expkey_list, names=['fish_id', 'region', 'cond'])
+    if in_collect_name in ['dfovf', 'dfovf_select']:
+        df_list = [ptt.restack_as_pattern(df) for df in df_list]
+    all_df = pd.concat(df_list, axis, keys=expkey_list, names=['fish_id', 'region', 'cond'])
     return all_df
 
 
