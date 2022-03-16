@@ -15,7 +15,7 @@ def plot_clustered_heatmap(all_response, kmeans, exclude_cluster_id=[]):
     if len(exclude_cluster_id):
         Xcs = Xcs[~Xcs['cluster_id'].isin(exclude_cluster_id)]
 
-    response_heatmap = ax.matshow(Xcs.iloc[:, :-1], aspect='auto')
+    response_heatmap = ax.matshow(Xcs.iloc[:, :-1], aspect='auto', cmap='viridis')
 
     ori_cmap = matplotlib.cm.get_cmap('tab20c')
     cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
@@ -50,3 +50,12 @@ def plot_cluster_count(all_response, cluster_labels, exp_list, exclude_cluster_i
     cluster_count_df = grouped_cluster_id.value_counts(normalize=True).sort_index().reindex(cond_list, level='train_cond')
     cluster_count_df.unstack(0).plot.barh(ax=ax)
     ax.invert_yaxis()
+
+
+def get_cluster_count_df(cluster_df):
+    #TODO make this work
+    cluster_df = pd.DataFrame(agg_cluster.labels_.reshape(1,-1), columns=all_response.columns)
+    cluster_df = cluster_df.transpose().rename(columns={0:'cluster_id'}).reset_index()
+    training_dict = dict(dtpar.exp_list)
+    cluster_df['train_cond']= cluster_df['fish_id'].map(training_dict)
+    cluster_count_df = cluster_df.groupby('train_cond', sort=False).cluster_id.value_counts(normalize=True).sort_index().reindex(dtpar.cond_list, level='train_cond')
