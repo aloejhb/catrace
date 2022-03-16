@@ -10,18 +10,14 @@ def plot_clustered_heatmap(all_response, kmeans, exclude_cluster_id=[]):
     ax = fig.add_subplot(gs[0, 0])
     ax_cid = fig.add_subplot(gs[0, 1], sharey=ax)
 
-    Xc = all_response.append(pd.DataFrame(kmeans.labels_.reshape(1,-1), columns=all_response.columns))
-    Xct = Xc.transpose()
-    Xct = Xct.set_axis([*Xct.columns[:-1], 'cluster_id'], axis=1, inplace=False) #rename(columns={0:'cluster_id'})
-    Xcs = Xct.sort_values('cluster_id')
-
+    Xcs = get_cluster_df(all_response, kmeans)
 
     if len(exclude_cluster_id):
         Xcs = Xcs[~Xcs['cluster_id'].isin(exclude_cluster_id)]
 
     response_heatmap = ax.matshow(Xcs.iloc[:, :-1], aspect='auto')
 
-    ori_cmap = matplotlib.cm.get_cmap('tab20b')
+    ori_cmap = matplotlib.cm.get_cmap('tab20c')
     cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
     cmap = matplotlib.colors.ListedColormap([ori_cmap(cnorm(i)) for i in range(n_clusters)])
 
@@ -30,7 +26,14 @@ def plot_clustered_heatmap(all_response, kmeans, exclude_cluster_id=[]):
     # plt.colorbar(mappable=cluster_id_map)
 
     labels, counts = np.unique(Xcs.cluster_id, return_counts=True)
-    dummy = [ax_cid.text(0, ct, l, fontsize='xx-large') for ct, l in zip(np.cumsum(counts), labels)]
+    dummy = [ax_cid.text(0, ct, int(l), fontsize=50) for ct, l in zip(np.cumsum(counts), labels)]
+
+def get_cluster_df(all_response, kmeans):
+    Xc = all_response.append(pd.DataFrame(kmeans.labels_.reshape(1,-1), columns=all_response.columns))
+    Xct = Xc.transpose()
+    Xct = Xct.set_axis([*Xct.columns[:-1], 'cluster_id'], axis=1, inplace=False) #rename(columns={0:'cluster_id'})
+    Xcs = Xct.sort_values('cluster_id')
+    return Xcs
 
 
 def plot_cluster_count(all_response, cluster_labels, exp_list, exclude_cluster_id=[]):
