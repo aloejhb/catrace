@@ -28,8 +28,8 @@ def plot_clustered_heatmap(all_response, kmeans, exclude_cluster_id=[]):
     labels, counts = np.unique(Xcs.cluster_id, return_counts=True)
     dummy = [ax_cid.text(0, ct, int(l), fontsize=50) for ct, l in zip(np.cumsum(counts), labels)]
 
-def get_cluster_df(all_response, kmeans):
-    Xc = all_response.append(pd.DataFrame(kmeans.labels_.reshape(1,-1), columns=all_response.columns))
+def get_cluster_df(all_response, labels):
+    Xc = all_response.append(pd.DataFrame(labels.reshape(1,-1), columns=all_response.columns))
     Xct = Xc.transpose()
     Xct = Xct.set_axis([*Xct.columns[:-1], 'cluster_id'], axis=1, inplace=False) #rename(columns={0:'cluster_id'})
     Xcs = Xct.sort_values('cluster_id')
@@ -59,3 +59,11 @@ def get_cluster_count_df(cluster_df):
     training_dict = dict(dtpar.exp_list)
     cluster_df['train_cond']= cluster_df['fish_id'].map(training_dict)
     cluster_count_df = cluster_df.groupby('train_cond', sort=False).cluster_id.value_counts(normalize=True).sort_index().reindex(dtpar.cond_list, level='train_cond')
+
+
+def get_cluster_cmap(labels, cmap='tab20c'):
+    n_clusters = len(np.unique(labels))
+    ori_cmap = matplotlib.cm.get_cmap(cmap)
+    cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
+    cmap = matplotlib.colors.ListedColormap([ori_cmap(cnorm(i)) for i in range(n_clusters)])
+    return cmap
