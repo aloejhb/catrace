@@ -1,7 +1,12 @@
+import os
 import numpy as np
 import itertools
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import seaborn as sns
+from skimage.io import imread
+
 
 class Roi:
     def __init__(self, tag, position, plane=None, meta=None):
@@ -46,7 +51,7 @@ def draw_stack(rois, stack_shape, meta_attr):
     return stack
 
 
-def assign_meta(rois, meta_df, meta_attr):
+def assign_meta(rois, meta_df, meta_attr, verbal=False):
     for k, roi in enumerate(rois):
         roi_plane = np.ceil((roi.plane + 1) / 2) - 1# 8 plane to original 4 plane * 2 subplanes
         roi_line = meta_df.loc[(meta_df['plane']==roi_plane) &
@@ -56,11 +61,12 @@ def assign_meta(rois, meta_df, meta_attr):
             roi.set_meta({meta_attr: val})
         else:
             # skip this roi
-            print(f'Skip ROI # {roi.tag} in plane {roi.plane}')
+            if verbal:
+                print(f'Skip ROI # {roi.tag} in plane {roi.plane}')
     return rois
 
 
-def show_stack(stack, figsize=(6, 10), matshow_kwargs=None):
+def plot_stack(stack, figsize=(6, 10), matshow_kwargs=None):
     nplane = stack.shape[0]
     ncol = 2
     nrow = np.ceil(nplane/ncol).astype(int)
@@ -78,6 +84,34 @@ def show_stack(stack, figsize=(6, 10), matshow_kwargs=None):
         ax.set_yticks([])
         axes.append(ax)
         imgs.append(img)
-    cbar_ax = fig.add_axes([0.88, 0.15, 0.04, 0.7])
-    fig.colorbar(imgs[-1], cax=cbar_ax)
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.04, 0.7])
+    clb = fig.colorbar(imgs[-1], cax=cbar_ax)
+    return fig, clb
+
+# expname, region, data_root_dir,
+# meta_df = cluster_df.loc[cluster_df['fish_id'] == expname]
+# 'cluster_id'
+def map_meta_to_roi_stack(exp_dir, meta_df, meta_attr):
+    """
+    Map metadata to neuron coordinates in the anatomy stack
+    """
+    roi_stack_file = os.path.join(exp_dir, 'roi', 'roi_stack.tif')
+    roi_stack = imread(roi_stack_file)
+    rois= import_roi_stack(roi_stack)
+    rois = assign_meta(rois, meta_df, meta_attr)
+    # Note that the rois (neurons) not in meta_df are skipped.
+    # These are the neurons that are not selected for having large enough respsonse
+    mstack = draw_stack(rois, roi_stack.shape, meta_attr)
+    return mstack
+
+
+def plot_meta_stack(mstack, cmap, title=None):
+    pal = sns.color_palette(cmap)
+    pal.insert(0, (0, 0, 0))
+    stack_cmap = matplotlib.colors.ListedColormap(pal)
+    matshow_kwargs = dict(vmin=0, vmax=20, cmap=stack_cmap)
+    fig, clb = plot_stack(mstack, figsize=(7, 10), matshow_kwargs=matshow_kwargs)
+    clb.set_ticks(range(21))
+    if title:
+        fig.suptitle(title)
     return fig
