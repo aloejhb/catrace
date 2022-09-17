@@ -120,8 +120,9 @@ def bin_and_restack(dfovf, tbin):
 def mean_pattern_in_time_window(dfovf, time_window, frame_rate):
     time_window = np.array(time_window)
     fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
-    dfrestack = ptt.restack_as_pattern(dfovf.iloc[:, fwindow[0]:fwindow[1]])
-    response_df = dfovf.iloc[:, fwindow[0]:fwindow[1]]
+    dfrestack = dfovf.transpose().stack(level=['odor', 'trial'])
+    # dfrestack = ptt.restack_as_pattern(dfovf.iloc[:, fwindow[0]:fwindow[1]])
+    response_df = dfrestack.iloc[:, fwindow[0]:fwindow[1]]
     level_del = [x for x in response_df.index.names if x not in ['odor', 'trial']]
     pat = response_df.mean(axis=1).unstack(level=level_del)
     pat = pat.reindex(dfovf.index.unique('odor'), level='odor')
