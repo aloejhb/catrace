@@ -16,7 +16,7 @@ def get_time_trace_file(root_dir, exp_name, plane_num):
     time_trace_dir = os.path.join(exp_dir, 'time_trace')
     plane_string = 'plane{0:02d}'.format(plane_num+1)
     plane_dir = os.path.join(time_trace_dir, plane_string)
-    trace_file = os.path.join(plane_dir, 'timetrace.mat')
+    trace_file = os.path.join(plane_dir, 'timetrace_roi.mat')
     return trace_file
 
 
@@ -35,6 +35,7 @@ def read_trace(trace_file):
     trace_dict['raw_trace'] = np.stack(time_trace['timeTraceMatList'][0])
 
     trace_dict['odor_list'] = np.stack(time_trace['odorList'][0]).squeeze()
+    trace_dict['roi_tag'] = time_trace['roiTagArray'].squeeze()
     if 'odorArraySorted' in time_trace.keys():
         trace_dict['odor_cat'] = np.stack(time_trace['odorArraySorted'].squeeze()).squeeze()
     else:
@@ -54,19 +55,22 @@ def read_spike(spike_dir):
     spike_array = np.stack(spike_list)
     return spike_array
 
+def convert_trial_to_df(trial_trace, roi_tags):
+    trial_df = pd.DataFrame(trial_trace, index=roi_tags)
+    return trial_df
+
 
 def load_trace_file(root_dir, exp_name, plane_nb_list, num_trial, odor_list):
     df_list = [None] * len(plane_nb_list)
     for i, plane_nb in enumerate(plane_nb_list):
         trace_file = get_time_trace_file(root_dir, exp_name, plane_nb)
         trace_dict = read_trace(trace_file)
-        # trace_colname = 'raw_trace_plane{0:02d}'.format(plane_nb)
-        # index_iter = [trace_dict['odor_list'], np.arange(num_trial)]
-        # index = pd.MultiIndex.from_product(index_iter)
         odordf = pd.DataFrame(trace_dict['odor_cat'],columns=['odor_cat'])
         odordfi = odordf.groupby('odor_cat').apply(lambda x: x.reset_index()).sort_values('index')
         index = odordfi.index
-        df_list[i] = pd.concat([pd.DataFrame(x) for x in trace_dict['raw_trace']],
+        trial_df_list = [convert_trial_to_df(t, trace_dict['roi_tag'])
+                         for t in trace_dict['raw_trace']]
+        df_list[i] = pd.concat(trial_df_list,
                                keys=index, names=['odor', 'trial', 'neuron'])
     tracedf = pd.concat(df_list, keys=plane_nb_list,
                         names=['plane']+df_list[0].index.names)

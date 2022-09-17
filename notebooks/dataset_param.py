@@ -34,6 +34,6 @@ region_list = ['Dp', 'OB']
 frame_rate = 30/4
 exp_info = dict(num_trial=3)
 odor_list = ['phe', 'trp', 'arg', 'tdca', 'tca', 'gca', 'acsf', 'spont']
-data_root_dir = '/media/hubo/WD_BoHu/Ca_imaging/results/'
-db_dir = '/media/hubo/WD_BoHu/Ca_imaging/results/JH_analysis/data'
+data_root_dir = '/media/hubo/WD_BoHu/BCE/Ca_imaging/results/'
+db_dir = '/media/hubo/WD_BoHu/BCE/Ca_imaging/results/JH_analysis/data'
 cond_list = ['phe-arg', 'arg-phe', 'phe-trp', 'naive']
