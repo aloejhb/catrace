@@ -6,23 +6,24 @@ import seaborn as sns
 from statannotations.Annotator import Annotator
 
 
-def plot_clustered_heatmap(all_response, kmeans, exclude_cluster_id=[]):
-    n_clusters = kmeans.n_clusters
+def plot_clustered_heatmap(all_response, n_clusters, labels, exclude_cluster_id=[]):
     fig = plt.figure(figsize=(20, 30))
     gs = fig.add_gridspec(1, 2,  width_ratios=(9, 2), wspace=0.02)
     ax = fig.add_subplot(gs[0, 0])
     ax_cid = fig.add_subplot(gs[0, 1], sharey=ax)
 
-    Xcs = get_cluster_df(all_response, kmeans)
+    Xcs = get_cluster_df(all_response, labels)
 
     if len(exclude_cluster_id):
         Xcs = Xcs[~Xcs['cluster_id'].isin(exclude_cluster_id)]
 
     response_heatmap = ax.matshow(Xcs.iloc[:, :-1], aspect='auto', cmap='viridis')
 
-    ori_cmap = matplotlib.cm.get_cmap('tab20c')
-    cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
+    ori_cmap = matplotlib.cm.get_cmap('tab20')
+    # cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
+    cnorm = matplotlib.colors.Normalize(vmin=0, vmax=20)
     cmap = matplotlib.colors.ListedColormap([ori_cmap(cnorm(i)) for i in range(n_clusters)])
+    # cmap = matplotlib.cm.get_cmap('tab20')
 
     cluster_id_map = ax_cid.matshow(np.tile(Xcs.cluster_id, (2,1)).transpose(),
                                     aspect='auto', cmap=cmap)
