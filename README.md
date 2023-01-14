@@ -4,7 +4,8 @@ A python package for calcium imaging time trace analysis
 ## Usage
   See demos/ for how to use the code.\
   analysis_multi_dataset.ipynb shows how to do multiple dataset analysis.\
-  analysis_OB.py shows how to do single dataset analysis.
+  analysis_OB.py shows how to do single dataset analysis.\
+  tuning_curve_OB.py shows how to do tuning curve clustering.
 ## Structure of the package
   * dataio: data reading and writing, contains functions to read data from MATLAB output.
   * process_time_trace: preprocess time trace for further analysis.
