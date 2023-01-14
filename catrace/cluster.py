@@ -85,10 +85,15 @@ def get_cluster_mean_df(H, labels):
     return cluster_mean_df
 
 
-def _get_odor_list(trial_list):
-    odor_list = [key[0] for key in trial_list]
+def _get_odor_list(trial_keys):
+    odor_list = [key[0] for key in trial_keys]
     odor_list = list(dict.fromkeys(odor_list))
     return odor_list
+
+def _get_trial_list(trial_keys):
+    trial_list = [key[1] for key in trial_keys]
+    trial_list = list(dict.fromkeys(trial_list))
+    return trial_list
 
 
 def plot_cluster_tuning(cluster_mean_df, cmap="tab20c"):
@@ -113,11 +118,12 @@ def plot_cluster_tuning(cluster_mean_df, cmap="tab20c"):
     g.despine(bottom=True, left=True)
 
     n_trials = cluster_mean_df.trial.max()
-    trial_per_odor = 3
-    trial_list2 = list(cluster_mean_df.trial_key.unique())
+    trial_keys = cluster_mean_df.trial_key.unique()
+    trial_list = _get_trial_list(trial_keys)
+    trial_per_odor = len(trial_list)
     for ax in g.axes.flat:
         ax.set_xticks(np.arange(0, n_trials, trial_per_odor)) # <--- set the ticks first
-        ax.set_xticklabels(_get_odor_list(trial_list2), fontsize=20)
+        ax.set_xticklabels(_get_odor_list(trial_keys), fontsize=20)
         # ax.set_xlabel('Trial')
         ax.set(xlabel=None)
     return g

@@ -21,10 +21,10 @@ def plot_trace_heatmap(trace, ax):
     return im
 
 
-def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, cut_window=None):
+def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, figsize=(10,4), cut_window=None):
     num_odor = len(odor_list)
     fig, axes = plt.subplots(num_trial, num_odor, sharex=True,
-                             sharey=True, figsize=[10, 4])
+                             sharey=True, figsize=figsize)
     for name, group in tracedf.groupby(level=['odor', 'trial']):
         if cut_window is not None:
             trace = group.iloc[:, cut_window[0]:cut_window[1]]
@@ -35,6 +35,8 @@ def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, cut_window=None)
         ax = axes[trial_nb, odor_nb]
         im = plot_trace_heatmap(trace, ax)
         im.set_clim(climit)
+        ax.set_xticks(range(0, trace.shape[1], 50))
+        ax.xaxis.tick_bottom()
         if not trial_nb:
             ax.set_title(name[0])
     plt.colorbar(im)
