@@ -19,14 +19,16 @@ def get_cluster_df(responses, labels):
     cluster_df = cluster_df.sort_values('cluster_id')
     return cluster_df
 
-def get_cluster_mean_df(cluster_df):
+def get_cluster_mean_df(cluster_df, remove_odors=None):
+    if remove_odors is not None:
+        remove_cols = [col for col in cluster_df.columns if col[0] in remove_odors]
+        cluster_df = cluster_df.drop(remove_cols, axis=1)
     cluster_mean_df = cluster_df.groupby('cluster_id').mean()
     cluster_mean_df = pd.melt(cluster_mean_df, var_name='trial_key', value_name='response', ignore_index=False).reset_index()
 
     trial_list = list(cluster_mean_df.trial_key.unique())
     trial_ord = cluster_mean_df.trial_key.map(lambda x: trial_list.index(x))
     cluster_mean_df["trial"] = trial_ord
-    cluster_mean_df = cluster_mean_df[cluster_mean_df.trial<18]
     return cluster_mean_df
 
 def get_cluster_nrn_df(cluster_df):
@@ -74,7 +76,7 @@ def plot_cluster_tuning(cluster_mean_df, cmap="tab20c"):
     # Draw the densities in a few steps
     g.map(sns.barplot, "trial", 'response')
     # passing color=None to refline() uses the hue mapping
-    #g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+    g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
     # Define and use a simple function to label the plot in axes coordinates
     def label(x, color, label):
         ax = plt.gca()
@@ -88,7 +90,7 @@ def plot_cluster_tuning(cluster_mean_df, cmap="tab20c"):
     g.set(yticks=[], ylabel="")
     g.despine(bottom=True, left=True)
 
-    n_trials = cluster_mean_df.trial.max()
+    n_trials = cluster_mean_df.trial.max() + 1 # trial number starts from 0
     trial_keys = cluster_mean_df.trial_key.unique()
     trial_list = _get_trial_list(trial_keys)
     trial_per_odor = len(trial_list)
