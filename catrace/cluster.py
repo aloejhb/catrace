@@ -3,79 +3,24 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+import phenograph
+from itertools import combinations
 from statannotations.Annotator import Annotator
 
+def compute_cluster(responses, k):
+    labels, graph, Q = phenograph.cluster(responses.transpose(), k=k)
+    labels = labels + 1 # so that cluster id starts from 1
+    return labels
 
-def plot_clustered_heatmap(all_response, n_clusters, labels, exclude_cluster_id=[]):
-    fig = plt.figure(figsize=(20, 30))
-    gs = fig.add_gridspec(1, 2,  width_ratios=(9, 2), wspace=0.02)
-    ax = fig.add_subplot(gs[0, 0])
-    ax_cid = fig.add_subplot(gs[0, 1], sharey=ax)
+def get_cluster_df(responses, labels):
+    cluster_df = responses.append(pd.DataFrame(labels.reshape(1,-1), columns=responses.columns))
+    cluster_df = cluster_df.transpose()
+    cluster_df = cluster_df.set_axis([*cluster_df.columns[:-1], 'cluster_id'], axis=1, inplace=False)
+    cluster_df = cluster_df.sort_values('cluster_id')
+    return cluster_df
 
-    Xcs = get_cluster_df(all_response, labels)
-
-    if len(exclude_cluster_id):
-        Xcs = Xcs[~Xcs['cluster_id'].isin(exclude_cluster_id)]
-
-    response_heatmap = ax.matshow(Xcs.iloc[:, :-1], aspect='auto', cmap='viridis')
-
-    ori_cmap = matplotlib.cm.get_cmap('tab20')
-    # cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
-    cnorm = matplotlib.colors.Normalize(vmin=0, vmax=20)
-    cmap = matplotlib.colors.ListedColormap([ori_cmap(cnorm(i)) for i in range(n_clusters)])
-    # cmap = matplotlib.cm.get_cmap('tab20')
-
-    cluster_id_map = ax_cid.matshow(np.tile(Xcs.cluster_id, (2,1)).transpose(),
-                                    aspect='auto', cmap=cmap)
-    # plt.colorbar(mappable=cluster_id_map)
-
-    labels, counts = np.unique(Xcs.cluster_id, return_counts=True)
-    dummy = [ax_cid.text(0, ct, int(l), fontsize=50) for ct, l in zip(np.cumsum(counts), labels)]
-
-def get_cluster_df(all_response, labels):
-    Xc = all_response.append(pd.DataFrame(labels.reshape(1,-1), columns=all_response.columns))
-    Xct = Xc.transpose()
-    Xct = Xct.set_axis([*Xct.columns[:-1], 'cluster_id'], axis=1, inplace=False) #rename(columns={0:'cluster_id'})
-    Xcs = Xct.sort_values('cluster_id')
-    return Xcs
-
-
-def plot_cluster_count(all_response, cluster_labels, exp_list, exclude_cluster_id=[]):
-    cluster_df = pd.DataFrame(cluster_labels.reshape(1,-1), columns=all_response.columns)
-    cluster_df = cluster_df.transpose().rename(columns={0:'cluster_id'}).reset_index()
-    training_dict = dict(exp_list)
-    cluster_df['train_cond']= cluster_df['fish_id'].map(training_dict)
-
-    cond_list = ['phe-arg', 'arg-phe', 'phe-trp', 'naive']
-    fig, ax = plt.subplots(figsize=(5,15))
-    if len(exclude_cluster_id):
-        cluster_df = cluster_df[~cluster_df['cluster_id'].isin(exclude_cluster_id)]
-    grouped_cluster_id = cluster_df.groupby('train_cond', sort=False).cluster_id
-    cluster_count_df = grouped_cluster_id.value_counts(normalize=True).sort_index().reindex(cond_list, level='train_cond')
-    cluster_count_df.unstack(0).plot.barh(ax=ax)
-    ax.invert_yaxis()
-
-
-def get_cluster_count_df(cluster_df):
-    #TODO make this work
-    cluster_df = pd.DataFrame(agg_cluster.labels_.reshape(1,-1), columns=all_response.columns)
-    cluster_df = cluster_df.transpose().rename(columns={0:'cluster_id'}).reset_index()
-    training_dict = dict(dtpar.exp_list)
-    cluster_df['train_cond']= cluster_df['fish_id'].map(training_dict)
-    cluster_count_df = cluster_df.groupby('train_cond', sort=False).cluster_id.value_counts(normalize=True).sort_index().reindex(dtpar.cond_list, level='train_cond')
-
-
-def get_cluster_cmap(labels, cmap='tab20c'):
-    n_clusters = len(np.unique(labels))
-    ori_cmap = matplotlib.cm.get_cmap(cmap)
-    cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
-    cmap = matplotlib.colors.ListedColormap([ori_cmap(cnorm(i)) for i in range(n_clusters)])
-    return cmap
-
-
-def get_cluster_mean_df(H, labels):
-    clustdf = get_cluster_df(H, labels)
-    cluster_mean_df = clustdf.groupby('cluster_id').mean()
+def get_cluster_mean_df(cluster_df):
+    cluster_mean_df = cluster_df.groupby('cluster_id').mean()
     cluster_mean_df = pd.melt(cluster_mean_df, var_name='trial_key', value_name='response', ignore_index=False).reset_index()
 
     trial_list = list(cluster_mean_df.trial_key.unique())
@@ -83,6 +28,32 @@ def get_cluster_mean_df(H, labels):
     cluster_mean_df["trial"] = trial_ord
     cluster_mean_df = cluster_mean_df[cluster_mean_df.trial<18]
     return cluster_mean_df
+
+def get_cluster_nrn_df(cluster_df):
+    cluster_nrn_df = cluster_df['cluster_id']
+    cluster_nrn_df = cluster_nrn_df.reset_index()
+    return cluster_nrn_df
+
+
+def get_cluster_count_df(cluster_nrn_df, cond_list):
+    grouped_cluster_id = cluster_nrn_df.groupby(['fish_id','cond'], sort=False).cluster_id
+    cluster_count_df = grouped_cluster_id.value_counts(normalize=True).sort_index().reindex(cond_list, level='cond')
+    cluster_count_df = cluster_count_df.rename('ratio').reset_index()
+    return cluster_count_df
+
+def get_all_cond_pairs(cond_list, cluster_ids):
+    cond_pair = list(combinations(cond_list, 2))
+    all_pairs = []
+    for cluster_id in cluster_ids:
+        all_pairs.extend([[(cluster_id, x[0]), (cluster_id, x[1])] for x in cond_pair])
+    return all_pairs
+
+def get_cluster_cmap(labels, cmap='tab20c'):
+    n_clusters = len(np.unique(labels))
+    ori_cmap = matplotlib.cm.get_cmap(cmap)
+    cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
+    cmap = matplotlib.colors.ListedColormap([ori_cmap(cnorm(i)) for i in range(n_clusters)])
+    return cmap
 
 
 def _get_odor_list(trial_keys):
@@ -128,9 +99,8 @@ def plot_cluster_tuning(cluster_mean_df, cmap="tab20c"):
         ax.set(xlabel=None)
     return g
 
-
-def plot_cluster_cont_with_stat(cluster_count_df, pairs, cond_list):
-    hue_plot_params = dict(x="cluster_id", y="ratio", hue="train_cond", hue_order=cond_list,
+def plot_cluster_cont_with_stat(cluster_count_df, pairs, cond_list, test_method="t-test_ind"):
+    hue_plot_params = dict(x="cluster_id", y="ratio", hue="cond", hue_order=cond_list,
                            data=cluster_count_df, palette="Set3")
 
     with sns.plotting_context("notebook", font_scale = 1.4):
@@ -142,7 +112,7 @@ def plot_cluster_cont_with_stat(cluster_count_df, pairs, cond_list):
 
     # Add annotations
         annotator = Annotator(ax, pairs, **hue_plot_params)
-        annotator.configure(test="t-test_ind").apply_and_annotate()
+        annotator.configure(test=test_method).apply_and_annotate()
 
     # Label and show
         legend = ax.legend()
@@ -184,3 +154,29 @@ def plot_embed_df(embed_df, selector=None, cmap="Spectral"):
     plt.setp(g.get_legend().get_texts(), fontsize='14')
     n_clusters = len(pd.unique(embed_df["cluster_id"]))
     return fig
+
+def plot_clustered_heatmap(all_response, n_clusters, labels, exclude_cluster_id=[]):
+    fig = plt.figure(figsize=(20, 30))
+    gs = fig.add_gridspec(1, 2,  width_ratios=(9, 2), wspace=0.02)
+    ax = fig.add_subplot(gs[0, 0])
+    ax_cid = fig.add_subplot(gs[0, 1], sharey=ax)
+
+    Xcs = get_cluster_df(all_response, labels)
+
+    if len(exclude_cluster_id):
+        Xcs = Xcs[~Xcs['cluster_id'].isin(exclude_cluster_id)]
+
+    response_heatmap = ax.matshow(Xcs.iloc[:, :-1], aspect='auto', cmap='viridis')
+
+    ori_cmap = matplotlib.cm.get_cmap('tab20')
+    # cnorm = matplotlib.colors.Normalize(vmin=0, vmax=n_clusters-1)
+    cnorm = matplotlib.colors.Normalize(vmin=0, vmax=20)
+    cmap = matplotlib.colors.ListedColormap([ori_cmap(cnorm(i)) for i in range(n_clusters)])
+    # cmap = matplotlib.cm.get_cmap('tab20')
+
+    cluster_id_map = ax_cid.matshow(np.tile(Xcs.cluster_id, (2,1)).transpose(),
+                                    aspect='auto', cmap=cmap)
+    # plt.colorbar(mappable=cluster_id_map)
+
+    labels, counts = np.unique(Xcs.cluster_id, return_counts=True)
+    dummy = [ax_cid.text(0, ct, int(l), fontsize=50) for ct, l in zip(np.cumsum(counts), labels)]
