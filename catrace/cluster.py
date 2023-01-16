@@ -69,7 +69,7 @@ def _get_trial_list(trial_keys):
     return trial_list
 
 
-def plot_cluster_tuning(cluster_mean_df, cmap="tab20c"):
+def plot_cluster_tuning(cluster_mean_df, cmap="tab20c", hspace=-0.01):
     # Initialize the FacetGrid object
     pal = sns.color_palette(cmap) #sns.cubehelix_palette(n_clusters, rot=-.25, light=.7)
     g = sns.FacetGrid(cluster_mean_df, row="cluster_id", hue="cluster_id", aspect=15, height=.5, palette=pal)
@@ -85,7 +85,8 @@ def plot_cluster_tuning(cluster_mean_df, cmap="tab20c"):
 
     g.map(label, "trial")
     # Set the subplots to overlap
-    g.figure.subplots_adjust(hspace=-.05)
+    #g.figure.subplots_adjust(hspace=-.05)
+    g.figure.subplots_adjust(hspace=hspace)
     g.set_titles("")
     g.set(yticks=[], ylabel="")
     g.despine(bottom=True, left=True)
@@ -101,13 +102,20 @@ def plot_cluster_tuning(cluster_mean_df, cmap="tab20c"):
         ax.set(xlabel=None)
     return g
 
-def plot_cluster_cont_with_stat(cluster_count_df, pairs, cond_list, test_method="t-test_ind"):
-    hue_plot_params = dict(x="cluster_id", y="ratio", hue="cond", hue_order=cond_list,
-                           data=cluster_count_df, palette="Set3")
+def plot_cluster_cont_with_stat(cluster_count_df, pairs, cond_list,
+                                test_method="t-test_ind", figsize=(16,10),
+                                ylim=None, orient='v'):
+    if orient == 'h':
+        hue_plot_params = dict(y="cluster_id", x="ratio", hue="cond", hue_order=cond_list,
+                               data=cluster_count_df, palette="Set3", orient=orient)
+    else:
+        hue_plot_params = dict(x="cluster_id", y="ratio", hue="cond", hue_order=cond_list,
+                               data=cluster_count_df, palette="Set3", orient=orient)
 
-    with sns.plotting_context("notebook", font_scale = 1.4):
+
+    with sns.plotting_context("notebook", font_scale=1.4):
     # Create new plot
-        fig, ax = plt.subplots(figsize=(16,10))
+        fig, ax = plt.subplots(figsize=figsize)
 
     # Plot with seaborn
         ax = sns.boxplot(ax=ax, **hue_plot_params)
@@ -121,6 +129,41 @@ def plot_cluster_cont_with_stat(cluster_count_df, pairs, cond_list, test_method=
         frame = legend.get_frame()
         frame.set_facecolor('white')
         ax.set_ylabel('#neurons in cluster/total #neurons')
+        if ylim is not None:
+            ax.set_ylim(ylim)
+    return annotator, fig
+
+def plot_single_cluster_cont_with_stat(cluster_count_df, cond_list,
+                                       test_method="t-test_ind", figsize=(16,10),
+                                       ylim=None):
+    cluster_id = cluster_count_df.cluster_id.iloc[0]
+    # x_order=cond_list,
+    hue_plot_params = dict(x="cond", y="ratio", order=cond_list,
+                           data=cluster_count_df,
+                           palette="Set3")
+    pairs = list(combinations(cond_list, 2))
+
+    with sns.plotting_context("notebook", font_scale=1.2):
+    # Create new plot
+        fig, ax = plt.subplots(figsize=figsize)
+
+    # Plot with seaborn
+        ax = sns.boxplot(ax=ax, **hue_plot_params)
+
+    # Add annotations
+        annotator = Annotator(ax, pairs, **hue_plot_params)
+        annotator.configure(test=test_method).apply_test()
+        new_pairs = get_significant_pairs(annotator)
+        new_annotator = Annotator(ax, new_pairs, **hue_plot_params)
+        new_annotator.configure(test=test_method).apply_and_annotate()
+
+    # Label and show
+        legend = ax.legend()
+        frame = legend.get_frame()
+        frame.set_facecolor('white')
+        ax.set_ylabel(f'cluster {int(cluster_id)}\n #neurons in cluster/total #neurons')
+        if ylim is not None:
+            ax.set_ylim(ylim)
     return annotator, fig
 
 def get_significant_pairs(annotator):
