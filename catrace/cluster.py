@@ -7,8 +7,8 @@ import phenograph
 from itertools import combinations
 from statannotations.Annotator import Annotator
 
-def compute_cluster(responses, k):
-    labels, graph, Q = phenograph.cluster(responses.transpose(), k=k)
+def compute_cluster(responses, **kwargs):
+    labels, graph, Q = phenograph.cluster(responses.transpose(), **kwargs)
     labels = labels + 1 # so that cluster id starts from 1
     return labels
 
