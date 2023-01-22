@@ -92,12 +92,6 @@ def select_response(tracedf, snr_thresh, base_window, response_window, frame_rat
     tracedf = tracedf[tracedf['response_y']].drop(columns=['response_x','response_y'])
     return tracedf
 
-
-def bin_tracedf(tracedf, bin_factor):
-    bindf = tracedf.groupby(np.arange(len(tracedf.columns))//bin_factor, axis=1).mean()
-    return bindf
-
-
 def restack_as_pattern(tracedf):
     newdf = tracedf.stack()
     newdf.index = newdf.index.rename(newdf.index.names[0:-1]+['time'])
@@ -106,16 +100,24 @@ def restack_as_pattern(tracedf):
     newdf = newdf.reindex(index.unique('odor'), level='odor')
     return newdf
 
-
 def unstack_pattern(df):
     return df.transpose().stack(level=['odor', 'trial'])
 
+def bin_tracedf(tracedf, bin_size, axis=0):
+    if axis == 1:
+        tracedf = restack_as_pattern(tracedf)# tracedf.transpose()
 
-def bin_and_restack(dfovf, tbin):
-    dfovf_bin = bin_tracedf(dfovf, tbin)
-    pattern = restack_as_pattern(dfovf_bin)
-    return pattern
+    time_index = tracedf.index.get_level_values(level='time')
 
+    bins = np.arange(0, len(time_index.unique())+bin_size, bin_size) - 1
+    tracedf['time_bin'] = pd.cut(time_index, bins)
+    binned_dfovf = tracedf.set_index('time_bin', append=True)
+
+    names = list(binned_dfovf.index.names)
+    names.remove('time')
+    binned_dfovf = binned_dfovf.groupby(level=names).mean()
+
+    return binned_dfovf
 
 def mean_pattern_in_time_window(dfovf, time_window, frame_rate):
     time_window = np.array(time_window)

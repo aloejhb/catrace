@@ -91,6 +91,7 @@ def plot_embed_2d(results, component_idx, ax=None):
     embeddf = pd.DataFrame(results['latent'][:,component_idx],
                            columns=['x', 'y'],
                            index=results['index'])
+    embeddf = embeddf.reindex(results['index'].unique('odor'), level='odor')
     groups = embeddf.groupby(['odor'])
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
     for name, group in groups:

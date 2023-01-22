@@ -146,7 +146,6 @@ def process_data_dict_decorator(data_func, exp_list, region_list,
         return data_dict
     return get_data_dict
 
-
 def process_data_db_decorator(data_func, exp_list, region_list,
                               out_collect_name, db_dir, in_collect_name=None):
     def process_data_db(*args, **kwargs):
@@ -162,6 +161,25 @@ def process_data_db_decorator(data_func, exp_list, region_list,
                 update_df(outdf, out_collect_name, exp_name, region, db_dir)
     return process_data_db
 
+# TODO 20230122
+def process_dataframe_decorator(data_func):
+    def process_dataframe(df, *args, **kwargs):
+        if 'region' in df.columns.names:
+            level = ['region', 'fish_id']
+        else:
+            level = 'fish_id'
+
+        exp_list = df.columns.get_level_values(level=level).unique()
+        outdf_list = []
+        for k,exp in enumerate(exp_list):
+            print(exp)
+            expdf = df.xs(exp, axis=1, level=level)
+            outdf_list.append(data_func(df, *args, **kwargs))
+
+        out_dataframe = pd.concat(outdf_list)
+        return out_dataframe
+
+    return process_dataframe
 
 def read_df(collect_name, exp_name, region, db_dir):
     print(exp_name, region)
