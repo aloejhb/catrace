@@ -5,6 +5,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn import datasets
 from sklearn import decomposition
 from sklearn.model_selection import cross_val_score
+import umap
+
 
 def plot_embed(embeddf):
     groups = embeddf.groupby(['odor'])
@@ -81,21 +83,27 @@ def compute_svd(pattern, n_components):
 def compute_pca(pattern, n_components):
     pca = decomposition.PCA(n_components)
     latent = pca.fit_transform(pattern)
-    results = dict(latent=latent, index=pattern.index, pca=pca)
-    return results
+    embeddf = get_embeddf(latent, pattern.index)
+    return embeddf
 
+def compute_umap(pattern, umap_params):
+    latent = umap.UMAP(**umap_params).fit_transform(pattern)
+    embeddf = get_embeddf(latent, pattern.index)
+    return embeddf
 
-def plot_embed_2d(results, component_idx, ax=None):
+def get_embeddf(latent, index):
+    embeddf = pd.DataFrame(latent, index=index)
+    embeddf = embeddf.reindex(index.unique('odor'), level='odor')
+    return embeddf
+
+def plot_embed_2d(embeddf, component_idx, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    embeddf = pd.DataFrame(results['latent'][:,component_idx],
-                           columns=['x', 'y'],
-                           index=results['index'])
-    embeddf = embeddf.reindex(results['index'].unique('odor'), level='odor')
+    embeddf = embeddf.iloc[:,list(component_idx)]
     groups = embeddf.groupby(['odor'])
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
     for name, group in groups:
-        ax.plot(group.x, group.y, marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
+        ax.plot(group.iloc[:,0], group.iloc[:,1], marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
 
 
 def plot_embed_1d(results, component_idx, ax=None):
@@ -166,26 +174,3 @@ def get_best_ncomp(results):
                                                  results[method+'_scores'])
         best_results[method] = dict(best_ncomp=best_ncomp, best_score=best_score)
     return best_results
-
-
-if __name__ == '__main__':
-    digits = datasets.load_digits(n_class=6)
-    X = digits.data
-    y = digits.target
-    n_samples, n_features = X.shape
-    n_neighbors = 30
-
-
-    # Plot images of the digits
-    n_img_per_row = 20
-    img = np.zeros((10 * n_img_per_row, 10 * n_img_per_row))
-    for i in range(n_img_per_row):
-        ix = 10 * i + 1
-        for j in range(n_img_per_row):
-            iy = 10 * j + 1
-            img[ix:ix + 8, iy:iy + 8] = X[i * n_img_per_row + j].reshape((8, 8))
-
-    plt.imshow(img, cmap=plt.cm.binary)
-    plt.xticks([])
-    plt.yticks([])
-    plt.title('A selection from the 64-dimensional digits dataset')

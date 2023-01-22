@@ -116,6 +116,7 @@ def bin_tracedf(tracedf, bin_size, axis=0):
     names = list(binned_dfovf.index.names)
     names.remove('time')
     binned_dfovf = binned_dfovf.groupby(level=names).mean()
+    binned_dfovf = binned_dfovf.reindex(tracedf.index.unique('odor'), level='odor')
 
     return binned_dfovf
 
