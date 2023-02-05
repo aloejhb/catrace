@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.collections import LineCollection
+from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn import datasets
 from sklearn import decomposition
@@ -96,22 +98,24 @@ def get_embeddf(latent, index):
     embeddf = embeddf.reindex(index.unique('odor'), level='odor')
     return embeddf
 
-def plot_embed_2d(embeddf, component_idx, ax=None):
+def plot_embed_2d(embeddf, component_idx, plot_type='line', ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     embeddf = embeddf.iloc[:,list(component_idx)]
     groups = embeddf.groupby(['odor'])
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
     for name, group in groups:
-        ax.plot(group.iloc[:,0], group.iloc[:,1], marker='o', linestyle='-', ms=4, label=name, alpha=0.7)
+        if plot_type == 'line':
+            ax.plot(group.iloc[:,0], group.iloc[:,1], marker='o',
+                    linestyle='-', ms=4, label=name, alpha=0.7)
+        elif plot_type == 'scatter':
+            ax.scatter(group.iloc[:,0], group.iloc[:,1], marker='o',
+                       s=4, label=name, alpha=0.7)
 
-
-def plot_embed_1d(results, component_idx, ax=None):
+def plot_embed_1d(embeddf, component_idx, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    embeddf = pd.DataFrame(results['latent'][:,component_idx],
-                           columns=['x'],
-                           index=results['index'])
+    embeddf = embeddf.iloc[:,component_idx]
     df = embeddf.unstack().transpose()
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
 
@@ -174,3 +178,50 @@ def get_best_ncomp(results):
                                                  results[method+'_scores'])
         best_results[method] = dict(best_ncomp=best_ncomp, best_score=best_score)
     return best_results
+
+
+def plot_on_poincare_disk(embeddf, ax=None, plot_type='scatter'):
+    odor_list = embeddf.index.unique('odor').tolist()
+    clr_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    groups = embeddf.groupby(['odor'])
+    for name, group in groups:
+        cidx = odor_list.index(name)
+        color = clr_cycle[cidx]
+
+        trials = group.index.get_level_values('trial').unique()
+        for trial in trials:
+            trial_data = group.xs(trial, level='trial')
+            x = trial_data.iloc[:,0].to_numpy()
+            y = trial_data.iloc[:,1].to_numpy()
+            z = np.sqrt(1 + np.sum(trial_data**2, axis=1)).to_numpy()
+            disk_x = x / (1 + z)
+            disk_y = y / (1 + z)
+
+            if plot_type == 'line':
+                # ax.quiver(disk_x[:-1], disk_y[:-1],
+                #           disk_x[1:]-disk_x[:-1],
+                #           disk_y[1:]-disk_y[:-1],
+                #           scale_units='xy', angles='xy',
+                #           scale=1, color=color)
+                cmap = LinearSegmentedColormap.from_list('custom',
+                                        [(0, 'white'),
+                                         (1, color)], N=256)
+                # cmap = 'viridis'
+                norm = plt.Normalize(-20, len(disk_x))
+                # lwidths = np.arange(len(disk_x)) / 10
+                points = np.array([disk_x, disk_y]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+                lc = LineCollection(segments, cmap=cmap, norm=norm)
+                lc.set_array(np.arange(len(disk_x)))
+                # linewidths=lwidths,
+                ax.add_collection(lc)
+                # ax.plot(disk_x, disk_y, label=name, alpha=0.7, color=color)
+            ax.scatter(disk_x, disk_y, label=name, marker='+',
+                       alpha=0.7, color=color, s=20)
+
+    boundary = plt.Circle((0,0), 1, fc='none', ec='k')
+    ax.set_xlim((-1.01, 1.01))
+    ax.set_ylim((-1.01, 1.01))
+    ax.add_artist(boundary)
+    ax.axis('off')
