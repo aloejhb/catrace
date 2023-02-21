@@ -6,6 +6,7 @@ import itertools
 import matplotlib.pyplot as plt
 from scipy.stats import sem
 from importlib import reload
+from scipy.ndimage import gaussian_filter1d
 
 from .dataio import load_trace_file
 from .trace_dataframe import get_colname
@@ -60,7 +61,12 @@ def get_paired_odor_idxpair(odor_pair, n_trial):
 
 
 def get_avgcorr(corrmat_tvec, idxpair, sigma):
-    corr_tvec_array = [gaussian_filter1d(corrmat_tvec[:, idxp[0], idxp[1]], sigma)
+    def _get_tvec(corrmat_tvec, idxp, sigma):
+        tvec = corrmat_tvec[:, idxp[0], idxp[1]]
+        if sigma:
+            tvec = gaussian_filter1d(tvec, sigma)
+        return tvec
+    corr_tvec_array = [_get_tvec(corrmat_tvec, idxp, sigma)
                        for idxp in idxpair]
     corr_tvec_array = np.stack(corr_tvec_array)
     avgcorr_tvec = np.mean(corr_tvec_array, axis=0)

@@ -98,19 +98,19 @@ def get_embeddf(latent, index):
     embeddf = embeddf.reindex(index.unique('odor'), level='odor')
     return embeddf
 
-def plot_embed_2d(embeddf, component_idx, plot_type='line', ax=None):
-    if ax is None:
-        fig, ax = plt.subplots()
-    embeddf = embeddf.iloc[:,list(component_idx)]
-    groups = embeddf.groupby(['odor'])
-    ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
-    for name, group in groups:
-        if plot_type == 'line':
-            ax.plot(group.iloc[:,0], group.iloc[:,1], marker='o',
-                    linestyle='-', ms=4, label=name, alpha=0.7)
-        elif plot_type == 'scatter':
-            ax.scatter(group.iloc[:,0], group.iloc[:,1], marker='o',
-                       s=4, label=name, alpha=0.7)
+# def plot_embed_2d(embeddf, component_idx, plot_type='line', ax=None):
+#     if ax is None:
+#         fig, ax = plt.subplots()
+#     embeddf = embeddf.iloc[:,list(component_idx)]
+#     groups = embeddf.groupby(['odor'])
+#     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
+#     for name, group in groups:
+#         if plot_type == 'line':
+#             ax.plot(group.iloc[:,0], group.iloc[:,1], marker='o',
+#                     linestyle='-', ms=4, label=name, alpha=0.7)
+#         elif plot_type == 'scatter':
+#             ax.scatter(group.iloc[:,0], group.iloc[:,1], marker='o',
+#                        s=4, label=name, alpha=0.7)
 
 def plot_embed_1d(embeddf, component_idx, ax=None):
     if ax is None:
@@ -225,3 +225,34 @@ def plot_on_poincare_disk(embeddf, ax=None, plot_type='scatter'):
     ax.set_ylim((-1.01, 1.01))
     ax.add_artist(boundary)
     ax.axis('off')
+
+
+def plot_embed_2d(embeddf, component_idx, ax=None, plot_type='scatter'):
+    odor_list = embeddf.index.unique('odor').tolist()
+    clr_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    embeddf = embeddf.iloc[:,list(component_idx)]
+    ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
+    groups = embeddf.groupby(['odor'])
+    for name, group in groups:
+        cidx = odor_list.index(name)
+        color = clr_cycle[cidx]
+
+        trials = group.index.get_level_values('trial').unique()
+        for trial in trials:
+            trial_data = group.xs(trial, level='trial')
+            x = group.iloc[:,0]
+            y = group.iloc[:,1]
+
+            if plot_type == 'line':
+                cmap = LinearSegmentedColormap.from_list('custom',
+                                        [(0, 'white'),
+                                         (1, color)], N=256)
+                norm = plt.Normalize(-20, len(x))
+                points = np.array([x, y]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+                lc = LineCollection(segments, cmap=cmap, norm=norm)
+                lc.set_array(np.arange(len(x)))
+                ax.add_collection(lc)
+            ax.scatter(x, y, label=name, marker='o',
+                       alpha=0.7, color=color, s=1)
