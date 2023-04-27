@@ -161,6 +161,25 @@ def process_data_db_decorator(data_func, exp_list, region_list,
                 update_df(outdf, out_collect_name, exp_name, region, db_dir)
     return process_data_db
 
+
+def process_data_db_decorator_dict(data_func, exp_list, region_list,
+                                   db_dir, in_collect_name=None):
+    def process_data_db(*args, **kwargs):
+        result = dict()
+        for exp in exp_list:
+            exp_name = exp[0]
+            result[exp_name] = dict()
+            for region in region_list:
+                print(exp_name, region)
+                if in_collect_name:
+                    df = read_df(in_collect_name, exp_name, region, db_dir)
+                    outdf = data_func(df, *args, **kwargs)
+                else:
+                    outdf = data_func(exp_name, region, *args, **kwargs)
+                result[exp_name][region] = outdf
+        return result
+    return process_data_db
+
 # TODO 20230122
 def process_dataframe_decorator(data_func):
     def process_dataframe(df, *args, **kwargs):
@@ -182,6 +201,16 @@ def process_dataframe_decorator(data_func):
     return process_dataframe
 
 def read_df(collect_name, exp_name, region, db_dir):
+    """
+    Read the data frame of a single experiment and brain region
+    Args:
+        collect_name: str, the name of the data collection, for example 'dfovf'
+        exp_name: str, the name of the experiment
+        region: str, region name
+        db_dir: str, the root directory containing all data collections
+    Returns:
+        df: pandas.DataFrame, the data frame containing required data
+    """
     print(exp_name, region)
     filename = get_filename(exp_name, region, 'pkl')
     df_file = os.path.join(db_dir, collect_name, filename)

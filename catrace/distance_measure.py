@@ -26,7 +26,7 @@ def compute_distance_mat(embeddf, metric_name):
     return dist_mat
 
 
-def plot_distance_mat(dist_mat, odor_range, n_trials_per_odor, ax):
+def plot_distance_mat(dist_mat, odor_range, n_trials_per_odor, ax=None):
     same_dist = [get_same_odor_avgcorr(dist_mat, od, n_trials_per_odor, sigma=0)
                 for od in odor_range]
     odor_pairs = itertools.combinations(odor_range, 2)
@@ -37,6 +37,6 @@ def plot_distance_mat(dist_mat, odor_range, n_trials_per_odor, ax):
         ax.plot(sd, label=f'#{i}')
 
     for odp, dd in diff_dist:
-        ax.plot(dd, label=f'#{odp[0]} vs #{odp[0]}')
+        ax.plot(dd, label=f'#{odp[0]} vs #{odp[1]}')
 
     ax.legend()

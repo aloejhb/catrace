@@ -78,6 +78,7 @@ def align_tracedf(tracedf, onsetdf, pre_time, post_time, frame_rate):
     cut_df = pd.concat(cut_df)
     return cut_df
 
+
 def select_response(tracedf, snr_thresh, base_window, response_window, frame_rate):
     base_fwindow = convert_sec_to_frame(base_window, frame_rate)
     response_fwindow = convert_sec_to_frame(response_window, frame_rate)
@@ -92,6 +93,7 @@ def select_response(tracedf, snr_thresh, base_window, response_window, frame_rat
     tracedf = tracedf[tracedf['response_y']].drop(columns=['response_x','response_y'])
     return tracedf
 
+
 def restack_as_pattern(tracedf):
     newdf = tracedf.stack()
     newdf.index = newdf.index.rename(newdf.index.names[0:-1]+['time'])
@@ -100,8 +102,10 @@ def restack_as_pattern(tracedf):
     newdf = newdf.reindex(index.unique('odor'), level='odor')
     return newdf
 
+
 def unstack_pattern(df):
     return df.transpose().stack(level=['odor', 'trial'])
+
 
 def bin_tracedf(tracedf, bin_size, axis=0):
     if axis == 1:
@@ -120,6 +124,7 @@ def bin_tracedf(tracedf, bin_size, axis=0):
 
     return binned_dfovf
 
+
 def mean_pattern_in_time_window(dfovf, time_window, frame_rate):
     time_window = np.array(time_window)
     fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
@@ -130,7 +135,6 @@ def mean_pattern_in_time_window(dfovf, time_window, frame_rate):
     pat = response_df.mean(axis=1).unstack(level=level_del)
     pat = pat.reindex(dfovf.index.unique('odor'), level='odor')
     return pat
-
 
 
 def select_neuron(dfovf, thresh):
