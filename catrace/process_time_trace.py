@@ -125,6 +125,13 @@ def bin_tracedf(tracedf, bin_size, axis=0):
     return binned_dfovf
 
 
+def truncate_binned_df(df, frame_window):
+    frame_interval = pd.Interval(left=frame_window[0], right=frame_window[1])
+    selected_index = [tb.overlaps(frame_interval) for tb in df.index.get_level_values('time_bin')]
+    df_trunc = df[selected_index]
+    return df_trunc
+
+
 def mean_pattern_in_time_window(dfovf, time_window, frame_rate):
     time_window = np.array(time_window)
     fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)

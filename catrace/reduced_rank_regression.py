@@ -25,20 +25,25 @@ class ReducedRankRegressor(object):
     - rrank is a rank constraint.
     - reg is a regularization parameter (optional).
     """
-    def __init__(self, X, Y, rank, reg=None):
+    def __init__(self, rank, reg=None):
+        self.rank = rank
+        self.reg = reg
+
+    def fit(self, X, Y):
         if np.size(np.shape(X)) == 1:
             X = np.reshape(X, (-1, 1))
         if np.size(np.shape(Y)) == 1:
             Y = np.reshape(Y, (-1, 1))
-        if reg is None:
-            reg = 0
-        self.rank = rank
+        if self.reg is None:
+            self.reg = 0
 
-        CXX = np.dot(X.T, X) + reg * sparse.eye(np.size(X, 1))
+        CXX = np.dot(X.T, X) + self.reg * sparse.eye(np.size(X, 1))
         CXY = np.dot(X.T, Y)
         _U, _S, V = np.linalg.svd(np.dot(CXY.T, np.dot(np.linalg.pinv(CXX), CXY)))
-        self.W = V[0:rank, :].T
-        self.A = np.dot(np.linalg.pinv(CXX), np.dot(CXY, self.W)).T
+        self.W = np.asarray(V[0:self.rank, :].T)
+        self.A = np.asarray(np.dot(np.linalg.pinv(CXX), np.dot(CXY, self.W)).T)
+
+        return self
 
     def __str__(self):
         return 'Reduced Rank Regressor (rank = {})'.format(self.rank)
@@ -48,3 +53,13 @@ class ReducedRankRegressor(object):
         if np.size(np.shape(X)) == 1:
             X = np.reshape(X, (-1, 1))
         return np.dot(X, np.dot(self.A.T, self.W.T))
+
+    def get_params(self, deep=True):
+        """Return estimator parameter names and values."""
+        return {'rank': self.rank, 'reg': self.reg}
+
+    def set_params(self, **params):
+        """Set the value of one or more estimator parameters."""
+        for parameter, value in params.items():
+            setattr(self, parameter, value)
+        return self
