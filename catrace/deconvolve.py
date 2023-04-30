@@ -1,20 +1,21 @@
 import os
 import sys
 import numpy as np
+import pandas as pd
 import scipy.io as sio
 import ruamel.yaml as yaml
 
-from cascade2p import cascade
+from cascade2p import cascade, utils
 
 
-def compute_noise_levels(traces_df, sampling_rate,
+def compute_noise_levels(trace_df, sampling_rate,
                          baseline_window=None):
     if baseline_window:
-        time_indices = traces.index.get_level_values('time')
-        baseline = traces[time_indices >= baseline_window[0] &
-                          time_indices <= baseline_window[1]]
+        time_indices = trace_df.index.get_level_values('time')
+        baseline = trace_df[(time_indices >= baseline_window[0]) &
+                            (time_indices <= baseline_window[1])]
     else:
-        baseline = traces
+        baseline = trace_df
 
     nl_dfs = []
     for (odor, trial), subset in baseline.groupby(level=('odor', 'trial')):
@@ -25,23 +26,24 @@ def compute_noise_levels(traces_df, sampling_rate,
         nl_dfs.append(nl_df)
 
     noise_level_df = pd.concat(nl_dfs)
-    return noise_level_df
+    mean_noise_levels = noise_level_df.mean(axis=0).to_numpy()
+    return mean_noise_levels
 
 
-def deconvolve_experiment(traces_df, model_name, model_folder):
+def deconvolve_experiment(trace_df, model_name, model_folder,
+                          sampling_rate, baseline_window):
     # Compute noise level for each neuron
-    noise_levels = compute_noise_levels(traces_df)
+    noise_levels = compute_noise_levels(trace_df, sampling_rate, baseline_window)
 
     sp_dfs = []
     # Loop through each odor and trial combination
-    for (odor, trial), subset in result.groupby(level=('odor', 'trial')):
+    for (odor, trial), subset in trace_df.groupby(level=('odor', 'trial')):
         traces = subset.to_numpy().T
         # Predict spike prob
         spike_prob = cascade.predict(model_name, traces,
                                      trace_noise_levels=noise_levels,
                                      model_folder=model_folder,
                                      verbosity=False)
-        import pdb; pdb.set_trace()
         sp_df = pd.DataFrame(spike_prob.T, index=subset.index, columns=subset.columns)
         sp_dfs.append(sp_df)
 
