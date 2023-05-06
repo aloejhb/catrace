@@ -6,7 +6,7 @@ import scipy.io as sio
 import ruamel.yaml as yaml
 
 from cascade2p import cascade, utils
-
+from catrace.process_time_trace import restack_as_pattern
 
 def compute_noise_levels(trace_df, sampling_rate,
                          baseline_window=None):
@@ -32,6 +32,7 @@ def compute_noise_levels(trace_df, sampling_rate,
 
 def deconvolve_experiment(trace_df, model_name, model_folder,
                           sampling_rate, baseline_window):
+    trace_df = restack_as_pattern(trace_df)
     # Compute noise level for each neuron
     noise_levels = compute_noise_levels(trace_df, sampling_rate, baseline_window)
 

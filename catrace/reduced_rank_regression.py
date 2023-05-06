@@ -5,8 +5,12 @@ Implemented by Chris Rayner (2015)
 dchrisrayner AT gmail DOT com
 Optimal linear 'bottlenecking' or 'multitask learning'.
 """
+import os
 import numpy as np
+import joblib
 from scipy import sparse
+from sklearn.preprocessing import StandardScaler
+import catrace.exp_collection as ecl
 
 
 def ideal_data(num, dimX, dimY, rrank, noise=1):
@@ -37,7 +41,7 @@ class ReducedRankRegressor(object):
         if self.reg is None:
             self.reg = 0
 
-        CXX = np.dot(X.T, X) + self.reg * sparse.eye(np.size(X, 1))
+        CXX = np.dot(X.T, X) + self.reg * X.shape[0] * sparse.eye(np.size(X, 1))
         CXY = np.dot(X.T, Y)
         _U, _S, V = np.linalg.svd(np.dot(CXY.T, np.dot(np.linalg.pinv(CXX), CXY)))
         self.W = np.asarray(V[0:self.rank, :].T)
@@ -63,3 +67,31 @@ class ReducedRankRegressor(object):
         for parameter, value in params.items():
             setattr(self, parameter, value)
         return self
+
+    def compute_latent(self, X):
+        return np.matmul(X, self.A.T)
+
+
+def estimate_rrr_experiment(exp_name, rrr_param, trace_dir, out_base_dir, db_dir):
+    df_ob = ecl.read_df(trace_dir, exp_name, 'OB', db_dir)
+    df_dp = ecl.read_df(trace_dir, exp_name, 'Dp', db_dir)
+
+    scaler_x = StandardScaler()
+    x = scaler_x.fit_transform(df_ob)
+
+    scaler_y = StandardScaler()
+    y = scaler_y.fit_transform(df_dp)
+
+    estimator = ReducedRankRegressor(**rrr_param)
+    estimator.fit(x, y)
+
+    out_dir = os.path.join(db_dir, out_base_dir, exp_name)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    joblib.dump(estimator, os.path.join(out_dir, 'rrr_model.pkl'))
+
+    y_predict = estimator.predict(x)
+    x_latent = estimator.compute_latent(x)
+    np.save(os.path.join(out_dir, 'y_predict.npy'), y_predict)
+    np.save(os.path.join(out_dir, 'x_latent.npy'), x_latent)

@@ -11,7 +11,7 @@ from cascade2p import cascade
 def generate_trace_df():
     odor = ['odor1', 'odor2', 'odor3']
     trial = [0, 1]
-    time = range(12)
+    time = range(100)
 
     dataframes = []
     for o, t, tp in pd.MultiIndex.from_product([odor, trial, time], names=['odor', 'trial', 'time']):

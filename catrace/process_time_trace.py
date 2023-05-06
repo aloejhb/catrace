@@ -9,7 +9,6 @@ from .import process_time_trace as ptt
 from . import frame_time
 
 
-
 def compute_dfovf(trace, fzero_twindow, frame_rate=1, intensity_offset=0,
                   fzero_percent=0.5):
     # Calculate dF/F from raw time traces

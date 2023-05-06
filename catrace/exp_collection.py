@@ -263,3 +263,30 @@ def sort_exp_list(exp_list, cond_list):
     cond_list = ['phe-arg', 'arg-phe', 'phe-trp', 'naive']
     exp_list.sort(key=lambda y: cond_list.index(y[1]))
     return exp_list
+
+
+# For each experiment including both OB and Dp
+def read_np(collect_name, exp_name, file_name, db_dir):
+    """
+    Read the numpy data of a single experiment
+    Args:
+        collect_name: str, the name of the data collection, for example 'dfovf'
+        exp_name: str, the name of the experiment
+        file_name: str, the file name of the numpy data file
+        db_dir: str, the root directory containing all data collections
+    Returns:
+        result: numpy.array, the data frame containing required data
+    """
+    np_file = os.path.join(db_dir, collect_name, exp_name, file_name)
+    result = np.load(np_file)
+    return result
+
+
+def concatenate_np_from_db(exp_list, in_collect_name, file_name, db_dir, axis=1):
+    arr_list = [read_np(in_collect_name, exp_name, file_name, db_dir)\
+                for exp_name, cond in exp_list]
+
+    df_list = [pd.DataFrame(arr).rename_axis('latent', axis=1) for arr in arr_list]
+    all_df = pd.concat(df_list, axis, keys=exp_list, names=['fish_id', 'cond'])
+    all_df.index = all_df.index.rename('time')
+    return all_df
