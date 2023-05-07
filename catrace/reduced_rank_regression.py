@@ -95,3 +95,15 @@ def estimate_rrr_experiment(exp_name, rrr_param, trace_dir, out_base_dir, db_dir
     x_latent = estimator.compute_latent(x)
     np.save(os.path.join(out_dir, 'y_predict.npy'), y_predict)
     np.save(os.path.join(out_dir, 'x_latent.npy'), x_latent)
+
+
+def copy_index(df1, df2):
+    """
+    Copy index of df1 to df2 while keep the original df2 index as one level
+    """
+    df1_index = df1.index.to_frame(index=False)
+    df2_index = df2.index.to_frame(index=False)
+    dfidx = df2_index.join(df1_index)
+    idx = pd.MultiIndex.from_frame(dfidx)
+    df2 = df2.set_index(idx)
+    return df2

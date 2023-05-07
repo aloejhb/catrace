@@ -1,7 +1,8 @@
 import itertools
 import umap
 import numpy as np
-from sklearn.metrics.pairwise import paired_distances
+import pandas as pd
+from sklearn.metrics.pairwise import paired_distances, euclidean_distances
 from catrace.pattern_correlation import (
     get_same_odor_avgcorr,
     get_paired_odor_avgcorr)
@@ -40,3 +41,17 @@ def plot_distance_mat(dist_mat, odor_range, n_trials_per_odor, ax=None):
         ax.plot(dd, label=f'#{odp[0]} vs #{odp[1]}')
 
     ax.legend()
+
+
+def compute_distances_to_starting_point(embeddf):
+    first_bin = embeddf.index.unique('time_bin')[0]
+    start_point = embeddf.xs(first_bin,
+                             level='time_bin').mean(axis=0).values.reshape(1,-1)
+
+    distance_list = []
+    for i, row in embeddf.iterrows():
+        distance = euclidean_distances(start_point, row.values.reshape(1,-1))
+        distance_list.append(distance[0][0])
+
+    distances = pd.DataFrame(distance_list, index=embeddf.index)
+    return distances

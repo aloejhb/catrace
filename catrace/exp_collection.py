@@ -181,24 +181,38 @@ def process_data_db_decorator_dict(data_func, exp_list, region_list,
     return process_data_db
 
 # TODO 20230122
+# def process_dataframe_decorator(data_func):
+#     def process_dataframe(df, *args, **kwargs):
+#         if 'region' in df.columns.names:
+#             level = ['region', 'fish_id']
+#         else:
+#             level = 'fish_id'
+
+#         exp_list = df.columns.get_level_values(level=level).unique()
+#         outdf_list = []
+#         for k,exp in enumerate(exp_list):
+#             print(exp)
+#             expdf = df.xs(exp, axis=1, level=level)
+#             outdf_list.append(data_func(expdf, *args, **kwargs))
+
+#         out_dataframe = pd.concat(outdf_list, axis=1, keys=exp_list)
+#         return out_dataframe
+
+#     return process_dataframe
+
+
 def process_dataframe_decorator(data_func):
-    def process_dataframe(df, *args, **kwargs):
+    def process_dataframe(df, **kwargs):
         if 'region' in df.columns.names:
-            level = ['region', 'fish_id']
+            level = ['region', 'fish_id', 'cond']
         else:
-            level = 'fish_id'
+            level = ['fish_id', 'cond']
 
-        exp_list = df.columns.get_level_values(level=level).unique()
-        outdf_list = []
-        for k,exp in enumerate(exp_list):
-            print(exp)
-            expdf = df.xs(exp, axis=1, level=level)
-            outdf_list.append(data_func(df, *args, **kwargs))
-
-        out_dataframe = pd.concat(outdf_list)
+        out_dataframe = df.groupby(level=level, axis=1).apply(data_func, **kwargs)
         return out_dataframe
 
     return process_dataframe
+
 
 def read_df(collect_name, exp_name, region, db_dir):
     """
@@ -287,6 +301,6 @@ def concatenate_np_from_db(exp_list, in_collect_name, file_name, db_dir, axis=1)
                 for exp_name, cond in exp_list]
 
     df_list = [pd.DataFrame(arr).rename_axis('latent', axis=1) for arr in arr_list]
-    all_df = pd.concat(df_list, axis, keys=exp_list, names=['fish_id', 'cond'])
-    all_df.index = all_df.index.rename('time')
+    all_df = pd.concat(df_list, axis=axis, keys=exp_list, names=['fish_id', 'cond'])
+    all_df.index = all_df.index.rename('time_index')
     return all_df

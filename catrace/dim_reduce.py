@@ -115,6 +115,10 @@ def get_embeddf(latent, index):
 def plot_embed_1d(embeddf, component_idx, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
+
+    if "time_index" in embeddf.index.names:
+        embeddf.index = embeddf.index.droplevel("time_index")
+
     embeddf = embeddf.iloc[:,component_idx]
     df = embeddf.unstack().transpose()
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
@@ -241,8 +245,8 @@ def plot_embed_2d(embeddf, component_idx, ax=None, plot_type='scatter'):
         trials = group.index.get_level_values('trial').unique()
         for trial in trials:
             trial_data = group.xs(trial, level='trial')
-            x = group.iloc[:,0]
-            y = group.iloc[:,1]
+            x = trial_data.iloc[:,0]
+            y = trial_data.iloc[:,1]
 
             if plot_type == 'line':
                 cmap = LinearSegmentedColormap.from_list('custom',
@@ -256,3 +260,14 @@ def plot_embed_2d(embeddf, component_idx, ax=None, plot_type='scatter'):
                 ax.add_collection(lc)
             ax.scatter(x, y, label=name, marker='o',
                        alpha=0.7, color=color, s=1)
+
+
+def plot_latent(embeddf, component_idx, ax=None):
+    """
+    Plot latent variables as a whole time trace concatenating all trials
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+    df = embeddf.iloc[:,component_idx].to_numpy()
+    ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
+    ax.plot(df)
