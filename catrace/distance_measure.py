@@ -2,7 +2,9 @@ import itertools
 import umap
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import paired_distances, euclidean_distances
+from sklearn.metrics.pairwise import (paired_distances, euclidean_distances,
+                                      cosine_distances)
+from scipy.spatial.distance import pdist, squareform
 from catrace.pattern_correlation import (
     get_same_odor_avgcorr,
     get_paired_odor_avgcorr)
@@ -55,3 +57,21 @@ def compute_distances_to_starting_point(embeddf):
 
     distances = pd.DataFrame(distance_list, index=embeddf.index)
     return distances
+
+
+def compute_pairwise_distance(df, metric='cosine'):
+    """
+    Args:
+    df: columns features, rows samples
+    """
+    dist = pdist(df, metric=metric)
+    dist_matrix = squareform(dist)
+
+    # set lower triangle and diagonal of distance matrix to NaN to eliminate symmetric entries
+    idx = np.triu_indices(dist_matrix.shape[0], k=0)
+    dist_matrix[idx] = np.nan
+
+    idxs = df.index.get_level_values('odor')
+    df_flat = pd.DataFrame(dist_matrix, columns=idxs, index=idxs)
+    df_flat = df_flat.rename_axis('odor1', axis=0).rename_axis('odor2', axis=1).stack().reset_index()
+    return df_flat

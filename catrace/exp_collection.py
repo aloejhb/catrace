@@ -201,14 +201,15 @@ def process_data_db_decorator_dict(data_func, exp_list, region_list,
 #     return process_dataframe
 
 
-def process_dataframe_decorator(data_func):
-    def process_dataframe(df, **kwargs):
+def process_dataframe_decorator(data_func, level=None, axis=1):
+    if level is None:
         if 'region' in df.columns.names:
             level = ['region', 'fish_id', 'cond']
         else:
             level = ['fish_id', 'cond']
 
-        out_dataframe = df.groupby(level=level, axis=1).apply(data_func, **kwargs)
+    def process_dataframe(df, **kwargs):
+        out_dataframe = df.groupby(level=level, axis=axis).apply(data_func, **kwargs)
         return out_dataframe
 
     return process_dataframe
