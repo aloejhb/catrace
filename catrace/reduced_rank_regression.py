@@ -41,8 +41,13 @@ class ReducedRankRegressor(object):
         if self.reg is None:
             self.reg = 0
 
-        CXX = np.dot(X.T, X) + self.reg * X.shape[0] * sparse.eye(np.size(X, 1))
+        N = X.shape[0]
+        CXX = np.dot(X.T, X) + self.reg * N * sparse.eye(np.size(X, 1))
         CXY = np.dot(X.T, Y)
+        # Here we use CXX and CXY, not CovXX, CovXY, because
+        # CXX = N * CovXX and CXY = N * CovXY
+        # but in singular value decomposition, the V is always unitary
+        # Hence the scaling by N is only visible in _S
         _U, _S, V = np.linalg.svd(np.dot(CXY.T, np.dot(np.linalg.pinv(CXX), CXY)))
         self.W = np.asarray(V[0:self.rank, :].T)
         self.A = np.asarray(np.dot(np.linalg.pinv(CXX), np.dot(CXY, self.W)).T)
@@ -95,15 +100,3 @@ def estimate_rrr_experiment(exp_name, rrr_param, trace_dir, out_base_dir, db_dir
     x_latent = estimator.compute_latent(x)
     np.save(os.path.join(out_dir, 'y_predict.npy'), y_predict)
     np.save(os.path.join(out_dir, 'x_latent.npy'), x_latent)
-
-
-def copy_index(df1, df2):
-    """
-    Copy index of df1 to df2 while keep the original df2 index as one level
-    """
-    df1_index = df1.index.to_frame(index=False)
-    df2_index = df2.index.to_frame(index=False)
-    dfidx = df2_index.join(df1_index)
-    idx = pd.MultiIndex.from_frame(dfidx)
-    df2 = df2.set_index(idx)
-    return df2

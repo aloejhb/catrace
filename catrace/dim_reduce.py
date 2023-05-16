@@ -124,7 +124,7 @@ def plot_embed_1d(embeddf, component_idx, ax=None):
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
 
     color_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    odor_list = list(df.columns.levels[0])
+    odor_list = embeddf.index.unique('odor').tolist()
     for label, content in df.iteritems():
         color = color_cycle[odor_list.index(label[0])]
         ax.plot(content.to_numpy(), color=color, linestyle='-', ms=4, label=label[0], alpha=0.7)
