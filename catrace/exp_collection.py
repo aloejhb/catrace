@@ -180,33 +180,10 @@ def process_data_db_decorator_dict(data_func, exp_list, region_list,
         return result
     return process_data_db
 
-# TODO 20230122
-# def process_dataframe_decorator(data_func):
-#     def process_dataframe(df, *args, **kwargs):
-#         if 'region' in df.columns.names:
-#             level = ['region', 'fish_id']
-#         else:
-#             level = 'fish_id'
 
-#         exp_list = df.columns.get_level_values(level=level).unique()
-#         outdf_list = []
-#         for k,exp in enumerate(exp_list):
-#             print(exp)
-#             expdf = df.xs(exp, axis=1, level=level)
-#             outdf_list.append(data_func(expdf, *args, **kwargs))
-
-#         out_dataframe = pd.concat(outdf_list, axis=1, keys=exp_list)
-#         return out_dataframe
-
-#     return process_dataframe
-
-
-def process_dataframe_decorator(data_func, level=None, axis=1):
-    if level is None:
-        if 'region' in df.columns.names:
-            level = ['region', 'fish_id', 'cond']
-        else:
-            level = ['fish_id', 'cond']
+def process_dataframe_decorator(data_func, level=['fish_id', 'cond'], axis=1):
+    # if 'region' in df.columns.names:
+    #     level = ['region', 'fish_id', 'cond']
 
     def process_dataframe(df, **kwargs):
         out_dataframe = df.groupby(level=level, axis=axis).apply(data_func, **kwargs)
@@ -304,4 +281,12 @@ def concatenate_np_from_db(exp_list, in_collect_name, file_name, db_dir, axis=1)
     df_list = [pd.DataFrame(arr).rename_axis('latent', axis=1) for arr in arr_list]
     all_df = pd.concat(df_list, axis=axis, keys=exp_list, names=['fish_id', 'cond'])
     all_df.index = all_df.index.rename('time_index')
+    return all_df
+
+
+def concatenate_df_from_dict(df_dict, exp_list, region_list, axis=1):
+    expkey_list = get_expkey_list(exp_list, region_list)
+    df_list = [df_dict[expkey[0]][expkey[1]] for expkey in expkey_list]
+    all_df = pd.concat(df_list, axis, keys=expkey_list,
+                       names=('fish_id', 'region', 'cond'))
     return all_df

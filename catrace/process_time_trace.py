@@ -131,6 +131,21 @@ def truncate_binned_df(df, frame_window):
     return df_trunc
 
 
+def truncate_tracedf(df, frame_window):
+    df = restack_as_pattern(df)
+    times = df.index.get_level_values('time')
+    df_trunc = df[(times >= frame_window[0]) & (times <= frame_window[1])]
+    return df_trunc
+
+
+def truncate_df_window(df, frame_window):
+    if 'time_bin' in df.index.names:
+        df_trunc = truncate_binned_df(df, frame_window)
+    else:
+        df_trunc = truncate_tracedf(df, frame_window)
+    return df_trunc
+
+
 def mean_pattern_in_time_window(dfovf, time_window, frame_rate):
     time_window = np.array(time_window)
     fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
