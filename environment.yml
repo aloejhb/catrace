@@ -14,8 +14,7 @@ dependencies:
   - libffi=3.3=he6710b0_2
   - libgcc-ng=12.2.0=h65d4601_19
   - libstdcxx-ng=12.2.0=h46fd767_19
-  - libuuid=1.0.3=h7f8727e_2
-  - llvm-openmp=14.0.6=h9e868ea_0
+  - libuuid=1.0.3=h7f8727e_2  - llvm-openmp=14.0.6=h9e868ea_0
   - ncurses=6.3=h5eee18b_3
   - openssl=1.1.1t=h0b41bf4_0
   - python=3.10.4=h12debd9_0
