@@ -231,7 +231,7 @@ def plot_on_poincare_disk(embeddf, ax=None, plot_type='scatter'):
     ax.axis('off')
 
 
-def plot_embed_2d(embeddf, component_idx, ax=None, plot_type='scatter'):
+def plot_embed_2d(embeddf, component_idx, ax, plot_type='scatter'):
     odor_list = embeddf.index.unique('odor').tolist()
     clr_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 

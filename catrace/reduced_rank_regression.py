@@ -50,7 +50,7 @@ class ReducedRankRegressor(object):
         # Hence the scaling by N is only visible in _S
         _U, _S, V = np.linalg.svd(np.dot(CXY.T, np.dot(np.linalg.pinv(CXX), CXY)))
         self.W = np.asarray(V[0:self.rank, :].T)
-        self.A = np.asarray(np.dot(np.linalg.pinv(CXX), np.dot(CXY, self.W)).T)
+        self.A = np.asarray(np.dot(np.linalg.pinv(CXX), np.dot(CXY, self.W)))
 
         return self
 
@@ -61,7 +61,7 @@ class ReducedRankRegressor(object):
         """Predict Y from X."""
         if np.size(np.shape(X)) == 1:
             X = np.reshape(X, (-1, 1))
-        return np.dot(X, np.dot(self.A.T, self.W.T))
+        return np.dot(X, np.dot(self.A, self.W.T))
 
     def get_params(self, deep=True):
         """Return estimator parameter names and values."""
@@ -74,13 +74,28 @@ class ReducedRankRegressor(object):
         return self
 
     def compute_latent(self, X):
-        return np.matmul(X, self.A.T)
+        return np.matmul(X, self.A)
 
 
 def estimate_rrr_experiment(exp_name, rrr_param, trace_dir, out_base_dir, db_dir):
     df_ob = ecl.read_df(trace_dir, exp_name, 'OB', db_dir)
     df_dp = ecl.read_df(trace_dir, exp_name, 'Dp', db_dir)
 
+    estimator, x_latent, y_predict = compute_rrr_experiment(df_ob, df_dp,
+                                                            rrr_param)
+
+
+    out_dir = os.path.join(db_dir, out_base_dir, exp_name)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    joblib.dump(estimator, os.path.join(out_dir, 'rrr_model.pkl'))
+
+    np.save(os.path.join(out_dir, 'x_latent.npy'), x_latent)
+    np.save(os.path.join(out_dir, 'y_predict.npy'), y_predict)
+
+
+def compute_rrr_experiment(df_ob, df_dp, rrr_param):
     scaler_x = StandardScaler()
     x = scaler_x.fit_transform(df_ob)
 
@@ -90,13 +105,7 @@ def estimate_rrr_experiment(exp_name, rrr_param, trace_dir, out_base_dir, db_dir
     estimator = ReducedRankRegressor(**rrr_param)
     estimator.fit(x, y)
 
-    out_dir = os.path.join(db_dir, out_base_dir, exp_name)
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-
-    joblib.dump(estimator, os.path.join(out_dir, 'rrr_model.pkl'))
-
-    y_predict = estimator.predict(x)
     x_latent = estimator.compute_latent(x)
-    np.save(os.path.join(out_dir, 'y_predict.npy'), y_predict)
-    np.save(os.path.join(out_dir, 'x_latent.npy'), x_latent)
+    y_predict = estimator.predict(x)
+
+    return estimator, x_latent, y_predict
