@@ -88,10 +88,12 @@ def compute_pca(pattern, n_components):
     embeddf = get_embeddf(latent, pattern.index)
     return embeddf
 
+
 def compute_umap(pattern, umap_params):
     latent = umap.UMAP(**umap_params).fit_transform(pattern)
     embeddf = get_embeddf(latent, pattern.index)
     return embeddf
+
 
 def get_embeddf(latent, index):
     embeddf = pd.DataFrame(latent, index=index)

@@ -176,3 +176,7 @@ def permute_odors(df):
     odor_list = df.index.unique('odor').tolist()
     random.shuffle(odor_list)
     return df.reindex(odor_list, level='odor')
+
+
+def select_odors_df(df, odors):
+    return df.loc[df.index.get_level_values('odor').isin(odors)]
