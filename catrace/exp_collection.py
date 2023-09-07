@@ -2,8 +2,6 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import pymongo
-import gridfs
 import itertools
 import pickle
 from sklearn import decomposition
