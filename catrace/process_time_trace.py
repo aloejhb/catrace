@@ -158,6 +158,20 @@ def mean_pattern_in_time_window(dfovf, time_window, frame_rate):
     return pat
 
 
+def mean_pattern_in_time_window(df, time_window, frame_rate):
+    """Compute pattern of neuron responses averaged within a time window"""
+    time_window = np.array(time_window)
+    fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
+    df_filtered = df[(df.index.get_level_values('time') >= fwindow[0])
+                     & (df.index.get_level_values('time') <= fwindow[1])]
+    all_levels = list(df.index.names)
+    all_levels.remove('time')
+    # Group by except time, sort=False keeps the original order
+    pattern = df_filtered.groupby(level=all_levels, sort=False).mean()
+    return pattern
+
+
+
 def select_neuron(dfovf, thresh):
     dfovf_restack = ptt.restack_as_pattern(dfovf)
     deviation = (dfovf_restack - dfovf_restack.mean()).abs().max() \
@@ -180,3 +194,12 @@ def permute_odors(df):
 
 def select_odors_df(df, odors):
     return df.loc[df.index.get_level_values('odor').isin(odors)]
+
+
+def sort_odors(df, odor_list):
+    cat_odor = pd.CategoricalDtype(categories=odor_list, ordered=True)
+    idx = df.index.names.index('odor')
+    df.index = df.index.set_levels(df.index.levels[idx].astype(cat_odor),
+                             level='odor')
+    df = df.sort_values('odor')
+    return df
