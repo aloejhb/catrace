@@ -10,9 +10,7 @@ from scipy.ndimage import gaussian_filter1d
 
 from .dataio import load_trace_file
 from .trace_dataframe import get_colname
-
-
-
+from .process_time_trace import mean_pattern_in_time_window
 
 
 def load_trace_from_planes(data_root_dir, exp_name, plane_num_list, cell_list=[]):
@@ -513,3 +511,10 @@ if __name__ == '__main__':
     # cc_range = range(6)
 
     # plt.show()
+
+
+def compute_pattern_correlation(dfovf, time_window, frame_rate):
+    """Compute pattern correlation of from time traces of neurons"""
+    pattern = mean_pattern_in_time_window(dfovf, time_window, frame_rate)
+    corrmat = np.corrcoef(pattern.to_numpy())
+    return corrmat
