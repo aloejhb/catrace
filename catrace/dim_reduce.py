@@ -273,3 +273,19 @@ def plot_latent(embeddf, component_idx, ax=None):
     df = embeddf.iloc[:,component_idx].to_numpy()
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
     ax.plot(df)
+
+
+def plot_latent_3d(latent_df):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    groups = latent_df.groupby(['odor'])
+    for name, group in groups:
+        ax.scatter(group.iloc[:,0], group.iloc[:,1], group.iloc[:,2],
+                   marker='o', s=4, label=name, alpha=0.7)
+
+
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    ax.set_title('3D Surface Plot')
