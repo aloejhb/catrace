@@ -172,14 +172,22 @@ def mean_pattern_in_time_window(df, time_window, frame_rate):
 
 
 
-def select_neuron(dfovf, thresh):
+def restack_and_select_neuron(dfovf, thresh):
     dfovf_restack = ptt.restack_as_pattern(dfovf)
     deviation = (dfovf_restack - dfovf_restack.mean()).abs().max() \
         / dfovf_restack.std()
     idx = deviation >= thresh
     dfovf_select_restack = dfovf_restack.loc[:,idx]
     dfovf_select = dfovf_select_restack.stack(level=['plane','neuron']).unstack(level='time')
-    return dfovf_select
+    return dfovf_select, idx
+
+
+def select_neuron(dfovf, thresh):
+    deviation = (dfovf - dfovf.mean()).abs().max() \
+        / dfovf.std()
+    idx = deviation >= thresh
+    dfovf_select = dfovf.loc[:,idx]
+    return dfovf_select, idx
 
 
 def average_trials(tracedf):

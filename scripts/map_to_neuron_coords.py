@@ -6,6 +6,8 @@ sys.path.append('..')
 from catrace.nrn_coord import import_roi_stack, draw_stack, assign_meta
 
 if __name__ == '__main__':
+    # If roi_stack.tif is not yet generated, use Ca_imaging/scripts/process_roi/batch_convert_roiarray_to_mask.m
+    # to generate
     region = 'OB'
     cluster_df = pd.read_pickle('../../../results/JH_analysis/cluster_df_{}.pkl'.format(region))
     expname = '2021-07-31-DpOBEM-JH17'

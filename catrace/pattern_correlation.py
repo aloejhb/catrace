@@ -91,7 +91,7 @@ def plot_avg_trace(trace, onset_list=[]):
         [plt.vlines(x, 0, 1, color=colors[i % len(colors)]) for i, x in enumerate(onset_list)]
 
 
-def plot_pattern_correlation(pattern, ax, clim=None, title='', perc=0):
+def plot_pattern_correlation_old(pattern, ax, clim=None, title='', perc=0):
     if perc:
         cellidx = filter_cell_based_on_response(pattern, perc)
         pattern = pattern[:, cellidx]
@@ -340,181 +340,29 @@ def plot_decorrelation(trace, ax, sigma0=0, aa_range = range(3), bb_range=range(
     ax[0].set_ylabel('Corr. coef.')
 
 
-if __name__ == '__main__':
-    data_root_dir = '/home/hubo/Projects/Ca_imaging/results/'
-    dp_exp = '2019-09-03-OBfastZ'
-    ob_exp = '2019-09-03-OBFastZ2'
-
-    outdir = os.path.join(data_root_dir, ob_exp, 'analysis')
-    if not os.path.exists(outdir):
-        os.mkdir(outdir)
-    frame_rate = 30/4
-    n_trial = 3
-    pre_time = 5
-    post_time = 10
-    trace = {}
-    trace_aligned = {}
-    time_window_dict = dict(ob_outer=[5, 10], ob_deep=[5, 10], dp=[4.8, 6.5])
-
-
-    # get odor list
-    trc_dict = dataio.load_trace_file(data_root_dir, ob_exp, 4)
-    odor_list = trc_dict['odor_list']
-    trc_dict = dataio.load_trace_file(data_root_dir, dp_exp, 1)
-    if not (odor_list == trc_dict['odor_list']).all():
-        raise Exception('OB and Dp odor lists are different')
-
-    # cell_cut = dict(ob_outer=80, ob_deep=275, dp=348)
-
-
-    ## OB data
-    trace['ob_outer'] = load_trace_from_planes(data_root_dir, ob_exp, [4], [70])
-    trace['ob_deep'] = load_trace_from_planes(data_root_dir, ob_exp, [2])
-    ob_onset_list = [101, 102, 103, 99, 114, 102, 102, 102, 116, 102, 102, 104, 104, 102, 104, 114, 111, 111, 102, 102, 102, 102, 102, 102]
-
-    trace_aligned['ob_outer'] = align_trace(trace['ob_outer'], ob_onset_list,
-                                            pre_time, post_time, frame_rate)
-    trace_aligned['ob_deep'] = align_trace(trace['ob_deep'], ob_onset_list,
-                                           pre_time, post_time, frame_rate)
-
-
-    ## Dp data
-    plane_num_list = [2]
-    # cell_list = [100, 120]
-    trace['dp'] = load_trace_from_planes(data_root_dir, dp_exp, plane_num_list)
-
-    ## Detect onset
-    dp_onset_list = [94, 101, 100, 96, 100, 99, 101, 101, 100, 102, 96, 90, 93, 100, 96, 96, 97, 95, 97, 97, 86, 100, 100, 100]
-    if not len(dp_onset_list):
-        dp_onset_list = get_df_onset_list(dp_trace)
-
-    trace_aligned['dp'] = align_trace(trace['dp'], dp_onset_list,
-                                      pre_time, post_time, frame_rate)
-
-    ## Plot sample average trace
-    sigma = 0.1
-    ala_range = range(3,6)
-    tca_range = range(9,12)
-    region_text_dict = dict(ob_outer='OB outer', ob_deep='OB deep', dp='Dp')
-    color_dict = dict(ob_outer='#2ca02c', ob_deep='#1f77b4', dp='#ff7f0e')
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=[10, 5], sharex=True, sharey=True)
-    plt.sca(ax[0])
-    plot_region_avg(trace_aligned, ala_range, frame_rate, sigma, region_text_dict, color_dict)
-    ax[0].set_xlabel('Time (s)')
-    ax[0].set_ylabel('dF/F')
-    ax[0].yaxis.set_tick_params(labelsize=18)
-    ax[0].xaxis.set_tick_params(labelsize=18)
-    plt.sca(ax[1])
-    plot_region_avg(trace_aligned, tca_range, frame_rate, sigma, region_text_dict, color_dict)
-    ax[1].set_xlabel('Time (s)')
-    ax[1].xaxis.set_tick_params(labelsize=18)
-    plt.legend(framealpha=0.5, fontsize=12)
-    plt.tight_layout()
-    fig_file = os.path.join(outdir, 'sample_avg.svg')
-    plt.savefig(fig_file)
-    plt.show()
-
-    perc = 0
-    # region_name = 'ob_outer'
-
-    ## Calculate response pattern
-    mytrace = {}
-    pattern = {}
-    for region_name in trace_aligned.keys():
-        time_window = time_window_dict[region_name]
-        trc = trace_aligned[region_name]
-        pat = convert_trace_to_pattern(trc, time_window, frame_rate)
-        if perc:
-            cellidx = filter_cell_based_on_response(pattern, perc)
-            trc = trc[:, cellidx, :]
-            pat = convert_trace_to_pattern(trc, time_wrindow, frame_rate)
-        mytrace[region_name] = trc
-        pattern[region_name] = pat
-
-    ## Plot PCA
-    # fig, ax = plt.subplots(nrows=3, ncols=1, figsize=[5, 12])
-    # for i, region_name in enumerate(trace_aligned.keys()):
-    #     nrnpca.plot_response_pca(pattern[region_name], odor_list[:6], n_trial, ax[i], ellipsekwargs=dict(linewidth=2))
-    #     ax[i].set_xlabel('PC1')
-    #     ax[i].set_ylabel('PC2')
-    # ax[0].legend(framealpha=0.5, fontsize=16)
-    # plt.tight_layout()
-
-    # fig_file = os.path.join(outdir, 'pca.svg')
-    # plt.savefig(fig_file)
-    # plt.show()
-
-    ## Plot correlation matrix
-    # fig, ax = plt.subplots(nrows=3, ncols=1, figsize=[5, 12])
-    # rep_odor_list = np.repeat(odor_list, 3)
-    # color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
-    # rep_color_list = np.repeat(color_list, 3)
-    # for i, region_name in enumerate(trace_aligned.keys()):
-    #     im = plot_pattern_correlation(pattern[region_name], ax[i],
-    #                                   odor_list=rep_odor_list, color_list=rep_color_list,
-    #                                   clim=(-0.05, 1))
-    #     plt.sca(ax[i])
-    #     cbar = plt.colorbar(im)
-    #     cbar.ax.yaxis.set_tick_params(labelsize=18)
-
-    # plt.tight_layout()
-
-    # fig_file = os.path.join(outdir, 'corrmat.svg')
-    # plt.savefig(fig_file)
-    # plt.show()
-    #
-
-    aa_range = range(3)
-    bb_range = range(3, 6)
-    sigma0 = 0.5
-
-    fig, ax = plt.subplots(nrows=3, ncols=2, figsize=[10, 12], sharex=True, sharey='row')
-    for i, region_name in enumerate(mytrace.keys()):
-        corrmat_tvec = calc_correlation_tvec(gaussian_filter1d(mytrace[region_name], sigma0, axis=2))
-        cc_corr_avg, cc_corr_std = calc_cross_odor_group_corr(corrmat_tvec, aa_range, bb_range, n_trial)
-        xvec = np.arange(len(cc_corr_avg)) / frame_rate
-        cc_color = 'gray'
-        cc_label = 'a.a. vs b.a'
-
-        aa_colors = ['blue', 'orange']
-        aa_labels = ['a.a. same', 'a.a. diff']
-        calc_decorrelation(corrmat_tvec, aa_range, ax[i, 0], frame_rate,
-                           aa_colors, aa_labels)
-        plot_avg_std(xvec, cc_corr_avg, cc_corr_std, ax[i, 0],
-                     color=cc_color, line_label=cc_label)
-
-        bb_colors = ['purple', 'green']
-        bb_labels = ['b.a. same', 'b.a. diff']
-        calc_decorrelation(corrmat_tvec, bb_range, ax[i, 1], frame_rate,
-                           bb_colors, bb_labels)
-        plot_avg_std(xvec, cc_corr_avg, cc_corr_std, ax[i, 1],
-                     color=cc_color, line_label=cc_label)
-    for i in range(2):
-        ax[2, i].legend(framealpha=0.5, fontsize=12)
-        ax[2, i].set_xlabel('Time (s)')
-        ax[2, i].xaxis.set_tick_params(labelsize=18)
-    for i in range(3):
-        ax[i, 0].set_ylabel('Corr. coef.')
-        ax[i, 0].yaxis.set_tick_params(labelsize=18)
-    ax[1, 0].set_yticks([0, 0.2, 0.4, 0.6])
-    ax[2, 0].set_yticks([0, 0.2, 0.4, 0.6])
-    plt.tight_layout()
-    fig_file = os.path.join(outdir, 'corr_tvec2.svg')
-    plt.savefig(fig_file)
-    plt.show()
-
-    # # plt.plot(np.mean(trace_aligned[:9, :, :], axis=(0, 1)))
-    # # plt.plot(np.mean(trace_aligned[10:18, :, :], axis=(0, 1)))
-
-
-
-    # cc_range = range(6)
-
-    # plt.show()
-
-
 def compute_pattern_correlation(dfovf, time_window, frame_rate):
     """Compute pattern correlation of from time traces of neurons"""
     pattern = mean_pattern_in_time_window(dfovf, time_window, frame_rate)
     corrmat = np.corrcoef(pattern.to_numpy())
     return corrmat
+
+
+def plot_pattern_correlation(corrmat, odor_list, ax, clim=None, title='', perc=0):
+    cat_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+
+    im = ax.imshow(corrmat, cmap='RdBu_r')
+    tick_pos = np.arange(corrmat.shape[0])
+    if len(odor_list):
+        ax.set_yticks(tick_pos)
+        ax.set_yticklabels(odor_list)
+        ax.yaxis.set_tick_params(length=0)
+        # if len(color_list):
+        #     for xtick, color in zip(ax.get_yticklabels(), color_list):
+        #         xtick.set_color(color)
+        # ax.set_xticks([])
+
+    if clim:
+        im.set_clim(clim)
+    if title:
+        ax.set_title(title)
+    return im

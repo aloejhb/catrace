@@ -33,3 +33,11 @@ def quantile_all(df, q=0.999):
     df_scaled = df_centered / np.quantile(np.absolute(df_centered),q=q)
     df_out = pd.DataFrame(data=df_scaled, columns=df.columns, index=df.index)
     return df_out
+
+
+def centering(df):
+    scaler = StandardScaler(copy=True, with_mean=True, with_std=False)
+    scaler.fit(df)
+    df_centered = scaler.transform(df)
+    df_out = pd.DataFrame(data=df_centered, columns=df.columns, index=df.index)
+    return df_out

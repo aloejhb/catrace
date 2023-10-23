@@ -3,6 +3,10 @@ import numpy as np
 from sklearn.feature_selection import mutual_info_regression
 
 from sklearn.preprocessing import MinMaxScaler
+from os.path import join as pjoin
+
+
+from . import exp_collection as ecl
 
 def compute_mi_experiment(db_dir, trace_dir, exp_name):
     dfob = ecl.read_df(trace_dir, exp_name, 'OB', db_dir)
@@ -87,3 +91,33 @@ def select_high_mi(db_dir, trace_dir, exp_name, mi_threshold):
     dfdp_mi = dfdp.iloc[:, dp_neurons]
 
     return dfob_mi, dfdp_mi, top_indices
+
+
+def select_high_resp_low_mi(db_dir, trace_dir, exp_name, region, mi_thresh, resp_thresh):
+    """
+    Select neurons that have high response but low mutual information between OB and Dp
+    """
+    df = ecl.read_df(trace_dir, exp_name, region, db_dir)
+    if trace_dir == 'dfovf':
+        df.columns = df.columns.set_names('time')
+        df = df.stack('time').unstack(['plane', 'neuron'])
+
+    mi_file = pjoin(db_dir, 'mutual_information', f"mi_matrix_{exp_name}.npy")
+    mi_matrix = np.load(mi_file)
+
+    top_indices = np.argwhere(mi_matrix >= mi_threshold)
+
+    if region == 'OB':
+        region_idx = 0
+    else:
+        region_idx = 1
+
+    high_mi_idx = list(set(top_indices[:, region_idx]))
+    print('{} #{} neurons'.format(region, len(high_mi_idx)))
+
+    df_select, high_resp_id = ptt.select_neuron(df, resp_thresh)
+    high_resp_idx = np.where(high_resp_id)[0]
+
+    high_resp_low_mi = np.setdiff1d(high_resp_idx, high_mi_idx)
+
+    return high_resp_low_mi, df

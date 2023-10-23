@@ -9,6 +9,8 @@ from sklearn import decomposition
 from sklearn.model_selection import cross_val_score
 import umap
 
+from .scale import standard_scale
+
 
 def plot_embed(embeddf):
     groups = embeddf.groupby(['odor'])
@@ -93,6 +95,13 @@ def compute_umap(pattern, umap_params):
     latent = umap.UMAP(**umap_params).fit_transform(pattern)
     embeddf = get_embeddf(latent, pattern.index)
     return embeddf
+
+
+def compute_pca_umap(df, n_components, umap_params):
+    scaled_df = standard_scale(df)
+    pca_latent = compute_pca(scaled_df, n_components)
+    umap_latent = compute_umap(pca_latent, umap_params)
+    return umap_latent
 
 
 def get_embeddf(latent, index):
