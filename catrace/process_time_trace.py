@@ -93,12 +93,13 @@ def select_response(tracedf, snr_thresh, base_window, response_window, frame_rat
     return tracedf
 
 
-def restack_as_pattern(tracedf):
-    newdf = tracedf.stack()
-    newdf.index = newdf.index.rename(newdf.index.names[0:-1]+['time'])
-    index = newdf.index
-    newdf = newdf.unstack(['plane', 'neuron'])
-    newdf = newdf.reindex(index.unique('odor'), level='odor')
+def restack_as_pattern(df):
+    df.columns = df.columns.set_names('time')
+    newdf = df.unstack(['plane', 'neuron']).stack('time')
+    # newdf = tracedf.stack()
+    # newdf.index = newdf.index.rename(newdf.index.names[0:-1]+['time'])
+    # index = newdf.index
+    # newdf = newdf.reindex(index.unique('odor'), level='odor')
     return newdf
 
 
@@ -188,6 +189,17 @@ def select_neuron(dfovf, thresh):
     idx = deviation >= thresh
     dfovf_select = dfovf.loc[:,idx]
     return dfovf_select, idx
+
+
+def select_neuron_df(dfovf, thresh):
+    dfovf_select, _ = select_neuron(dfovf, thresh)
+    return dfovf_select
+
+
+def select_neuron_dfovf(dfovf, thresh):
+    dfovf = restack_as_pattern(dfovf)
+    dfovf_select, _ = select_neuron(dfovf, thresh)
+    return dfovf_select
 
 
 def average_trials(tracedf):
