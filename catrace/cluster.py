@@ -166,8 +166,8 @@ def plot_single_cluster_cont_with_stat(cluster_count_df, cond_list,
             ax.set_ylim(ylim)
     return annotator, fig
 
-def get_significant_pairs(annotator):
-    new_pairs = [[ano.data.group1, ano.data.group2] for ano in annotator.annotations if ano.data.pvalue < 0.05]
+def get_significant_pairs(annotator, threshold=0.05):
+    new_pairs = [[ano.data.group1, ano.data.group2] for ano in annotator.annotations if ano.data.pvalue < threshold]
     return new_pairs
 
 

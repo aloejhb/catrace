@@ -9,6 +9,8 @@ from sklearn import decomposition
 from sklearn.model_selection import cross_val_score
 import umap
 
+from .scale import standard_scale
+
 
 def plot_embed(embeddf):
     groups = embeddf.groupby(['odor'])
@@ -93,6 +95,13 @@ def compute_umap(pattern, umap_params):
     latent = umap.UMAP(**umap_params).fit_transform(pattern)
     embeddf = get_embeddf(latent, pattern.index)
     return embeddf
+
+
+def compute_pca_umap(df, n_components, umap_params):
+    scaled_df = standard_scale(df)
+    pca_latent = compute_pca(scaled_df, n_components)
+    umap_latent = compute_umap(pca_latent, umap_params)
+    return umap_latent
 
 
 def get_embeddf(latent, index):
@@ -273,3 +282,19 @@ def plot_latent(embeddf, component_idx, ax=None):
     df = embeddf.iloc[:,component_idx].to_numpy()
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
     ax.plot(df)
+
+
+def plot_latent_3d(latent_df):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    groups = latent_df.groupby(['odor'])
+    for name, group in groups:
+        ax.scatter(group.iloc[:,0], group.iloc[:,1], group.iloc[:,2],
+                   marker='o', s=4, label=name, alpha=0.7)
+
+
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    ax.set_title('3D Surface Plot')

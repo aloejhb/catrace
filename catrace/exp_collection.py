@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import itertools
 import pickle
+import re
 from sklearn import decomposition
 
 from . import pattern_correlation as pcr
@@ -225,7 +226,8 @@ def concatenate_df_from_db(exp_list, region_list, in_collect_name, db_dir, axis=
     expkey_list = get_expkey_list(exp_list, region_list)
     df_list = [read_df(in_collect_name, expkey[0], expkey[1], db_dir)\
                for expkey in expkey_list]
-    if in_collect_name in ['dfovf', 'dfovf_select']:
+    # if in_collect_name in ['dfovf', 'dfovf_select'] or re.match('dfovf_select', in_collect_name):
+    if in_collect_name == 'dfovf':
         df_list = [ptt.restack_as_pattern(df) for df in df_list]
     all_df = pd.concat(df_list, axis, keys=expkey_list, names=['fish_id', 'region', 'cond'])
     return all_df
