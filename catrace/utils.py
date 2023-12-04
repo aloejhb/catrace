@@ -11,3 +11,12 @@ def copy_index(df1, df2):
     idx = pd.MultiIndex.from_frame(dfidx)
     df2 = df2.set_index(idx)
     return df2
+
+
+def copy_frame_structure(arr, df):
+    """
+    Copy the row and column indices and create a new dataframe with values of an array
+    """
+    assert df.shape == arr.shape, "Dataframe and array shapes should be the same"
+    new_df = pd.DataFrame(arr, index=df.index, columns=df.columns)
+    return new_df

@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter1d
 
 from .frame_time import convert_sec_to_frame
-from .import process_time_trace as ptt
+from . import process_time_trace as ptt
 from . import frame_time
-
+from . import utils
 
 def compute_dfovf(trace, fzero_twindow, frame_rate=1, intensity_offset=0,
                   fzero_percent=0.5):
@@ -183,22 +183,27 @@ def restack_and_select_neuron(dfovf, thresh):
     return dfovf_select, idx
 
 
-def select_neuron(dfovf, thresh):
-    deviation = (dfovf - dfovf.mean()).abs().max() \
-        / dfovf.std()
+def select_neuron(dfovf, thresh, sigma=None):
+    if sigma:
+        dfovf_filtered = gaussian_filter1d(dfovf, sigma, axis=0)
+        dfovf_filtered = utils.copy_frame_structure(dfovf_filtered, dfovf)
+    else:
+        dfovf_filtered = dfovf
+    deviation = (dfovf_filtered - dfovf_filtered.mean()).abs().max() \
+        / dfovf_filtered.std()
     idx = deviation >= thresh
     dfovf_select = dfovf.loc[:,idx]
     return dfovf_select, idx
 
 
-def select_neuron_df(dfovf, thresh):
-    dfovf_select, _ = select_neuron(dfovf, thresh)
+def select_neuron_df(dfovf, **kwargs):
+    dfovf_select, _ = select_neuron(dfovf,**kwargs)
     return dfovf_select
 
 
-def select_neuron_dfovf(dfovf, thresh):
+def select_neuron_dfovf(dfovf, **kwargs):
     dfovf = restack_as_pattern(dfovf)
-    dfovf_select, _ = select_neuron(dfovf, thresh)
+    dfovf_select, _ = select_neuron(dfovf, **kwargs)
     return dfovf_select
 
 
