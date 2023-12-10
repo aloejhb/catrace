@@ -344,22 +344,38 @@ def compute_pattern_correlation(dfovf, time_window, frame_rate):
     """Compute pattern correlation of from time traces of neurons"""
     pattern = mean_pattern_in_time_window(dfovf, time_window, frame_rate)
     corrmat = np.corrcoef(pattern.to_numpy())
+    corrmat = pd.DataFrame(corrmat, index=pattern.index, columns=pattern.index)
     return corrmat
 
 
-def plot_pattern_correlation(corrmat, odor_list, ax, clim=None, title='', perc=0):
-    cat_color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+def plot_pattern_correlation(df, ax=None, clim=None, title=''):
+    """
+    Plot patthern correlation matrix heatmap
 
-    im = ax.imshow(corrmat, cmap='RdBu_r')
-    tick_pos = np.arange(corrmat.shape[0])
-    if len(odor_list):
-        ax.set_yticks(tick_pos)
-        ax.set_yticklabels(odor_list)
-        ax.yaxis.set_tick_params(length=0)
-        # if len(color_list):
-        #     for xtick, color in zip(ax.get_yticklabels(), color_list):
-        #         xtick.set_color(color)
-        # ax.set_xticks([])
+    Args:
+        **df**: pandas.DataFrame. Square matrix of pattern correlation.
+        Row index levels: odor, trial. Column index levels: odor, trial.
+        **ax**: plot Axis object. Axis to plot the matrix heatmap.
+        **clim**: List. Color limit of the heatmap. Default ``None``.
+        **title**: str. Title of the plot. Default ``''``.
+
+    Returns:
+        Image object.
+    """
+    im = ax.imshow(df.to_numpy(), cmap='RdBu_r')
+
+    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+    odor_list = df.index.unique(level='odor')
+    color_dict = dict(zip(odor_list, color_list[:len(odor_list)]))
+    y_labels = [label[0] for label in df.index]
+    tick_pos = np.arange(df.shape[0])
+    ax.yaxis.set_tick_params(length=0)
+    ax.set_yticks(tick_pos)
+    ax.set_yticklabels(y_labels)
+    ax.set_xticks([])
+
+    for i, ytick in enumerate(ax.get_yticklabels()):
+        ytick.set_color(color_dict[ytick.get_text()])
 
     if clim:
         im.set_clim(clim)

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from scipy.spatial.distance import mahalanobis
 
 def invert_cov_mat(cov_mat, reg=1e-5):
@@ -14,15 +15,20 @@ def compute_mahals(points, ref, inv_cov_mat):
     mahals = [mahalanobis(p, ref, inv_cov_mat) for p in points]
     return mahals
 
-def compute_mahals_df(df):
+def compute_mahals_df(df, window=None):
+    if window is not None:
+        times = df.index.get_level_values('time')
+        idxs = (times >= window[0]) &(times <= window[1])
+        df = df.loc[idxs, :]
+
     odor_list = list(df.index.unique('odor'))
 
     # Compute center for each odor
-    centers = df.groupby(level='odor').mean()
+    centers = df.groupby(level='odor', sort=False).mean()
 
     # Compute cov_mat for each odor
     cov_mats = dict()
-    for name, group in df.groupby(level='odor'):
+    for name, group in df.groupby(level='odor', sort=False):
         cov_mats[name] = np.cov(group.transpose())
 
     # Compute inv_cov_mat for each odor
@@ -48,3 +54,37 @@ def compute_mahals_df(df):
     # Convert to DataFrame using MultiIndex
     mahals_df = pd.DataFrame(list(mahals_dict.values()), index=multi_index)
     return mahals_df
+
+
+def compute_mahals_mat(df):
+    mahals_df = compute_mahals_df(df)
+    mahals_mat = get_mean_mahals_mat(mahals_df)
+    return mahals_mat
+
+
+def get_mean_mahals_mat(mahals_df, odor_list):
+    mahals_mean = mahals_df.mean(axis=1)
+    mahals_mean.name = 'mean_mahal_dist'
+    mahals_mean = mahals_mean.reset_index()
+
+
+    mahals_mean['order'] = range(len(mahals_mean))
+    mahals_mat = mahals_mean.pivot_table(index='odor', columns='ref_odor', values='mean_mahal_dist')
+
+    mahals_mat.index = pd.Categorical(mahals_mat.index, categories=odor_list, ordered=True)
+    mahals_mat = mahals_mat.sort_index()
+    mahals_mat = mahals_mat[odor_list]
+    return mahals_mat
+
+
+def plot_mean_mahals_mat(mahals_mat, ax=None, vmin=None, vmax=None):
+    ax = sns.heatmap(mahals_mat, ax=ax, cmap="RdBu_r", cbar=False,
+                      vmin=vmin, vmax=vmax,
+                      xticklabels=mahals_mat.columns, yticklabels=mahals_mat.index)
+    return ax
+
+
+def plot_mahals_mat_df(df, ax=None, odor_list=None, **kwargs):
+    mahals_mat = get_mean_mahals_mat(df, odor_list=odor_list)
+    ax = plot_mean_mahals_mat(mahals_mat, ax=ax, **kwargs)
+    return ax

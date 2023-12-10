@@ -6,6 +6,7 @@ import itertools
 import pickle
 import re
 from sklearn import decomposition
+from functools import partial
 
 from . import pattern_correlation as pcr
 from . import process_time_trace as ptt
@@ -94,7 +95,7 @@ def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
         ax = axes.flatten()[axidx]
         plot_func(data, *args, **kwargs, ax=ax)
     plt.tight_layout()
-    return fig
+    return fig, axes
 
 def _get_axidx(k, cond_cumsum, nrow_list, ncol):
     ncond = sum(cond_cumsum<=k)
@@ -158,6 +159,28 @@ def process_data_db_decorator(data_func, exp_list, region_list,
                 else:
                     outdf = data_func(exp_name, region, *args, **kwargs)
                 update_df(outdf, out_collect_name, exp_name, region, db_dir)
+    return process_data_db
+
+
+def process_data_db_decorator_parallel(data_func, exp_list, region_list,
+                                       out_collect_name, db_dir, in_collect_name=None,
+                                       parallelism=1):
+
+    def process_data_db(*args, **kwargs):
+        func = partial(data_func, *args, **kwargs)
+        def _process_data(exp_name, region):
+            if in_collect_name:
+                df = read_df(in_collect_name, exp_name, region, db_dir)
+                outdf = func(df)
+            else:
+                outdf = func(exp_name, region)
+            update_df(outdf, out_collect_name, exp_name, region, db_dir)
+
+        exp_names = [e[0] for e in exp_list]
+        exps = itertools.product(exp_names, region_list)
+        with Pool(processes=parallelism) as pool:
+            pool.map(_process_data, exps)
+
     return process_data_db
 
 
