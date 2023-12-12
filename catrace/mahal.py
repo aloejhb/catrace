@@ -15,7 +15,7 @@ def compute_mahals(points, ref, inv_cov_mat):
     mahals = [mahalanobis(p, ref, inv_cov_mat) for p in points]
     return mahals
 
-def compute_mahals_df(df, window=None):
+def compute_mahals_df(df, window=None, reg=0):
     if window is not None:
         times = df.index.get_level_values('time')
         idxs = (times >= window[0]) &(times <= window[1])
@@ -34,7 +34,7 @@ def compute_mahals_df(df, window=None):
     # Compute inv_cov_mat for each odor
     inv_cov_mats = dict()
     for key, val in cov_mats.items():
-        inv_cov_mats[key] = invert_cov_mat(val, reg=1e-5)
+        inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
 
     # For each ordered pair of odors,
     # compute mahal distance from all points of odor1 to center of odor2

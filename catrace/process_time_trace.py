@@ -190,6 +190,11 @@ def select_neuron_df(dfovf, **kwargs):
 
 
 def select_neuron_dfovf(dfovf, **kwargs):
+    """
+    Select neuron based on their response/noise ratio
+
+    use this for raw dfovf as input
+    """
     dfovf = restack_as_pattern(dfovf)
     dfovf_select, _ = select_neuron(dfovf, **kwargs)
     return dfovf_select
@@ -214,5 +219,11 @@ def sort_odors(df, odor_list):
     idx = df.index.names.index('odor')
     df.index = df.index.set_levels(df.index.levels[idx].astype(cat_odor),
                              level='odor')
-    df = df.sort_values('odor')
-    return df
+    # df = df.sort_values('odor') # this alters the order of other levels
+    groups = []
+    keys = []
+    for key, group in df.groupby(level='odor'):
+        groups.append(group)
+        keys.append(key)
+    df_sorted = pd.concat(groups)
+    return df_sorted

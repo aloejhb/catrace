@@ -65,7 +65,7 @@ def plot_trace_avg(trace, frame_rate, odor_list=None, ax=None):
         fig, ax = plt.subplots()
     else:
         new_ax_flag = 0
-    # trace = trace.stack(level=['plane','neuron']).unstack(level='time')
+    trace = trace.stack(level=['plane','neuron']).unstack(level='time')
     odor_avg = trace.groupby(level=['odor']).mean()
     if odor_list:
         odor_avg = odor_avg.reindex(odor_list)
