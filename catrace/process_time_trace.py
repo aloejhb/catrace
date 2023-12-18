@@ -61,8 +61,8 @@ def detect_tracedf_onset(trace, onset_param, debug=False):
         return trial_avg
 
 
-def cut_tracedf(tracedf, onset, pre_nframe, post_nframe):
-    cdf = tracedf.iloc[:, onset-pre_nframe:onset+post_nframe]
+def cut_tracedf(tracedf, window):
+    cdf = tracedf.iloc[:, window[0]:window[1]]
     cdf.columns = pd.RangeIndex(start=0, stop=len(cdf.columns), step=1)
     return cdf
 

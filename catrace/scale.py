@@ -41,3 +41,17 @@ def centering(df):
     df_centered = scaler.transform(df)
     df_out = pd.DataFrame(data=df_centered, columns=df.columns, index=df.index)
     return df_out
+
+
+def scale_by_response(df, window, method='max'):
+    times = df.index.get_level_values('time')
+    idx = (times >= window[0]) & (times <= window[1])
+    response = df.iloc[idx, :].mean(axis=1).groupby(level=('odor', 'trial')).mean()
+    if method == 'max':
+        normalizer = response.max()
+    elif method == 'mean':
+        normalizer = response.mean()
+    else:
+        ValueError('Method should be either max or mean.')
+    df_scaled = df / normalizer
+    return df_scaled
