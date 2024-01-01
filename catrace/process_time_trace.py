@@ -211,7 +211,13 @@ def permute_odors(df):
 
 
 def select_odors_df(df, odors):
-    return df.loc[df.index.get_level_values('odor').isin(odors)]
+    sedf = df.loc[df.index.get_level_values('odor').isin(odors)].copy()
+    odors = sedf.index.get_level_values('odor').remove_unused_categories()
+    sedf.loc[:, 'new_odor'] = odors
+    sedf.set_index('new_odor', append=True, inplace=True)
+    sedf.index = sedf.index.droplevel('odor')
+    sedf.rename_axis(index={'new_odor': 'odor'}, inplace=True)
+    return sedf
 
 
 def sort_odors(df, odor_list):

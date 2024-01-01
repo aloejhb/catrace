@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from scipy.spatial.distance import mahalanobis
+from scipy.spatial.distance import mahalanobis, euclidean
 
 def invert_cov_mat(cov_mat, reg=1e-5):
     reg_term = reg * np.identity(cov_mat.shape[0])
@@ -15,7 +15,12 @@ def compute_mahals(points, ref, inv_cov_mat):
     mahals = [mahalanobis(p, ref, inv_cov_mat) for p in points]
     return mahals
 
-def compute_mahals_df(df, window=None, reg=0):
+def compute_euclideans(points, ref):
+    mahals = [euclidean(p, ref) for p in points]
+    return mahals
+
+
+def compute_distances_df(df, window=None, metric='mahal', reg=0):
     if window is not None:
         times = df.index.get_level_values('time')
         idxs = (times >= window[0]) &(times <= window[1])
@@ -26,34 +31,42 @@ def compute_mahals_df(df, window=None, reg=0):
     # Compute center for each odor
     centers = df.groupby(level='odor', sort=False).mean()
 
-    # Compute cov_mat for each odor
-    cov_mats = dict()
-    for name, group in df.groupby(level='odor', sort=False):
-        cov_mats[name] = np.cov(group.transpose())
+    if metric == 'mahal':
+        # Compute cov_mat for each odor
+        cov_mats = dict()
+        for name, group in df.groupby(level='odor', sort=False):
+            cov_mats[name] = np.cov(group.transpose())
 
-    # Compute inv_cov_mat for each odor
-    inv_cov_mats = dict()
-    for key, val in cov_mats.items():
-        inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
+        # Compute inv_cov_mat for each odor
+        inv_cov_mats = dict()
+        for key, val in cov_mats.items():
+            inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
 
-    # For each ordered pair of odors,
-    # compute mahal distance from all points of odor1 to center of odor2
-    mahals_dict = dict()
+    distances_dict = dict()
     for odor1 in odor_list:
         data1 = df.xs(odor1, level='odor')
         for odor2 in odor_list:
             center2 = centers.loc[odor2]
-            inv_cov_mat2 = inv_cov_mats[odor2]
-            mahals_dict[(odor1, odor2)] = compute_mahals(data1.to_numpy(), center2.to_numpy(), inv_cov_mat2)
 
+            if metric == 'mahal':
+                inv_cov_mat2 = inv_cov_mats[odor2]
+                distances = compute_mahals(data1.to_numpy(),
+                                          center2.to_numpy(),
+                                          inv_cov_mat2)
+            elif metric == 'euclidean':
+                distances = compute_euclideans(data1.to_numpy(),
+                                              center2.to_numpy())
+            else:
+                raise ValueError('Metric should be either mahal or euclidean.')
 
+            distances_dict[(odor1, odor2)] = distances
 
     # Convert to DataFrame with separate columns for odors
-    multi_index = pd.MultiIndex.from_tuples(mahals_dict.keys(), names=['odor', 'ref_odor'])
+    multi_index = pd.MultiIndex.from_tuples(distances_dict.keys(), names=['odor', 'ref_odor'])
 
     # Convert to DataFrame using MultiIndex
-    mahals_df = pd.DataFrame(list(mahals_dict.values()), index=multi_index)
-    return mahals_df
+    distances_df = pd.DataFrame(list(distances_dict.values()), index=multi_index)
+    return distances_df
 
 
 def compute_mahals_mat(df):

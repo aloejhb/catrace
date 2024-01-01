@@ -1,5 +1,6 @@
-from multiprocessing import Pool, cpu_count
+import os
 import numpy as np
+from multiprocessing import Pool, cpu_count
 from sklearn.feature_selection import mutual_info_regression
 
 from sklearn.preprocessing import MinMaxScaler
@@ -23,16 +24,13 @@ def compute_mi_experiment(db_dir, trace_dir, exp_name):
 
     # Now compute the mutual information matrix
     mi_file = pjoin(db_dir, 'mutual_information', f"mi_matrix_{exp_name}.npy")
-    if not os.path.exists(mi_file):
-        mi_matrix = compute_mi_matrix_continuous(x_scaled, y_scaled, parallelism=10)
-        np.save(mi_file, mi_matrix)
-    else:
-    # Or load the already computed matrix
-        mi_matrix = np.load(mi_file)
+    mi_matrix = compute_mi_matrix_continuous(x_scaled, y_scaled, parallelism=10)
+    np.save(mi_file, mi_matrix)
 
 
 def compute_single_column(x, y_column):
     return mutual_info_regression(x, y_column, discrete_features=False)
+
 
 def compute_mi_matrix_continuous(x, y, parallelism=None):
     """
@@ -121,3 +119,9 @@ def select_high_resp_low_mi(db_dir, trace_dir, exp_name, region, mi_thresh, resp
     high_resp_low_mi = np.setdiff1d(high_resp_idx, high_mi_idx)
 
     return high_resp_low_mi, df
+
+
+def load_mi(mi_dir, exp_name):
+    mi_file = os.path.join(mi_dir, f'mi_matrix_{exp_name}.npy')
+    mi_matrix = np.load(mi_file)
+    return mi_matrix
