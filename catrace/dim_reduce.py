@@ -84,10 +84,13 @@ def compute_svd(pattern, n_components):
     return results
 
 
-def compute_pca(pattern, n_components):
+def compute_pca(pattern, n_components, return_model=False):
     pca = decomposition.PCA(n_components)
     latent = pca.fit_transform(pattern)
     embeddf = get_embeddf(latent, pattern.index)
+    if return_model:
+        return embeddf, pca
+
     return embeddf
 
 

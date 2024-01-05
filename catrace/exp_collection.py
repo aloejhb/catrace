@@ -162,6 +162,26 @@ def process_data_db_decorator(data_func, exp_list, region_list,
     return process_data_db
 
 
+def process_data_model_decorator(data_func, exp_list, region_list,
+                                out_collect_name, db_dir, in_collect_name=None):
+    model_out_dir = os.path.join(db_dir, out_collect_name, 'models')
+    if not os.path.exists(model_out_dir):
+        os.mkdir(model_out_dir)
+    def process_data_model(*args, **kwargs):
+        for exp in exp_list:
+            exp_name = exp[0]
+            for region in region_list:
+                print(exp_name, region)
+                if in_collect_name:
+                    df = read_df(in_collect_name, exp_name, region, db_dir)
+                    outdf, model = data_func(df, *args, **kwargs)
+                else:
+                    outdf, model = data_func(exp_name, region, *args, **kwargs)
+                update_df(outdf, out_collect_name, exp_name, region, db_dir)
+                update_df(model, model_out_dir, exp_name, region, '')
+    return process_data_model
+
+
 def process_data_db_decorator_parallel(data_func, exp_list, region_list,
                                        out_collect_name, db_dir, in_collect_name=None,
                                        parallelism=1):
