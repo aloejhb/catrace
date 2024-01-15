@@ -160,27 +160,36 @@ def mean_pattern_in_time_window(df, time_window, frame_rate):
     return pattern
 
 
+def compute_deviation(dfovf, std_window=None, sigma=None):
+    if std_window is not None:
+        std = dfovf[std_window[0]:std_window[1]].std()
+    else:
+        std = dfovf.std()
 
-def restack_and_select_neuron(dfovf, thresh):
-    dfovf_restack = ptt.restack_as_pattern(dfovf)
-    deviation = (dfovf_restack - dfovf_restack.mean()).abs().max() \
-        / dfovf_restack.std()
-    idx = deviation >= thresh
-    dfovf_select_restack = dfovf_restack.loc[:,idx]
-    dfovf_select = dfovf_select_restack.stack(level=['plane','neuron']).unstack(level='time')
-    return dfovf_select, idx
-
-
-def select_neuron(dfovf, thresh, sigma=None):
     if sigma:
         dfovf_filtered = gaussian_filter1d(dfovf, sigma, axis=0)
         dfovf_filtered = utils.copy_frame_structure(dfovf_filtered, dfovf)
     else:
         dfovf_filtered = dfovf
-    deviation = (dfovf_filtered - dfovf_filtered.mean()).abs().max() \
-        / dfovf_filtered.std()
+
+    deviation = (dfovf_filtered - dfovf_filtered.mean()).abs().max() / std
+    return deviation
+
+def compute_max_of_mean_response_per_trial(df, window):
+    df = select_time_points(df, window)
+    response = df.groupby(level=['odor', 'trial']).mean().max()
+    return response
+
+
+def select_neuron(dfovf, thresh, std_window=None, sigma=None):
+    deviation = compute_deviation(dfovf, std_window=std_window, sigma=sigma)
     idx = deviation >= thresh
     dfovf_select = dfovf.loc[:,idx]
+    return dfovf_select, idx
+
+def select_neuron(dfovf, criterion_func, method, **kwargs):
+    criteria = criterion_func(dfovf, **kwargs)
+
     return dfovf_select, idx
 
 
@@ -233,3 +242,10 @@ def sort_odors(df, odor_list):
         keys.append(key)
     df_sorted = pd.concat(groups)
     return df_sorted
+
+
+def select_time_points(df, window):
+    """Select trace dataframe in a given time window"""
+    df_filtered = df[(df.index.get_level_values('time') >= window[0])
+                     & (df.index.get_level_values('time') <= window[1])]
+    return df_filtered

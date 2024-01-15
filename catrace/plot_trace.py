@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
 
-from .trace_dataframe import get_colname, concatenate_planes
-
 
 def get_plot_idx(i, n_trial, n_odor):
     idx = (i % n_trial) * n_odor + np.floor(i/n_trial) + 1

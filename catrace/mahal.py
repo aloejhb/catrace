@@ -69,35 +69,39 @@ def compute_distances_df(df, window=None, metric='mahal', reg=0):
     return distances_df
 
 
-def compute_mahals_mat(df):
-    mahals_df = compute_mahals_df(df)
-    mahals_mat = get_mean_mahals_mat(mahals_df)
-    return mahals_mat
+# def compute_mahals_mat(df):
+#     mahals_df = compute_mahals_df(df)
+#     mahals_mat = get_mean_mahals_mat(mahals_df)
+#     return mahals_mat
 
 
-def get_mean_mahals_mat(mahals_df, odor_list):
-    mahals_mean = mahals_df.mean(axis=1)
-    mahals_mean.name = 'mean_mahal_dist'
-    mahals_mean = mahals_mean.reset_index()
+def get_mean_dist_mat(dist_df, odor_list):
+    dist_mean = dist_df.mean(axis=1)
+    dist_mean.name = 'mean_dist'
+    dist_mean = dist_mean.reset_index()
 
 
-    mahals_mean['order'] = range(len(mahals_mean))
-    mahals_mat = mahals_mean.pivot_table(index='odor', columns='ref_odor', values='mean_mahal_dist')
+    dist_mean['order'] = range(len(dist_mean))
+    dist_mat = dist_mean.pivot_table(index='odor',
+                                     columns='ref_odor',
+                                     values='mean_dist')
 
-    mahals_mat.index = pd.Categorical(mahals_mat.index, categories=odor_list, ordered=True)
-    mahals_mat = mahals_mat.sort_index()
-    mahals_mat = mahals_mat[odor_list]
-    return mahals_mat
+    dist_mat.index = pd.Categorical(dist_mat.index,
+                                    categories=odor_list,
+                                    ordered=True)
+    dist_mat = dist_mat.sort_index()
+    dist_mat = dist_mat[odor_list]
+    return dist_mat
 
 
-def plot_mean_mahals_mat(mahals_mat, ax=None, vmin=None, vmax=None):
-    ax = sns.heatmap(mahals_mat, ax=ax, cmap="RdBu_r", cbar=False,
+def plot_mean_dist_mat(dist_mat, ax=None, vmin=None, vmax=None):
+    ax = sns.heatmap(dist_mat, ax=ax, cmap="RdBu_r", cbar=False,
                       vmin=vmin, vmax=vmax,
-                      xticklabels=mahals_mat.columns, yticklabels=mahals_mat.index)
+                      xticklabels=dist_mat.columns, yticklabels=dist_mat.index)
     return ax
 
 
-def plot_mahals_mat_df(df, ax=None, odor_list=None, **kwargs):
-    mahals_mat = get_mean_mahals_mat(df, odor_list=odor_list)
-    ax = plot_mean_mahals_mat(mahals_mat, ax=ax, **kwargs)
+def plot_dist_mat_df(df, ax=None, odor_list=None, **kwargs):
+    dist_mat = get_mean_dist_mat(df, odor_list=odor_list)
+    ax = plot_mean_dist_mat(dist_mat, ax=ax, **kwargs)
     return ax

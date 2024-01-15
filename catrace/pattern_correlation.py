@@ -9,7 +9,6 @@ from importlib import reload
 from scipy.ndimage import gaussian_filter1d
 
 from .dataio import load_trace_file
-from .trace_dataframe import get_colname
 from .process_time_trace import mean_pattern_in_time_window
 
 

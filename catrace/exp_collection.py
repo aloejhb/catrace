@@ -147,7 +147,7 @@ def process_data_dict_decorator(data_func, exp_list, region_list,
     return get_data_dict
 
 def process_data_db_decorator(data_func, exp_list, region_list,
-                              out_collect_name, db_dir, in_collect_name=None):
+                              out_collect_name, in_collect_name=None, db_dir=''):
     def process_data_db(*args, **kwargs):
         for exp in exp_list:
             exp_name = exp[0]
