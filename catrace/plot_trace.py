@@ -77,3 +77,7 @@ def plot_trace_avg(trace, frame_rate, odor_list=None, ax=None):
         return fig
     else:
         ax.legend().remove()
+
+
+def plot_average_time_trace(dff):
+    plt.plot(dff.groupby('time').mean().mean(axis=1))

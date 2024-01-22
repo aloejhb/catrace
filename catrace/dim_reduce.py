@@ -10,6 +10,7 @@ from sklearn.model_selection import cross_val_score
 import umap
 
 from .scale import standard_scale
+from .process_time_trace import select_odors_df, select_time_points
 
 
 def plot_embed(embeddf):
@@ -92,6 +93,16 @@ def compute_pca(pattern, n_components, return_model=False):
         return embeddf, pca
 
     return embeddf
+
+def select_and_pca(df, odor_list, window, n_components):
+    """
+    Select odors and time points and then do pca
+    """
+    df = select_odors_df(df, odor_list)
+    df = select_time_points(df, window)
+    embeddf, model = compute_pca(df, n_components, return_model=True)
+    return embeddf, model
+
 
 
 def compute_umap(pattern, umap_params):

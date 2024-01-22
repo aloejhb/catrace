@@ -7,6 +7,18 @@ import ruamel.yaml as yaml
 
 from cascade2p import cascade, utils
 from catrace.process_time_trace import restack_as_pattern
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+
+
+@dataclass_json
+@dataclass
+class DeconvolveConfig:
+    model_folder: str
+    model_name: str
+    baseline_window: list[int, int] # in terms of frames
+    sampling_rate: float
+
 
 def compute_noise_levels(trace_df, sampling_rate,
                          baseline_window=None):

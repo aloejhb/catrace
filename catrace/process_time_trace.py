@@ -181,20 +181,20 @@ def compute_max_of_mean_response_per_trial(df, window):
     return response
 
 
-def select_neuron(dfovf, thresh, std_window=None, sigma=None):
-    deviation = compute_deviation(dfovf, std_window=std_window, sigma=sigma)
-    idx = deviation >= thresh
-    dfovf_select = dfovf.loc[:,idx]
-    return dfovf_select, idx
-
-def select_neuron(dfovf, criterion_func, method, **kwargs):
+def select_neuron(dfovf, criterion_func, thresh=None, head=None, **kwargs):
     criteria = criterion_func(dfovf, **kwargs)
-
+    if thresh:
+        idx = criteria >= thresh
+    elif head:
+        idx = criteria.index[:head]
+    else:
+        raise ValueError('To Choose a correct selection method, set either the parameter thresh or head')
+    dfovf_select = dfovf.loc[:,idx]
     return dfovf_select, idx
 
 
 def select_neuron_df(dfovf, **kwargs):
-    dfovf_select, _ = select_neuron(dfovf,**kwargs)
+    dfovf_select, _ = select_neuron(dfovf, **kwargs)
     return dfovf_select
 
 
@@ -209,6 +209,19 @@ def select_neuron_dfovf(dfovf, **kwargs):
     return dfovf_select
 
 
+def select_neuron_and_sort_odors(df, odor_list, **kwargs):
+    df = select_neuron_df(df, **kwargs)
+    df = sort_odors(df, odor_list)
+    return df
+
+
+def select_neurons_by_df(source_df, select_df):
+    """
+    Select in source_df the columns that also appears in select_df
+    """
+    return source_df.loc[select_df.index]
+
+
 def average_trials(tracedf):
     pass
 
@@ -221,8 +234,11 @@ def permute_odors(df):
 
 def select_odors_df(df, odors):
     sedf = df.loc[df.index.get_level_values('odor').isin(odors)].copy()
-    odors = sedf.index.get_level_values('odor').remove_unused_categories()
-    sedf.loc[:, 'new_odor'] = odors
+    odor_idxs = sedf.index.get_level_values('odor')
+    if not isinstance(odor_idxs.dtype, pd.CategoricalDtype):
+        odor_idxs = pd.Categorical(odor_idxs)
+    odor_idxs = odor_idxs.remove_unused_categories()
+    sedf.loc[:, 'new_odor'] = odor_idxs
     sedf.set_index('new_odor', append=True, inplace=True)
     sedf.index = sedf.index.droplevel('odor')
     sedf.rename_axis(index={'new_odor': 'odor'}, inplace=True)
@@ -232,6 +248,7 @@ def select_odors_df(df, odors):
 def sort_odors(df, odor_list):
     cat_odor = pd.CategoricalDtype(categories=odor_list, ordered=True)
     idx = df.index.names.index('odor')
+    import pdb; pdb.set_trace()
     df.index = df.index.set_levels(df.index.levels[idx].astype(cat_odor),
                              level='odor')
     # df = df.sort_values('odor') # this alters the order of other levels

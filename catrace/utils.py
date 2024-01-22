@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 
 
@@ -20,3 +21,10 @@ def copy_frame_structure(arr, df):
     assert df.shape == arr.shape, "Dataframe and array shapes should be the same"
     new_df = pd.DataFrame(arr, index=df.index, columns=df.columns)
     return new_df
+
+
+def load_config(file_path, config_class):
+    with open(file_path, 'r') as file:
+        json_data = json.load(file)
+        config = config_class.from_json(json_data)
+        return config

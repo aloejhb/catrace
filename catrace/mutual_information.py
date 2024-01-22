@@ -6,15 +6,20 @@ from sklearn.feature_selection import mutual_info_regression
 from sklearn.preprocessing import MinMaxScaler
 from os.path import join as pjoin
 
-
 from . import exp_collection as ecl
 
-def compute_mi_experiment(db_dir, trace_dir, exp_name):
-    dfob = ecl.read_df(trace_dir, exp_name, 'OB', db_dir)
-    dfdp = ecl.read_df(trace_dir, exp_name, 'Dp', db_dir)
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 
-    x = dfob.to_numpy()
-    y = dfdp.to_numpy()
+
+@dataclass_json
+@dataclass
+class MutualInfoConfig:
+    pass
+
+def compute_mi_experiment(dfx, dfy, parallelism=None):
+    x = dfx.to_numpy() # OB
+    y = dfy.to_numpy() # Dp
 
     # Initialize and fit the scaler
     scaler_x = MinMaxScaler()
@@ -23,9 +28,8 @@ def compute_mi_experiment(db_dir, trace_dir, exp_name):
     y_scaled = scaler_y.fit_transform(y)
 
     # Now compute the mutual information matrix
-    mi_file = pjoin(db_dir, 'mutual_information', f"mi_matrix_{exp_name}.npy")
-    mi_matrix = compute_mi_matrix_continuous(x_scaled, y_scaled, parallelism=10)
-    np.save(mi_file, mi_matrix)
+    mi_matrix = compute_mi_matrix_continuous(x_scaled, y_scaled, parallelism=parallelism)
+    return mi_matrix
 
 
 def compute_single_column(x, y_column):
@@ -122,6 +126,6 @@ def select_high_resp_low_mi(db_dir, trace_dir, exp_name, region, mi_thresh, resp
 
 
 def load_mi(mi_dir, exp_name):
-    mi_file = os.path.join(mi_dir, f'mi_matrix_{exp_name}.npy')
+    mi_file = os.path.join(mi_dir, f'{exp_name}.npy')
     mi_matrix = np.load(mi_file)
     return mi_matrix
