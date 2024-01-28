@@ -33,3 +33,22 @@ def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
 
     plt.tight_layout()
     return fig, axes
+
+
+def plot_conds(df, plot_func, sharex=False,
+               sharey=False, *args, **kwargs):
+    """
+    Plot for each training condtion.
+    so far only for 4 conditions
+    """
+    ncol = 2
+    nrow = 2
+    figsize=[8, 3.5*nrow]
+    fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
+                             sharey=sharey, figsize=figsize)
+    for idx, (name, group) in enumerate(df.groupby(level='cond', axis=1)):
+        ax = axes.flatten()[idx]
+        plot_func(group, *args, **kwargs, ax=ax)
+        ax.set_title(name)
+    plt.tight_layout()
+    return fig, axes

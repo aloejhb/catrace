@@ -234,7 +234,7 @@ def process_dataframe_decorator(data_func, level=['fish_id', 'cond'], axis=1):
     return process_dataframe
 
 
-def read_df(collect_name, exp_name, region, db_dir):
+def read_df(collect_name, exp_name, region, db_dir=''):
     """
     Read the data frame of a single experiment and brain region
     Args:
@@ -251,7 +251,7 @@ def read_df(collect_name, exp_name, region, db_dir):
     df = pd.read_pickle(df_file)
     return df
 
-def update_df(df, collect_name, exp_name, region, db_dir):
+def update_df(df, collect_name, exp_name, region, db_dir=''):
     collect_dir = os.path.join(db_dir, collect_name)
     if not os.path.exists(collect_dir):
         os.mkdir(collect_dir)

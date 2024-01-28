@@ -4,6 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter1d
 
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+
 from .frame_time import convert_sec_to_frame
 from . import process_time_trace as ptt
 from . import frame_time
@@ -248,7 +251,6 @@ def select_odors_df(df, odors):
 def sort_odors(df, odor_list):
     cat_odor = pd.CategoricalDtype(categories=odor_list, ordered=True)
     idx = df.index.names.index('odor')
-    import pdb; pdb.set_trace()
     df.index = df.index.set_levels(df.index.levels[idx].astype(cat_odor),
                              level='odor')
     # df = df.sort_values('odor') # this alters the order of other levels
@@ -263,6 +265,39 @@ def sort_odors(df, odor_list):
 
 def select_time_points(df, window):
     """Select trace dataframe in a given time window"""
-    df_filtered = df[(df.index.get_level_values('time') >= window[0])
-                     & (df.index.get_level_values('time') <= window[1])]
+    if 'time' in df.index.names:
+        df_filtered = df[(df.index.get_level_values('time') >= window[0])
+                        & (df.index.get_level_values('time') <= window[1])]
+    elif 'time_bin' in df.index.names:
+        df_filtered = select_binned_time_points(df, window)
+    else:
+        raise ValueError('Dataframe index names should contain time or time_bin')
+
     return df_filtered
+
+
+def select_binned_time_points(df, window):
+    interval = pd.Interval(left=window[0], right=window[1])
+    selected_index = [tb.overlaps(interval) for tb in df.index.get_level_values('time_bin')]
+    df_sel = df[selected_index]
+    return df_sel
+
+
+@dataclass_json
+@dataclass
+class SelectDfConfig:
+    odors: list[str]
+    time_window: list[str] # although named time window, by far it corresponds to the frame window
+
+
+def select_dataframe(df: pd.DataFrame, config: SelectDfConfig):
+    df = select_time_points(df, config.time_window)
+    df = select_odors_df(df, config.odors)
+    return df
+
+
+def get_select_tag(config: SelectDfConfig):
+    odor_tag = ''.join([x[0] for x in config.odors])
+    window = config.time_window
+    tag = f'odors_{odor_tag}_window{window[0]}to{window[1]}'
+    return tag

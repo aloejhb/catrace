@@ -5,7 +5,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn import datasets
-from sklearn import decomposition
+from sklearn import decomposition, manifold
 from sklearn.model_selection import cross_val_score
 import umap
 
@@ -85,7 +85,7 @@ def compute_svd(pattern, n_components):
     return results
 
 
-def compute_pca(pattern, n_components, return_model=False):
+def compute_pca(pattern, n_components=None, return_model=False):
     pca = decomposition.PCA(n_components)
     latent = pca.fit_transform(pattern)
     embeddf = get_embeddf(latent, pattern.index)
@@ -93,6 +93,27 @@ def compute_pca(pattern, n_components, return_model=False):
         return embeddf, pca
 
     return embeddf
+
+
+def compute_isomap(df, return_model=False, **kwargs):
+    model = manifold.Isomap(**kwargs)
+    latent = model.fit_transform(df)
+    embeddf = get_embeddf(latent, df.index)
+    if return_model:
+        return embeddf, model
+
+    return embeddf
+
+
+def compute_embedding(df, func, return_model=False, **kwargs):
+    model = func(**kwargs)
+    latent = model.fit_transform(df)
+    embeddf = get_embeddf(latent, df.index)
+    if return_model:
+        return embeddf, model
+
+    return embeddf
+
 
 def select_and_pca(df, odor_list, window, n_components):
     """

@@ -8,14 +8,6 @@ from os.path import join as pjoin
 
 from . import exp_collection as ecl
 
-from dataclasses import dataclass
-from dataclasses_json import dataclass_json
-
-
-@dataclass_json
-@dataclass
-class MutualInfoConfig:
-    pass
 
 def compute_mi_experiment(dfx, dfy, parallelism=None):
     x = dfx.to_numpy() # OB
@@ -67,6 +59,33 @@ def compute_mi_matrix_continuous(x, y, parallelism=None):
         mi_matrix[:, j] = mi_values
 
     return mi_matrix
+
+
+def select_mi_mat_by_traces(mi_mat, dfob, dfdp, dfob_sel, dfdp_sel):
+    idx_ob = np.where(dfob.columns.isin(dfob_sel.columns))[0]
+    idx_dp = np.where(dfdp.columns.isin(dfdp_sel.columns))[0]
+    mi_mat_sel = mi_mat[idx_ob, :][:, idx_dp]
+    return mi_mat_sel
+
+
+def select_neuron_by_mi(df, mi_mat, mi_range,
+                        method='range',
+                        axis=1):
+    """
+    Select neurons by its mean MI with neurons from the other region
+    """
+    mi_mean = np.mean(mi_mat, axis=int(not axis)) # Mean along the other axis
+    if method == 'range':
+        pass
+    elif method == 'proportion':
+        mi_range = [np.quantile(mi_mean, mir) for mir in mi_range]
+    else:
+        raise ValueError('Selection method should be either range or proportion')
+
+    idx = np.where((mi_mean >= mi_range[0]) & (mi_mean <= mi_range[1]))[0]
+
+    return df.iloc[:, idx]
+
 
 
 def select_high_mi(db_dir, trace_dir, exp_name, mi_threshold):
