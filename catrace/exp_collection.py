@@ -87,7 +87,7 @@ def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
 
     axidx_list = [_get_axidx(k, cond_cumsum, nrow_list, ncol) for k in range(total_exp)]
 
-    figsize=[17, 3.4*total_nrow]
+    figsize=[10, 2*total_nrow]
     fig, axes = plt.subplots(total_nrow, ncol, sharex=sharex,
                              sharey=sharey, figsize=figsize)
     for idx, data in enumerate(data_list):

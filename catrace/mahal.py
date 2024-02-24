@@ -105,3 +105,7 @@ def plot_dist_mat_df(df, ax=None, odor_list=None, **kwargs):
     dist_mat = get_mean_dist_mat(df, odor_list=odor_list)
     ax = plot_mean_dist_mat(dist_mat, ax=ax, **kwargs)
     return ax
+
+
+def select_odors_mat(mat, odor_list):
+    return mat.loc[odor_list][odor_list]
