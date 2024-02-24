@@ -184,14 +184,52 @@ def compute_max_of_mean_response_per_trial(df, window):
     return response
 
 
-def select_neuron(dfovf, criterion_func, thresh=None, head=None, **kwargs):
-    criteria = criterion_func(dfovf, **kwargs)
-    if thresh:
-        idx = criteria >= thresh
-    elif head:
-        idx = criteria.index[:head]
-    else:
-        raise ValueError('To Choose a correct selection method, set either the parameter thresh or head')
+def _get_top_n_positions(df, n):
+    # Identify the positions of the top n values for each row
+    top_positions_per_row = df.apply(lambda x: list(x.argsort()[::-1].head(n).values), axis=1)
+    all_positions = [position for positions in top_positions_per_row for position in positions]
+    return all_positions
+
+
+def _sample_positions(all_positions, sample_size=50):
+    # Randomly select sample_size positions from the list
+    unique_positions = list(set(all_positions))
+    if len(unique_positions) <= sample_size:
+        raise ValueError(f'Cannot sample {sample_size} neurons from total {len(unique_positions)} neurons.')
+    return list(np.random.choice(unique_positions, size=sample_size, replace=False))
+
+
+def select_neuron_by_ensemble(dff, window, top_n_per_odor):
+    dff = select_time_points(dff, window)
+    response = dff.groupby(level='odor').mean().max()
+    all_positions = _get_top_n_positions(dff, top_n_per_odor)
+    # pos = _sample_positions(all_positions, sample_size)
+    idx = dff.columns[all_positions]
+    return idx
+
+
+def get_select_neuron_func(criterion_func, thresh=None, head=None):
+    def func(dfovf, **kwargs):
+        criteria = criterion_func(dfovf, **kwargs)
+        if thresh:
+            idx = criteria >= thresh
+        elif head:
+            idx = criteria.index[:head]
+        else:
+            raise ValueError('To Choose a correct selection method, set either the parameter thresh or head')
+        return idx
+    return func
+
+
+@dataclass_json
+@dataclass
+class SelectEnsembleConfig:
+    window: list[str] # although named time window, by far it corresponds to the frame window
+    top_n_per_odor: int
+
+
+def select_neuron(dfovf, select_func, **kwargs):
+    idx = select_func(dfovf, **kwargs)
     dfovf_select = dfovf.loc[:,idx]
     return dfovf_select, idx
 
