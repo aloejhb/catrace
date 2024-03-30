@@ -366,11 +366,11 @@ def plot_pattern_correlation(df, ax=None, clim=None, title=''):
     color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
     odor_list = df.index.unique(level='odor')
     color_dict = dict(zip(odor_list, color_list[:len(odor_list)]))
-    y_labels = [label[0] for label in df.index]
+    y_labels = [label for label in df.index.get_level_values('odor')]
     tick_pos = np.arange(df.shape[0])
     ax.yaxis.set_tick_params(length=0)
     ax.set_yticks(tick_pos)
-    ax.set_yticklabels(y_labels)
+    ax.set_yticklabels(y_labels, fontsize=8)
     ax.set_xticks([])
 
     for i, ytick in enumerate(ax.get_yticklabels()):
@@ -381,3 +381,16 @@ def plot_pattern_correlation(df, ax=None, clim=None, title=''):
     if title:
         ax.set_title(title)
     return im
+
+
+def select_odors_mat(df, odors):
+    return df.loc[(odors, slice(None)), (odors, slice(None))]
+
+
+def compute_aavsba(simdf, aa_odors, ba_odors):
+    if simdf.index.names == ['odor', 'trial']:
+        aavsba = simdf.loc[(aa_odors, slice(None)), (ba_odors, slice(None))].mean().mean()
+    else:
+        aavsba = simdf.loc[aa_odors, ba_odors].mean().mean()
+
+    return aavsba

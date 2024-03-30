@@ -239,17 +239,6 @@ def select_neuron_df(dfovf, **kwargs):
     return dfovf_select
 
 
-def select_neuron_dfovf(dfovf, **kwargs):
-    """
-    Select neuron based on their response/noise ratio
-
-    use this for raw dfovf as input
-    """
-    dfovf = restack_as_pattern(dfovf)
-    dfovf_select, _ = select_neuron(dfovf, **kwargs)
-    return dfovf_select
-
-
 def select_neuron_and_sort_odors(df, odor_list, **kwargs):
     df = select_neuron_df(df, **kwargs)
     df = sort_odors(df, odor_list)
