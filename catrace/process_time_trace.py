@@ -178,10 +178,46 @@ def compute_deviation(dfovf, std_window=None, sigma=None):
     deviation = (dfovf_filtered - dfovf_filtered.mean()).abs().max() / std
     return deviation
 
-def compute_max_of_mean_response_per_trial(df, window):
-    df = select_time_points(df, window)
+def compute_max_of_mean_response_per_trial(df, response_window,
+                                           normalize_by_std=False,
+                                           std_window=None):
+    df = select_time_points(df, response_window)
     response = df.groupby(level=['odor', 'trial']).mean().max()
+
+    if normalize_by_std:
+        std = dfovf[std_window[0]:std_window[1]].std()
+        response = response / std
+
     return response
+
+@dataclass_json
+@dataclass
+class SelectNeuronsConfig:
+    response_window: list[int]
+
+    thresh: float = None
+    head: int = None
+
+    normalize_by_std: bool = False
+    std_window: list[int] = None
+
+
+def get_select_neuron_tag(config):
+    if config.head:
+        method_tag = f'head{config.head}'
+    else:
+        method_tag = re.sub('\.', 'p', f'thresh{config.thresh:.02f}')
+
+    rwd = config.response_window
+    param_tag = f'response_window{rwd[0]:d}to{rwd[1]:d}'
+
+    if config.normalize_by_std:
+        swd = config.std_window
+        sdt_tag = f'std_window{swd[0]:d}to{swd[1]:d}'
+        param_tag = param_tag + '_' + std_tag
+
+    tag = method_tag + '_' + param_tag
+    return tag
 
 
 def _get_top_n_positions(df, n):
@@ -226,6 +262,9 @@ def get_select_neuron_func(criterion_func, thresh=None, head=None):
 class SelectEnsembleConfig:
     window: list[str] # although named time window, by far it corresponds to the frame window
     top_n_per_odor: int
+
+def sample_neuron(dfovf, sample_size):
+    return dfovf.sample(n=sample_size, axis=1)
 
 
 def select_neuron(dfovf, select_func, **kwargs):
