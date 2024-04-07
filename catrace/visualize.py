@@ -56,7 +56,7 @@ def plot_conds(df, plot_func, sharex=False,
     return fig, axes
 
 
-def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hline_y=1.0, stat_y_max=0.5, stat_y_offset=0.06):
+def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hline_y=None, stat_y_max=0.5, stat_y_offset=0.06):
     """
     Plot responses and statistical test results
     """
@@ -73,8 +73,9 @@ def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hl
 
     ax.set_xlabel('Condition')
 
-    if naive_comparisons:
+    if hline_y is not None:
         ax.axhline(hline_y, linestyle='--', color='black')
+    if naive_comparisons is not None:
         significance_levels = {0.001: '***', 0.01: '**', 0.05: '*'}
 
         num_conds = df['cond'].nunique()

@@ -1,8 +1,11 @@
 import random
+import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter1d
+from os.path import join as pjoin
+
 
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
@@ -178,9 +181,10 @@ def compute_deviation(dfovf, std_window=None, sigma=None):
     deviation = (dfovf_filtered - dfovf_filtered.mean()).abs().max() / std
     return deviation
 
-def compute_max_of_mean_response_per_trial(df, response_window,
-                                           normalize_by_std=False,
-                                           std_window=None):
+def compute_max_of_mean_response_per_trial(df: pd.DataFrame,
+                                           response_window: list[int],
+                                           normalize_by_std: bool = False,
+                                           std_window: list[int] = None):
     df = select_time_points(df, response_window)
     response = df.groupby(level=['odor', 'trial']).mean().max()
 
@@ -192,31 +196,22 @@ def compute_max_of_mean_response_per_trial(df, response_window,
 
 @dataclass_json
 @dataclass
-class SelectNeuronsConfig:
-    response_window: list[int]
-
+class SelectNeuronConfig:
+    criterion: str
     thresh: float = None
     head: int = None
-
-    normalize_by_std: bool = False
-    std_window: list[int] = None
+    params: dict = None
 
 
 def get_select_neuron_tag(config):
+    criterion_tag = config.criterion
+
     if config.head:
         method_tag = f'head{config.head}'
     else:
         method_tag = re.sub('\.', 'p', f'thresh{config.thresh:.02f}')
 
-    rwd = config.response_window
-    param_tag = f'response_window{rwd[0]:d}to{rwd[1]:d}'
-
-    if config.normalize_by_std:
-        swd = config.std_window
-        sdt_tag = f'std_window{swd[0]:d}to{swd[1]:d}'
-        param_tag = param_tag + '_' + std_tag
-
-    tag = method_tag + '_' + param_tag
+    tag = criterion_tag +'_'+ method_tag
     return tag
 
 
@@ -263,25 +258,50 @@ class SelectEnsembleConfig:
     window: list[str] # although named time window, by far it corresponds to the frame window
     top_n_per_odor: int
 
-def sample_neuron(dfovf, sample_size):
-    return dfovf.sample(n=sample_size, axis=1)
+def sample_neuron(dfovf, sample_size, random_state=None):
+    return dfovf.sample(n=sample_size, axis=1, random_state=random_state)
 
 
-def select_neuron(dfovf, select_func, **kwargs):
-    idx = select_func(dfovf, **kwargs)
+def select_neuron(dfovf: pd.DataFrame,
+                  config: SelectNeuronConfig) -> (pd.DataFrame, pd.Index):
+    if config.criterion == 'max_of_mean_response_per_trial':
+        criterion_func = compute_max_of_mean_response_per_trial
+    elif config.criterion == 'deviation':
+        criterion_func = compute_deviation
+    else:
+        raise ValueError(f"Unrecognized criterion {config.criterion}. Should be 'max_of_mean_response_per_trial' or 'deviation'")
+    select_func = get_select_neuron_func(criterion_func,
+                                         thresh=config.thresh,
+                                         head=config.head)
+    idx = select_func(dfovf, **config.params)
     dfovf_select = dfovf.loc[:,idx]
     return dfovf_select, idx
 
 
-def select_neuron_df(dfovf, **kwargs):
-    dfovf_select, _ = select_neuron(dfovf, **kwargs)
+def select_neuron_df(dfovf: pd.DataFrame,
+                     config: SelectNeuronConfig) -> pd.DataFrame:
+    """
+    Select neurons based on property of their traces
+    Args:
+        dfovf: the pd.DataFrame of the traces of neurons
+        config: configuration for selecting neurons
+
+    Returns:
+        pd.DataFrame. The dataframe containing traces of selected neurons
+    """
+    dfovf_select, _ = select_neuron(dfovf, config)
     return dfovf_select
 
 
-def select_neuron_and_sort_odors(df, odor_list, **kwargs):
-    df = select_neuron_df(df, **kwargs)
-    df = sort_odors(df, odor_list)
-    return df
+def save_config(out_dir, config):
+    config_file = pjoin(out_dir, "config.json")
+    with open(config_file, "w") as file:
+        json.dump(config.to_json(), file, indent=4)
+
+# def select_neuron_and_sort_odors(df, odor_list, **kwargs):
+#     df = select_neuron_df(df, **kwargs)
+#     df = sort_odors(df, odor_list)
+#     return df
 
 
 def select_neurons_by_df(source_df, select_df):
