@@ -23,10 +23,12 @@ def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
     figsize=[8, 3.5*nrow]
     fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
                              sharey=sharey, figsize=figsize)
+    vmin = min([df.to_numpy().min() for df in  dfs.values()])
+    vmax = max([df.to_numpy().max() for df in  dfs.values()])
     for idx, name in enumerate(cond_list):
         group = dfs[name]
         ax = axes.flatten()[idx]
-        plot_func(group, *args, **kwargs, ax=ax)
+        plot_func(group, *args, **kwargs, ax=ax, vmin=vmin, vmax=vmax)
         ax.set_title(name)
         img = ax.get_children()[0]
         fig.colorbar(img, ax=ax)
