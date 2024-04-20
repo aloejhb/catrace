@@ -32,3 +32,25 @@ def incremental_histogram(data, bins, chunk_size=10000, normalize=True):
         histogram = histogram / len(data)
 
     return histogram
+
+
+def compute_sparseness(x):
+    """
+    Compute the sparseness of a vector x.
+
+    Args:
+    x (numpy.array): A numpy array representing the vector x.
+
+    Returns:
+    float: The sparseness value.
+    """
+    N = len(x)
+    if N <= 1:
+        return 0  # Sparseness is not well-defined for a single value.
+    
+    # Compute the sparseness using the given formula
+    sum_x = np.sum(x)
+    sum_x_squared = np.sum(x**2)
+    sparseness = (1 - (sum_x/N)**2 / (sum_x_squared/N)) / (1 - 1/N)
+    
+    return sparseness

@@ -269,10 +269,9 @@ def concatenate_df_from_db(exp_list, region_list, in_collect_name, db_dir, axis=
     expkey_list = get_expkey_list(exp_list, region_list)
     df_list = [read_df(in_collect_name, expkey[0], expkey[1], db_dir)\
                for expkey in expkey_list]
-    # if in_collect_name in ['dfovf', 'dfovf_select'] or re.match('dfovf_select', in_collect_name):
     if in_collect_name == 'dfovf':
         df_list = [ptt.restack_as_pattern(df) for df in df_list]
-    all_df = pd.concat(df_list, axis, keys=expkey_list, names=['fish_id', 'region', 'cond'])
+    all_df = pd.concat(df_list, axis=axis, keys=expkey_list, names=['fish_id', 'region', 'cond'])
     return all_df
 
 
@@ -333,3 +332,17 @@ def concatenate_df_from_dict(df_dict, exp_list, region_list, axis=1):
     all_df = pd.concat(df_list, axis, keys=expkey_list,
                        names=('fish_id', 'region', 'cond'))
     return all_df
+
+
+def mean_mat_over_cond(mat_list, exp_cond_list, cond_list):
+    avg_mats = dict()
+    for cond in cond_list:
+        filtered_dfs = [df for df, con in zip(mat_list, exp_cond_list) if con == cond]
+        average_df = pd.DataFrame().reindex_like(filtered_dfs[0])
+
+        for df in filtered_dfs:
+            average_df = average_df.add(df, fill_value=0)
+
+        average_df = average_df / len(filtered_dfs)
+        avg_mats[cond] = average_df
+    return avg_mats

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from scipy.spatial.distance import mahalanobis, euclidean
+import catrace.process_time_trace as ptt
 
 def invert_cov_mat(cov_mat, reg=1e-5):
     reg_term = reg * np.identity(cov_mat.shape[0])
@@ -34,13 +35,16 @@ def compute_distances_df(df, window=None, metric='mahal', reg=0):
     if metric == 'mahal':
         # Compute cov_mat for each odor
         cov_mats = dict()
-        for name, group in df.groupby(level='odor', sort=False):
+        for name, group in df.groupby(level='odor', sort=False, observed=True):
             cov_mats[name] = np.cov(group.transpose())
 
         # Compute inv_cov_mat for each odor
         inv_cov_mats = dict()
         for key, val in cov_mats.items():
-            inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
+            try:
+                inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
+            except:
+                import pdb; pdb.set_trace()
 
     distances_dict = dict()
     for odor1 in odor_list:
@@ -69,10 +73,16 @@ def compute_distances_df(df, window=None, metric='mahal', reg=0):
     return distances_df
 
 
-# def compute_mahals_mat(df):
-#     mahals_df = compute_mahals_df(df)
-#     mahals_mat = get_mean_mahals_mat(mahals_df)
-#     return mahals_mat
+def compute_distances_mat(df, odor_list, **kwargs):
+    dist_df = compute_distances_df(df, **kwargs)
+    dist_mat = get_mean_dist_mat(dist_df, odor_list)
+    return dist_mat
+
+
+def sample_neuron_and_comopute_distance_mat(df, sample_size, random_state=None, **kwargs):
+    df = ptt.sample_neuron(df, sample_size=sample_size, random_state=random_state)
+    dist_mat = compute_distances_mat(df, **kwargs)
+    return dist_mat
 
 
 def get_mean_dist_mat(dist_df, odor_list):
