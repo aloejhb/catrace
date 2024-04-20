@@ -35,7 +35,7 @@ def compute_distances_df(df, window=None, metric='mahal', reg=0):
     if metric == 'mahal':
         # Compute cov_mat for each odor
         cov_mats = dict()
-        for name, group in df.groupby(level='odor', sort=False):
+        for name, group in df.groupby(level='odor', sort=False, observed=True):
             cov_mats[name] = np.cov(group.transpose())
 
         # Compute inv_cov_mat for each odor

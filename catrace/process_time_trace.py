@@ -342,7 +342,7 @@ def sort_odors(df, odor_list):
     # df = df.sort_values('odor') # this alters the order of other levels
     groups = []
     keys = []
-    for key, group in df.groupby(level='odor'):
+    for key, group in df.groupby(level='odor', observed=True):
         groups.append(group)
         keys.append(key)
     df_sorted = pd.concat(groups)

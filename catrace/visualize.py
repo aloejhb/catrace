@@ -1,6 +1,17 @@
+import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
+
+def load_colormap(name):
+    current_folder = os.path.dirname(os.path.abspath(__file__))
+    if name == 'clut2b':
+        colormap_data =  np.load(os.path.join(current_folder, '../colormap/clut2b.npy'))
+    else:
+        raise ValueError('Unknown colormap name')
+    colormap = LinearSegmentedColormap.from_list('clut2b', colormap_data)
+    return colormap
 
 
 def plot_pattern_heatmap(pattern, climit=None, ax=None):
@@ -68,8 +79,12 @@ def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hl
     fig, ax = plt.subplots(figsize=(10, 6))
     if plot_type == 'box':
         sns.boxplot(ax=ax, data=df, x='cond', y=yname, palette=palette, gap=.1, showfliers=False, fill=False, whis=(1,99))
-    else:
+    elif plot_type == 'violin':
         sns.violinplot(ax=ax, data=df, x='cond', y=yname, palette=palette, gap=.1, fill=False)
+    elif plot_type == 'strip':
+        sns.stripplot(ax=ax, data=df, x='cond', y=yname, palette=palette, jitter=True, dodge=True)
+    else:
+        raise ValueError('plot_type must be one of "box", "violin", or "strip"')
 
     ax.set_xlabel('Condition')
 
@@ -86,17 +101,21 @@ def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hl
         y_max = df[yname].max() * stat_y_max
         y_offset = (df[yname].max() - df[yname].min()) * stat_y_offset  # Slight offset above the violin
 
+        starred = False
         for i, cond in enumerate(naive_comparisons.index):
             if cond != 'naive':
                 p_value = naive_comparisons.loc[cond]
                 for sig_level, marker in significance_levels.items():
                     if p_value < sig_level:
+                        if not starred:
+                            starred = True
                         # Place the text annotation above the violin
                         x_pos = np.where(df['cond'].unique() == cond)[0]
                         ax.text(x_pos, y_max+y_offset, marker, ha='center', va='bottom', color='black')
                         break  # Found the significant level, no need to check further
-        ax.hlines(y=y_max, xmin=xmin, xmax=xmax, color='black')
-        ax.vlines(x=xmax, ymin=y_max-y_offset*0.7, ymax=y_max, color='black')
+        if starred:
+            ax.hlines(y=y_max, xmin=xmin, xmax=xmax, color='black')
+            ax.vlines(x=xmax, ymin=y_max-y_offset*0.7, ymax=y_max, color='black')
 
         # Adjust y-axis limit to account for the space needed by annotations
         y_lim = ax.get_ylim()

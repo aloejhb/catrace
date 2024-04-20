@@ -41,6 +41,15 @@ def compute_similarity_mat(dfovf, time_window, frame_rate, similarity_func):
     sim_mat = pd.DataFrame(sim_mat, index=pattern.index, columns=pattern.index)
     return sim_mat
 
+def compute_similarity_mat_timecourse(dfovf, bin_size, frame_rate, similarity_func):
+    import pdb; pdb.set_trace()
+    # TODO
+    # mats = []
+
+    # for i in range(0, dfovf.shape[1], bin_size):
+    #     mat = compute_similarity_mat(dfovf[:, i:i+bin_size], time_window, frame_rate, similarity_func)
+    #     mats.append(mat)
+
 
 def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', title=''):
     """
