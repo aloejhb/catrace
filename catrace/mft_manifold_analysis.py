@@ -33,4 +33,4 @@ def compute_mftma_experiment(input_file, config_file, output_file):
 class MftmaConfig:
     select_df_config: SelectDfConfig
     kappa: float
-    n_t: float # Number of gaussian vectors to sample per manifold
+    n_t: int # Number of gaussian vectors to sample per manifold

@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
+import unittest
 from .conftest import create_test_dataframe
 from catrace.utils import save_config
 from catrace.mft_manifold_analysis import compute_mftma, compute_mftma_experiment, MftmaConfig
@@ -19,7 +20,7 @@ def test_compute_mftma_experiment(tmp_path):
     input_file = tmp_path / "input.pkl"
     output_file = tmp_path / "output.npz"
 
-    config = MftmaConfig(select_df_config=SelectDfConfig(odors=['apple'], time_window=[2, 4], sort=False), kappa=0.1, n_t=200)
+    config = MftmaConfig(select_df_config=SelectDfConfig(odors=['banana', 'apple', 'date'], time_window=[3, 10], sort=True), kappa=0.01, n_t=200)
     save_config(config, config_file)
 
     dff = create_test_dataframe()
