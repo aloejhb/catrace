@@ -41,7 +41,7 @@ def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
     for idx, name in enumerate(cond_list):
         group = dfs[name]
         ax = axes.flatten()[idx]
-        plot_func(group, *args, **kwargs, ax=ax, vmin=vmin, vmax=vmax)
+        plot_func(group, *args, **kwargs, ax=ax)
         ax.set_title(name)
         img = ax.get_children()[0]
         fig.colorbar(img, ax=ax)

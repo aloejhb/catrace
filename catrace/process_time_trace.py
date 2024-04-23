@@ -374,11 +374,15 @@ def select_binned_time_points(df, window):
 class SelectDfConfig:
     odors: list[str]
     time_window: list[str] # although named time window, by far it corresponds to the frame window
+    sort: bool = False
 
 
 def select_dataframe(df: pd.DataFrame, config: SelectDfConfig):
     df = select_time_points(df, config.time_window)
     df = select_odors_df(df, config.odors)
+    if config.sort:
+        import pdb; pdb.set_trace()
+        df = sort_odors(df, config.odors)
     return df
 
 

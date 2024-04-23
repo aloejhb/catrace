@@ -346,3 +346,12 @@ def mean_mat_over_cond(mat_list, exp_cond_list, cond_list):
         average_df = average_df / len(filtered_dfs)
         avg_mats[cond] = average_df
     return avg_mats
+
+def mean_mat(mat_list):
+    average_df = pd.DataFrame().reindex_like(mat_list[0])
+
+    for df in mat_list:
+            average_df = average_df.add(df, fill_value=0)
+
+    average_df = average_df / len(mat_listm)
+    return average_df
