@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+from dataclasses_json import DataClassJsonMixin
 
 
 def copy_index(df1, df2):
@@ -25,6 +26,22 @@ def copy_frame_structure(arr, df):
 
 def load_config(file_path, config_class):
     with open(file_path, 'r') as file:
-        json_data = json.load(file)
-        config = config_class.from_json(json_data)
+        data = json.load(file)
+        json_str = json.dumps(data)
+        config = config_class.from_json(json_str)
         return config
+
+def save_config(config: DataClassJsonMixin, file_path):
+    """
+    Saves a dataclass_json object to a JSON file.
+    
+    Args:
+    config (DataClassJsonMixin): The dataclass instance to serialize.
+    file_path (str): The path to the file where the JSON data should be saved.
+    """
+    json_str = config.to_json()
+    data = json.loads(json_str)
+
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
+

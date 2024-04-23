@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
@@ -8,10 +9,10 @@ from .utils import load_config
 from .process_time_trace import SelectDfConfig, select_dataframe
 from .exp_collection import read_df
 
-def compute_mftma(dff, kappa=0):
+def compute_mftma(dff, kappa=0, n_t=100):
     grouped = dff.groupby('odor', observed=True)
     manifolds = [group.T.to_numpy() for _, group in grouped]
-    alpha_m, radius_m, dimension_m, res_coeff0, KK = manifold_analysis_corr(manifolds, kappa, 200, n_reps=1)
+    alpha_m, radius_m, dimension_m, res_coeff0, KK = manifold_analysis_corr(manifolds, kappa=kappa, n_t=n_t)
     ma_result = {'alpha_m': alpha_m,
                 'radius_m': radius_m,
                 'dimension_m': dimension_m,
@@ -21,15 +22,15 @@ def compute_mftma(dff, kappa=0):
 
 def compute_mftma_experiment(input_file, config_file, output_file):
     config = load_config(config_file, MftmaConfig)
-    dff = read_df(input_file).dropna()
+    dff = pd.read_pickle(input_file).dropna()
     dff = select_dataframe(dff, config.select_df_config)
-    ma_result = compute_mftma(dff, kappa=kappa)
+    ma_result = compute_mftma(dff, kappa=config.kappa, n_t=config.n_t)
     np.savez(output_file, **ma_result)
     return ma_result
 
 @dataclass_json
 @dataclass
 class MftmaConfig:
-    self.select_df_config: SelectDfConfig
-    self.kappa: float
-    self.n_t: float # Number of gaussian vectors to sample per manifold
+    select_df_config: SelectDfConfig
+    kappa: float
+    n_t: float # Number of gaussian vectors to sample per manifold
