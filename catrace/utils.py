@@ -45,3 +45,21 @@ def save_config(config: DataClassJsonMixin, file_path):
     with open(file_path, 'w') as file:
         json.dump(data, file, indent=4)
 
+
+def dict_to_command_line_args(params):
+    """
+    Converts a dictionary to a command-line argument string.
+
+    Args:
+    params (dict): A dictionary where keys are the option names and values are the arguments.
+
+    Returns:
+    str: A string formatted as command-line arguments.
+    """
+    args = []
+    for key, value in params.items():
+        # Add the key prefixed with '--' and its corresponding value to the args list
+        args.append(f"--{key} {value}")
+    
+    # Join all elements in the list with a space to form the final string
+    return ' '.join(args)

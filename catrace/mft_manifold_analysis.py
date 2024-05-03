@@ -20,7 +20,7 @@ def compute_mftma(dff, kappa=0, n_t=100):
                 'KK': KK}
     return ma_result
 
-def compute_mftma_experiment(input_file, config_file, output_file):
+def compute_mftma_io(input_file, config_file, output_file):
     config = load_config(config_file, MftmaConfig)
     dff = pd.read_pickle(input_file).dropna()
     dff = select_dataframe(dff, config.select_df_config)

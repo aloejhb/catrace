@@ -353,5 +353,5 @@ def mean_mat(mat_list):
     for df in mat_list:
             average_df = average_df.add(df, fill_value=0)
 
-    average_df = average_df / len(mat_listm)
+    average_df = average_df / len(mat_list)
     return average_df

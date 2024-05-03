@@ -21,30 +21,31 @@ def compute_euclideans(points, ref):
     return mahals
 
 
-def compute_distances_df(df, window=None, metric='mahal', reg=0):
-    if window is not None:
-        times = df.index.get_level_values('time')
-        idxs = (times >= window[0]) &(times <= window[1])
-        df = df.loc[idxs, :]
-
+def compute_distances_df(df, window=None, model_window=None, model_trials=None, metric='mahal', reg=0):
+    df = ptt.select_time_points(df, window)
     odor_list = list(df.index.unique('odor'))
 
+    model_df = df
+    if model_window is not None:
+        model_df = ptt.select_time_points(df, model_window)
+
+    if model_trials is not None:
+        idx = model_df.index.get_level_values('trial').isin(model_trials)
+        model_df = model_df[idx]
+
     # Compute center for each odor
-    centers = df.groupby(level='odor', sort=False).mean()
+    centers = model_df.groupby(level='odor', sort=False).mean()
 
     if metric == 'mahal':
         # Compute cov_mat for each odor
         cov_mats = dict()
-        for name, group in df.groupby(level='odor', sort=False, observed=True):
+        for name, group in model_df.groupby(level='odor', sort=False, observed=True):
             cov_mats[name] = np.cov(group.transpose())
 
         # Compute inv_cov_mat for each odor
         inv_cov_mats = dict()
         for key, val in cov_mats.items():
-            try:
-                inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
-            except:
-                import pdb; pdb.set_trace()
+            inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
 
     distances_dict = dict()
     for odor1 in odor_list:
@@ -71,6 +72,20 @@ def compute_distances_df(df, window=None, metric='mahal', reg=0):
     # Convert to DataFrame using MultiIndex
     distances_df = pd.DataFrame(list(distances_dict.values()), index=multi_index)
     return distances_df
+
+
+def sample_neuron_and_select_odors(df, sample_size, random_state=None, odor_list=None):
+    df = df.dropna()
+    df = ptt.sample_neuron(df, sample_size=sample_size, random_state=random_state)
+    if odor_list is not None:
+        df = ptt.select_odors_df(df, odor_list)
+        df = ptt.sort_odors(df, odor_list)
+    return df
+
+def sample_neuron_and_comopute_distance_df(df, sample_size, random_state=None, odor_list=None, **kwargs):
+    df = sample_neuron_and_select_odors(df, sample_size, random_state, odor_list)
+    dist_df = compute_distances_df(df, **kwargs)
+    return dist_df
 
 
 def compute_distances_mat(df, odor_list, **kwargs):
