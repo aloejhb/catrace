@@ -63,3 +63,8 @@ def dict_to_command_line_args(params):
     
     # Join all elements in the list with a space to form the final string
     return ' '.join(args)
+
+
+def load_config(file_path, config_class):
+    with open(file_path, 'r') as file:
+        return config_class.from_json(file.read())

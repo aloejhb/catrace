@@ -50,7 +50,7 @@ def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
     return fig, axes
 
 
-def plot_conds(df, plot_func, sharex=False,
+def plot_conds(dfs, cond_list, plot_func, sharex=False,
                sharey=False, *args, **kwargs):
     """
     Plot for each training condtion.
@@ -61,7 +61,8 @@ def plot_conds(df, plot_func, sharex=False,
     figsize=[8, 3.5*nrow]
     fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
                              sharey=sharey, figsize=figsize)
-    for idx, (name, group) in enumerate(df.groupby(level='cond', axis=1)):
+    for idx, name in enumerate(cond_list):
+        group = dfs[name]
         ax = axes.flatten()[idx]
         plot_func(group, *args, **kwargs, ax=ax)
         ax.set_title(name)
@@ -122,3 +123,6 @@ def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hl
         # Adjust y-axis limit to account for the space needed by annotations
         y_lim = ax.get_ylim()
         ax.set_ylim(y_lim[0], y_lim[1] + (y_lim[1] - y_lim[0]) * 0.2)  # Increase the upper limit to avoid overlap
+
+def plot_avgdf(avgdf, ax=None):
+    ax.plot(avgdf)

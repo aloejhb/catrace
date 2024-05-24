@@ -390,3 +390,25 @@ def get_select_tag(config: SelectDfConfig):
     window = config.time_window
     tag = f'odors_{odor_tag}_window{window[0]}to{window[1]}'
     return tag
+
+
+def compute_average_timecourse(dff):
+    avgdf = dff.groupby(level=['odor', 'time'], observed=True).mean().mean(axis=1)
+    avgdf = avgdf.unstack('time').T
+    return avgdf
+
+
+def compute_deviation(dff):
+    nrn_mean = dff.T.mean() # mean across neurons at each time point
+    nrn_std = dff.T.std() # std across neurons at each time point
+    nrn_cv = nrn_std/nrn_mean
+
+    def _make_df(nrn):
+        df = nrn.groupby(level=['odor', 'time'], observed=True).mean().unstack('time').T
+        return df
+
+    meandf = _make_df(nrn_mean)
+    stddf = _make_df(nrn_std)
+    cvdf = _make_df(nrn_cv)
+
+    return meandf, stddf, cvdf
