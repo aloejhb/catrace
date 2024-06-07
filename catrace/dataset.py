@@ -6,7 +6,8 @@ from dataclasses_json import dataclass_json
 class DatasetConfig:
     db_dir: str
     exp_list: list[tuple[str, str]]
-    odor_list: list[str]
-    cond_list: list[str]
+    odors: list[str]
+    conditions: list[str]
     frame_rate: float
+    num_trials: int
     fig_dir: str

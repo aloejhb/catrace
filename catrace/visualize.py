@@ -26,14 +26,14 @@ def plot_pattern_heatmap(pattern, climit=None, ax=None):
 
 
 def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
-                   sharey=False, *args, **kwargs):
+                   sharey=False, row_height=3.5, *args, **kwargs):
     """
     Plot matrices for each training condtion.
-    so far only for 4 conditions
     """
     ncol = 2
-    nrow = 2
-    figsize=[8, 3.5*nrow]
+    nrow = np.ceil(len(cond_list) /ncol).astype(int)
+    print(nrow)
+    figsize=[8, row_height*nrow]
     fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
                              sharey=sharey, figsize=figsize)
     vmin = min([df.to_numpy().min() for df in  dfs.values()])

@@ -93,7 +93,10 @@ def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
     for idx, data in enumerate(data_list):
         axidx = axidx_list[idx]
         ax = axes.flatten()[axidx]
-        plot_func(data, *args, **kwargs, ax=ax)
+        show_legend = False
+        if idx == len(data_list)-1:
+            show_legend = True
+        plot_func(data, *args, **kwargs, ax=ax)#, show_legend=show_legend)
     plt.tight_layout()
     return fig, axes
 
@@ -146,19 +149,34 @@ def process_data_dict_decorator(data_func, exp_list, region_list,
         return data_dict
     return get_data_dict
 
-def process_data_db_decorator(data_func, exp_list, region_list,
-                              out_collect_name, in_collect_name=None, db_dir=''):
+def process_data_list_decorator(data_func, exp_list, in_dir):
+
+    def process_func(*args, **kwargs):
+        result_dfs = []
+        for exp in exp_list:
+            exp_name = exp[0]
+            print(exp_name)
+            df = read_df(in_dir, exp_name)
+            outdf = data_func(df, *args, **kwargs)
+            result_dfs.append(outdf)
+        return result_dfs
+
+    return process_func
+
+
+def process_data_db_decorator(data_func, exp_list,
+                              out_dir, in_dir=None):
     def process_data_db(*args, **kwargs):
         for exp in exp_list:
             exp_name = exp[0]
-            for region in region_list:
-                print(exp_name, region)
-                if in_collect_name:
-                    df = read_df(in_collect_name, exp_name, region, db_dir)
-                    outdf = data_func(df, *args, **kwargs)
-                else:
-                    outdf = data_func(exp_name, region, *args, **kwargs)
-                update_df(outdf, out_collect_name, exp_name, region, db_dir)
+            print(exp_name)
+            if in_dir:
+                df = read_df(in_dir, exp_name)
+                outdf = data_func(df, *args, **kwargs)
+            else:
+                outdf = data_func(exp_name, *args, **kwargs)
+            update_df(outdf, out_dir, exp_name)
+
     return process_data_db
 
 
@@ -234,7 +252,7 @@ def process_dataframe_decorator(data_func, level=['fish_id', 'cond'], axis=1):
     return process_dataframe
 
 
-def read_df(collect_name, exp_name, region, db_dir=''):
+def read_df(collect_name, exp_name, region=None, db_dir=''):
     """
     Read the data frame of a single experiment and brain region
     Args:
@@ -267,13 +285,26 @@ def get_filename(exp_name, region, ext):
     return '{}_{}.{}'.format(exp_name, region, ext)
 
 
-def concatenate_df_from_db(exp_list, region_list, in_collect_name, db_dir, axis=1):
-    expkey_list = get_expkey_list(exp_list, region_list)
-    df_list = [read_df(in_collect_name, expkey[0], expkey[1], db_dir)\
-               for expkey in expkey_list]
-    if in_collect_name == 'dfovf':
-        df_list = [ptt.restack_as_pattern(df) for df in df_list]
-    all_df = pd.concat(df_list, axis=axis, keys=expkey_list, names=['fish_id', 'region', 'cond'])
+def concatenate_df_from_db(in_dir: str,
+                           exp_list: list[tuple[str]],
+                           axis: int=1):
+    """
+    Concatenates dataframes from files based on experiment list
+
+    Parameters:
+        in_dir (str): Directory containing data files.
+        exp_list (list[tuple[str]]): List of experiment identifiers (fish ID, condition).
+        axis (int, optional): Axis to concatenate on. Default is 1 (columns).
+
+    Returns:
+        pandas.DataFrame: Concatenated DataFrame with multi-level index (fish_id, cond).
+
+    Example:
+        >>> combined_df = concatenate_df_from_db('/path/to/data', [('exp_fish1', 'naive'), ('exp_fish2', 'trained')])
+    """
+    df_list = [read_df(in_dir, exp[0])\
+               for exp in exp_list]
+    all_df = pd.concat(df_list, axis=axis, keys=exp_list, names=['fish_id', 'cond'])
     return all_df
 
 

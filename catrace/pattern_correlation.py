@@ -95,7 +95,7 @@ def compute_pattern_correlation(dfovf, time_window, frame_rate):
     return corrmat
 
 
-def plot_pattern_correlation(df, ax=None, clim=None, title=''):
+def plot_pattern_correlation(df, ax=None, clim=None, title='', cmap='turbo', show_legend=False):
     """
     Plot patthern correlation matrix heatmap
 
@@ -109,7 +109,7 @@ def plot_pattern_correlation(df, ax=None, clim=None, title=''):
     Returns:
         Image object.
     """
-    im = ax.imshow(df.to_numpy(), cmap='RdBu_r')
+    im = ax.imshow(df.to_numpy(), cmap=cmap)#'RdBu_r'
 
     color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
     odor_list = df.index.unique(level='odor')
@@ -128,4 +128,6 @@ def plot_pattern_correlation(df, ax=None, clim=None, title=''):
         im.set_clim(clim)
     if title:
         ax.set_title(title)
+    if show_legend:
+        ax.colorbar()
     return im

@@ -290,7 +290,7 @@ def select_neuron_df(dfovf: pd.DataFrame,
         pd.DataFrame. The dataframe containing traces of selected neurons
     """
     dfovf_select, _ = select_neuron(dfovf, config)
-    return dfovf_select
+    return dfovf_select.dropna()
 
 
 def save_config(out_dir, config):
@@ -412,3 +412,12 @@ def compute_deviation(dff):
     cvdf = _make_df(nrn_cv)
 
     return meandf, stddf, cvdf
+
+
+def select_cell_type_wrapper(func):
+    def wrapped_func(dff, cell_type, odors, **kwargs):
+        if cell_type is not None:
+            dff = dff.xs(cell_type, level='cell_type', axis=1)
+        dff = ptt.sort_odors(dff, odors)
+        return func(dff, **kwargs)
+    return wrapped_func

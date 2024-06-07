@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
 
@@ -41,7 +42,7 @@ def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, figsize=(10,4), 
     return fig
 
 
-def plot_trace_avg(trace, frame_rate, odor_list=None, ax=None):
+def plot_trace_avg(trace, frame_rate, odor_list=None, ax=None, show_legend=False, yname='spike_prob'):
     """
     Plot averaged time trace for each odor
 
@@ -58,26 +59,18 @@ def plot_trace_avg(trace, frame_rate, odor_list=None, ax=None):
         ax (axis object): Default is None. If ax is not provided, it will create
                           a new figure. Otherwise it will plot on the given axis.
     """
-    if ax is None:
-        new_ax_flag = 1
-        fig, ax = plt.subplots()
-    else:
-        new_ax_flag = 0
-    trace = trace.stack(level=['plane','neuron']).unstack(level='time')
-    odor_avg = trace.groupby(level=['odor']).mean()
-    if odor_list:
-        odor_avg = odor_avg.reindex(odor_list)
-    xvec = np.arange(len(odor_avg.columns)) / frame_rate
-    odor_avg.columns = xvec
-    odor_avg.transpose().plot(ax=ax)
-    if new_ax_flag:
-        plt.xlabel('Time (s)')
-        plt.ylabel('dF/F')
-        plt.legend()
-        return fig
-    else:
+    odor_avg = trace.groupby(level=['odor', 'time']).mean().T.mean()
+    # if odor_list:
+    #     odor_avg = odor_avg.reindex(odor_list)
+    tvec = odor_avg.index.get_level_values('time')
+    xvec = tvec / frame_rate
+    odor_avg = odor_avg.reset_index()
+    odor_avg = odor_avg.rename(columns={0: yname})
+    sns.lineplot(odor_avg, x='time', y=yname, hue='odor', ax=ax)
+    if not show_legend:
         ax.legend().remove()
-
+    else:
+        ax.legend(loc=2, prop={'size': 6})
 
 def plot_average_time_trace(dff):
     plt.plot(dff.groupby('time').mean().mean(axis=1))

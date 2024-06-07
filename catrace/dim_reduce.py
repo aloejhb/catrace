@@ -283,7 +283,7 @@ def plot_embed_2d(embeddf, component_idx, ax, plot_type='scatter'):
 
     embeddf = embeddf.iloc[:,list(component_idx)]
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
-    groups = embeddf.groupby(['odor'])
+    groups = embeddf.groupby(level='odor')
     for name, group in groups:
         cidx = odor_list.index(name)
         color = clr_cycle[cidx]
