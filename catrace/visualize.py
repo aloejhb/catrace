@@ -126,3 +126,39 @@ def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hl
 
 def plot_avgdf(avgdf, ax=None):
     ax.plot(avgdf)
+
+
+def pvalue_to_marker(p_value):
+    significance_levels = {0.001: '***', 0.01: '**', 0.05: '*'}
+    for sig_level, marker in significance_levels.items():
+        if p_value < sig_level:
+            return marker
+    return None
+
+def plot_boxplot_with_significance(datadf, test_results, yname):
+    """
+    Plot boxplot with significance annotations
+
+    Args:
+        datadf: DataFrame with columns 'odor' and `yname`.
+        test_results: Dictionary with keys as odor names and values as test results.
+        yname: Name of the column in `datadf` to plot.
+    """
+
+    fig, ax = plt.subplots(figsize=(5,3))
+    sns.stripplot(ax=ax, x='odor', y=yname, data=datadf, color='black', jitter=True, size=2, alpha=0.3, zorder=1)
+    sns.boxplot(ax=ax, data=datadf, x='odor', y=yname, saturation=0.5,
+                width=0.45, zorder=2,
+                showfliers=False, showcaps=False,
+                medianprops=dict(color='green', linewidth=2),
+                boxprops=dict(color='green', alpha=0.5, fill=False, linewidth=2),
+                whiskerprops=dict(color='green', linewidth=2, alpha=0.5))
+    ax.axhline(0, linestyle='--', color='0.2', alpha=0.5)
+    ax.set_ylabel(yname)
+
+    current_ylim = ax.get_ylim()
+    ymax = 0.95*current_ylim[1]
+    for key, val in test_results.items():
+        ax.text(key, ymax, pvalue_to_marker(val['p-value']))
+
+    return fig, ax

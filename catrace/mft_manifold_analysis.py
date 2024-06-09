@@ -4,20 +4,31 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
 from mftma.manifold_analysis_correlation import manifold_analysis_corr
+from mftma.manifold_analysis import manifold_analysis
 
 from .utils import load_config
 from .process_time_trace import SelectDfConfig, select_dataframe
 from .exp_collection import read_df
 
-def compute_mftma(dff, kappa=0, n_t=100):
+def compute_mftma(dff, kappa=0, n_t=200, n_reps=1):
     grouped = dff.groupby('odor', observed=True)
     manifolds = [group.T.to_numpy() for _, group in grouped]
-    alpha_m, radius_m, dimension_m, res_coeff0, KK = manifold_analysis_corr(manifolds, kappa=kappa, n_t=n_t)
+    alpha_m, radius_m, dimension_m, res_coeff0, KK = manifold_analysis_corr(manifolds, kappa=kappa, n_t=n_t, n_reps=1)
     ma_result = {'alpha_m': alpha_m,
                 'radius_m': radius_m,
                 'dimension_m': dimension_m,
                 'res_coeff0': res_coeff0,
                 'KK': KK}
+    return ma_result
+
+
+def compute_mftma(dff, kappa=0, n_t=200):
+    grouped = dff.groupby('odor', observed=True)
+    manifolds = [group.T.to_numpy() for _, group in grouped]
+    alpha_m, radius_m, dimension_m= manifold_analysis(manifolds, kappa, n_t)
+    ma_result = {'alpha_m': alpha_m,
+                'radius_m': radius_m,
+                'dimension_m': dimension_m}
     return ma_result
 
 def compute_mftma_io(input_file, config_file, output_file):

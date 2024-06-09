@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.stats import mannwhitneyu
+
 
 def incremental_histogram(data, bins, chunk_size=10000, normalize=True):
     """
@@ -54,3 +56,30 @@ def compute_sparseness(x):
     sparseness = (1 - (sum_x/N)**2 / (sum_x_squared/N)) / (1 - 1/N)
     
     return sparseness
+
+def apply_mann_whitney(df, results):
+    """
+    Mann Whitney U test for manifold analysis measurements
+
+    Args:
+        df (pandas.DataFrame): A pandas DataFrame with the data.
+          df.index.names = ['cond', ...]
+          df.columns = ['odor1', 'odor2', ...] or [0, 1, ...] representing odor index.
+          For the 'cond' level, 'naive' and 'trained' are expected.
+        results (dict): A dictionary to store the statistical results.
+          Keys are odor names and values are dictionaries with keys 'statistic' and 'p-value'.
+    """
+    results = {}
+    for odor in df.columns:
+        # Split data into naive and trained
+        naive_data = df.xs('naive', level='cond')[odor]
+        trained_data = df.xs('trained', level='cond')[odor]
+        
+        # Perform the Mann-Whitney U test
+        stat, p = mannwhitneyu(naive_data, trained_data, alternative='two-sided')
+        
+        # Store results
+        results[odor] = {'statistic': stat, 'p-value': p}
+    
+    return results
+    w

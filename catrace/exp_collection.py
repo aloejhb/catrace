@@ -200,24 +200,19 @@ def process_data_model_decorator(data_func, exp_list, region_list,
     return process_data_model
 
 
-def process_data_db_decorator_parallel(data_func, exp_list, region_list,
-                                       out_collect_name, db_dir, in_collect_name=None,
+def process_data_db_decorator_parallel(data_func, exp_list,
+                                       out_dir, in_dir,
                                        parallelism=1):
-
     def process_data_db(*args, **kwargs):
         func = partial(data_func, *args, **kwargs)
         def _process_data(exp_name, region):
-            if in_collect_name:
-                df = read_df(in_collect_name, exp_name, region, db_dir)
-                outdf = func(df)
-            else:
-                outdf = func(exp_name, region)
-            update_df(outdf, out_collect_name, exp_name, region, db_dir)
+            df = read_df(in_collect_name, exp_name, region, db_dir)
+            outdf = func(df)
+            update_df(outdf, out_dir, exp_name)
 
         exp_names = [e[0] for e in exp_list]
-        exps = itertools.product(exp_names, region_list)
         with Pool(processes=parallelism) as pool:
-            pool.map(_process_data, exps)
+            pool.map(_process_data, exp_names)
 
     return process_data_db
 
