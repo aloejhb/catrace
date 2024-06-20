@@ -57,7 +57,7 @@ def compute_sparseness(x):
     
     return sparseness
 
-def apply_mann_whitney(df, results):
+def apply_mann_whitney(df):
     """
     Mann Whitney U test for manifold analysis measurements
 
@@ -66,6 +66,8 @@ def apply_mann_whitney(df, results):
           df.index.names = ['cond', ...]
           df.columns = ['odor1', 'odor2', ...] or [0, 1, ...] representing odor index.
           For the 'cond' level, 'naive' and 'trained' are expected.
+    
+    Returns:
         results (dict): A dictionary to store the statistical results.
           Keys are odor names and values are dictionaries with keys 'statistic' and 'p-value'.
     """
@@ -82,4 +84,3 @@ def apply_mann_whitney(df, results):
         results[odor] = {'statistic': stat, 'p-value': p}
     
     return results
-    w

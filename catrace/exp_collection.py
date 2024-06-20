@@ -7,6 +7,7 @@ import pickle
 import re
 from sklearn import decomposition
 from functools import partial
+from multiprocessing import Pool
 
 from . import pattern_correlation as pcr
 from . import process_time_trace as ptt
@@ -179,6 +180,24 @@ def process_data_db_decorator(data_func, exp_list,
 
     return process_data_db
 
+def dataio_func(exp_name, data_func, out_dir, in_dir=None, **kwargs):
+    if in_dir:
+        df = read_df(in_dir, exp_name)
+        outdf = data_func(df, **kwargs)
+    else:
+        outdf = data_func(exp_name, **kwargs)
+    update_df(outdf, out_dir, exp_name)
+
+
+def process_data_db_parallel(data_func, exp_list,
+                            out_dir, in_dir,
+                            parallelism=1, **kwargs):
+    dataio_func_partial = partial(dataio_func, data_func=data_func,
+                                  out_dir=out_dir, in_dir=in_dir, **kwargs)
+    exp_names = [exp[0] for exp in exp_list]
+    with Pool(processes=parallelism) as pool:
+        pool.map(dataio_func_partial, exp_names)
+
 
 def process_data_model_decorator(data_func, exp_list, region_list,
                                 out_collect_name, db_dir, in_collect_name=None):
@@ -198,23 +217,6 @@ def process_data_model_decorator(data_func, exp_list, region_list,
                 update_df(outdf, out_collect_name, exp_name, region, db_dir)
                 update_df(model, model_out_dir, exp_name, region, '')
     return process_data_model
-
-
-def process_data_db_decorator_parallel(data_func, exp_list,
-                                       out_dir, in_dir,
-                                       parallelism=1):
-    def process_data_db(*args, **kwargs):
-        func = partial(data_func, *args, **kwargs)
-        def _process_data(exp_name, region):
-            df = read_df(in_collect_name, exp_name, region, db_dir)
-            outdf = func(df)
-            update_df(outdf, out_dir, exp_name)
-
-        exp_names = [e[0] for e in exp_list]
-        with Pool(processes=parallelism) as pool:
-            pool.map(_process_data, exp_names)
-
-    return process_data_db
 
 
 def process_data_db_decorator_dict(data_func, exp_list, region_list,
@@ -267,7 +269,7 @@ def read_df(collect_name, exp_name, region=None, db_dir=''):
 def update_df(df, collect_name, exp_name, region=None, db_dir=''):
     collect_dir = os.path.join(db_dir, collect_name)
     if not os.path.exists(collect_dir):
-        os.mkdir(collect_dir)
+        os.mkdir(collect_dir, exist_ok=True)
     filename = get_filename(exp_name, region, 'pkl')
     df_file = os.path.join(collect_dir, filename)
     # df.to_pickle(df_file)

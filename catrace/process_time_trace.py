@@ -201,6 +201,7 @@ class SelectNeuronConfig:
     thresh: float = None
     head: int = None
     params: dict = None
+    cell_type: str = None
 
 
 def get_select_neuron_tag(config):
@@ -212,6 +213,9 @@ def get_select_neuron_tag(config):
         method_tag = re.sub('\.', 'p', f'thresh{config.thresh:.02f}')
 
     tag = criterion_tag +'_'+ method_tag
+
+    if config.cell_type:
+        tag = tag + f'_{config.cell_type}'
     return tag
 
 
@@ -236,7 +240,8 @@ def select_neuron_by_ensemble(dff, window, top_n_per_odor):
     all_positions = _get_top_n_positions(dff, top_n_per_odor)
     # pos = _sample_positions(all_positions, sample_size)
     idx = dff.columns[all_positions]
-    return idx
+    dff_select = dff.loc[:, idx]
+    return dff_select
 
 
 def get_select_neuron_func(criterion_func, thresh=None, head=None):
@@ -264,6 +269,8 @@ def sample_neuron(dfovf, sample_size, random_state=None):
 
 def select_neuron(dfovf: pd.DataFrame,
                   config: SelectNeuronConfig) -> (pd.DataFrame, pd.Index):
+    if config.cell_type:
+        dfovf = dfovf.xs(config.cell_type, level='cell_type', axis=1)
     if config.criterion == 'max_of_mean_response_per_trial':
         criterion_func = compute_max_of_mean_response_per_trial
     elif config.criterion == 'deviation':
@@ -421,3 +428,13 @@ def select_cell_type_wrapper(func):
         dff = ptt.sort_odors(dff, odors)
         return func(dff, **kwargs)
     return wrapped_func
+
+def select_cell_type_odors_neurons(dff, cell_type, odors, select_func_name, **kwargs):
+    if cell_type is not None:
+        dff = dff.xs(cell_type, level='cell_type', axis=1)
+    dff = ptt.sort_odors(dff, odors)
+    if select_func_name == 'select_neuron_by_ensemble':
+        dff = select_neuron_by_ensemble(dff, **kwargs)
+    else:
+        raise ValueError(f'Unrecognized select_func_name {select_func_name}. So far only select_neuron_by_ensemble is supported.')
+    return dff
