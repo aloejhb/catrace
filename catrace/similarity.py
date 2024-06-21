@@ -51,7 +51,7 @@ def compute_similarity_mat_timecourse(dfovf, bin_size, frame_rate, similarity_fu
     #     mats.append(mat)
 
 
-def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', title=''):
+def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8, title=''):
     """
     Plot similarity matrix heatmap
 
@@ -74,7 +74,7 @@ def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', title=''):
     tick_pos = np.arange(df.shape[0])
     ax.yaxis.set_tick_params(length=0)
     ax.set_yticks(tick_pos)
-    ax.set_yticklabels(y_labels, fontsize=8)
+    ax.set_yticklabels(y_labels, fontsize=ylabel_fontsize)
     ax.set_xticks([])
 
     for i, ytick in enumerate(ax.get_yticklabels()):

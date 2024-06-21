@@ -26,14 +26,13 @@ def plot_pattern_heatmap(pattern, climit=None, ax=None):
 
 
 def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
-                   sharey=False, row_height=3.5, *args, **kwargs):
+                   sharey=False, ncol=2, row_height=3.5, col_width=4, *args, **kwargs):
     """
     Plot matrices for each training condtion.
     """
-    ncol = 2
     nrow = np.ceil(len(cond_list) /ncol).astype(int)
     print(nrow)
-    figsize=[8, row_height*nrow]
+    figsize=[col_width*ncol, row_height*nrow]
     fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
                              sharey=sharey, figsize=figsize)
     vmin = min([df.to_numpy().min() for df in  dfs.values()])
@@ -123,6 +122,7 @@ def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hl
         # Adjust y-axis limit to account for the space needed by annotations
         y_lim = ax.get_ylim()
         ax.set_ylim(y_lim[0], y_lim[1] + (y_lim[1] - y_lim[0]) * 0.2)  # Increase the upper limit to avoid overlap
+    return ax
 
 def plot_avgdf(avgdf, ax=None):
     ax.plot(avgdf)
@@ -135,7 +135,8 @@ def pvalue_to_marker(p_value):
             return marker
     return None
 
-def plot_boxplot_with_significance(datadf, yname, test_results,
+def plot_boxplot_with_significance(datadf, xname, yname, test_results,
+                                   test_type='single', ref_key=None,
                                    box_color='green'):
     """
     Plot boxplot with significance annotations
@@ -147,8 +148,8 @@ def plot_boxplot_with_significance(datadf, yname, test_results,
     """
     fig, ax = plt.subplots(figsize=(5,3))
 
-    sns.stripplot(ax=ax, x='odor', y=yname, data=datadf, color='black', jitter=True, size=2, alpha=0.2, zorder=1)
-    sns.boxplot(ax=ax, data=datadf, x='odor', y=yname, saturation=0.5,
+    sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=2, alpha=0.2, zorder=1)
+    sns.boxplot(ax=ax, data=datadf, x=xname, y=yname, saturation=0.5,
                 width=0.45, zorder=2,
                 showfliers=False, showcaps=False,
                 medianprops=dict(color=box_color, alpha=0.7, linewidth=2),
@@ -158,8 +159,19 @@ def plot_boxplot_with_significance(datadf, yname, test_results,
     ax.set_ylabel(yname)
 
     current_ylim = ax.get_ylim()
-    ymax = 1.02*current_ylim[1]
-    for key, val in test_results.items():
-        ax.text(key, ymax, pvalue_to_marker(val['p-value']))
-
+    ylevel = 1.02*current_ylim[1]
+    plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=ref_key)
     return fig, ax
+
+def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None):
+    if test_type == 'single':
+        for key, val in test_results.items():
+            ax.text(key, ylevel, pvalue_to_marker(val['p']))
+    elif test_type == 'one_reference':
+        if ref_key is None:
+            raise ValueError('ref_key must be specified when test_type is "one_reference"')
+        for key, val in test_results.items():
+            if key != ref_key:
+                ax.text(key, ylevel, pvalue_to_marker(val['p']))
+    else:
+        raise ValueError('test_type must be one of "single" or "one_reference"')

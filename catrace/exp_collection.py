@@ -269,7 +269,7 @@ def read_df(collect_name, exp_name, region=None, db_dir=''):
 def update_df(df, collect_name, exp_name, region=None, db_dir=''):
     collect_dir = os.path.join(db_dir, collect_name)
     if not os.path.exists(collect_dir):
-        os.mkdir(collect_dir, exist_ok=True)
+        os.makedirs(collect_dir, exist_ok=True)
     filename = get_filename(exp_name, region, 'pkl')
     df_file = os.path.join(collect_dir, filename)
     # df.to_pickle(df_file)
