@@ -128,15 +128,18 @@ def plot_avgdf(avgdf, ax=None):
     ax.plot(avgdf)
 
 
-def pvalue_to_marker(p_value):
+def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01):
     significance_levels = {0.001: '***', 0.01: '**', 0.05: '*'}
     for sig_level, marker in significance_levels.items():
         if p_value < sig_level:
-            return marker
+            xoffset = len(marker) * pvalue_marker_xoffset
+            return marker, xoffset
     return None
 
 def plot_boxplot_with_significance(datadf, xname, yname, test_results,
                                    test_type='single', ref_key=None,
+                                   figsize=(5,3),
+                                   pvalue_marker_xoffset=0.01,
                                    box_color='green'):
     """
     Plot boxplot with significance annotations
@@ -146,9 +149,9 @@ def plot_boxplot_with_significance(datadf, xname, yname, test_results,
         test_results: Dictionary with keys as odor names and values as test results.
         yname: Name of the column in `datadf` to plot.
     """
-    fig, ax = plt.subplots(figsize=(5,3))
+    fig, ax = plt.subplots(figsize=figsize)
 
-    sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=2, alpha=0.2, zorder=1)
+    sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=2, alpha=0.4, zorder=1)
     sns.boxplot(ax=ax, data=datadf, x=xname, y=yname, saturation=0.5,
                 width=0.45, zorder=2,
                 showfliers=False, showcaps=False,
@@ -160,18 +163,37 @@ def plot_boxplot_with_significance(datadf, xname, yname, test_results,
 
     current_ylim = ax.get_ylim()
     ylevel = 1.02*current_ylim[1]
-    plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=ref_key)
+    plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=ref_key, pvalue_marker_xoffset=pvalue_marker_xoffset)
+
+    # Removing the top and right spines
+    sns.despine(ax=ax)
     return fig, ax
 
-def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None):
+def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, **kwargs):
+    # Getting the positions and labels
+    xticks = ax.get_xticks()
+    xlabels = [label.get_text() for label in ax.get_xticklabels()]
+    # Mapping the labels to their positions
+    xpos_dict = dict(zip(xlabels, xticks))
+
     if test_type == 'single':
         for key, val in test_results.items():
-            ax.text(key, ylevel, pvalue_to_marker(val['p']))
+            marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
+            ax.text(xpos_dict[key]-xoffset, ylevel, marker)
     elif test_type == 'one_reference':
         if ref_key is None:
             raise ValueError('ref_key must be specified when test_type is "one_reference"')
         for key, val in test_results.items():
             if key != ref_key:
-                ax.text(key, ylevel, pvalue_to_marker(val['p']))
+                marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
+                ax.text(xpos_dict[key]-xoffset, ylevel, marker)
+    elif test_type == 'pairwise':
+        for key, val in test_results.items():
+            marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
+            xstart = xpos_dict[key[0]]
+            xend = xpos_dict[key[1]]
+            xmid = (xstart + xend) / 2
+            ax.text(xmid-xoffset, ylevel, marker)
+            ax.hlines(y=ylevel, xmin=xstart, xmax=xend, color='black')
     else:
         raise ValueError('test_type must be one of "single" or "one_reference"')
