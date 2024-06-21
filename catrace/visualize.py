@@ -128,15 +128,9 @@ def plot_avgdf(avgdf, ax=None):
     ax.plot(avgdf)
 
 
-def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01):
-    significance_levels = {0.001: '***', 0.01: '**', 0.05: '*'}
-    for sig_level, marker in significance_levels.items():
-        if p_value < sig_level:
-            xoffset = len(marker) * pvalue_marker_xoffset
-            return marker, xoffset
-    return None
-
-def plot_boxplot_with_significance(datadf, xname, yname, test_results,
+def plot_boxplot_with_significance(datadf, xname, yname,
+                                   ylabel,
+                                   test_results,
                                    test_type='single', ref_key=None,
                                    figsize=(5,3),
                                    pvalue_marker_xoffset=0.01,
@@ -159,7 +153,19 @@ def plot_boxplot_with_significance(datadf, xname, yname, test_results,
                 boxprops=dict(color=box_color, alpha=0.7, fill=False, linewidth=2),
                 whiskerprops=dict(color=box_color, linewidth=2, alpha=0.7))
     ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
-    ax.set_ylabel(yname)
+
+    # Calculate means
+    means = datadf.groupby(xname, sort=False)[yname].mean()
+    # Add mean to the boxplot
+    for i, mean in enumerate(means):
+        ax.plot([i-0.2, i+0.2], [mean, mean], color='red', lw=2)
+
+    ax.set_xlabel('')
+    # Adjusting the font size and rotation of x-axis tick labels
+    ax.tick_params(axis='x', labelsize=16)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+
+    ax.set_ylabel(ylabel, fontsize=16)
 
     current_ylim = ax.get_ylim()
     ylevel = 1.02*current_ylim[1]
@@ -169,7 +175,16 @@ def plot_boxplot_with_significance(datadf, xname, yname, test_results,
     sns.despine(ax=ax)
     return fig, ax
 
-def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, **kwargs):
+def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01):
+    significance_levels = {0.001: '***', 0.01: '**', 0.05: '*'}
+    for sig_level, marker in significance_levels.items():
+        if p_value < sig_level:
+            xoffset = len(marker) * pvalue_marker_xoffset
+            return marker, xoffset
+    return 'n.s.', 4*pvalue_marker_xoffset
+
+
+def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_ns=True, **kwargs):
     # Getting the positions and labels
     xticks = ax.get_xticks()
     xlabels = [label.get_text() for label in ax.get_xticklabels()]
@@ -179,21 +194,24 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, **kwar
     if test_type == 'single':
         for key, val in test_results.items():
             marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
-            ax.text(xpos_dict[key]-xoffset, ylevel, marker)
+            if marker != 'n.s.' or show_ns:
+                ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
     elif test_type == 'one_reference':
         if ref_key is None:
             raise ValueError('ref_key must be specified when test_type is "one_reference"')
         for key, val in test_results.items():
             if key != ref_key:
                 marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
-                ax.text(xpos_dict[key]-xoffset, ylevel, marker)
+                if marker != 'n.s.' or show_ns:
+                    ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
     elif test_type == 'pairwise':
         for key, val in test_results.items():
             marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
-            xstart = xpos_dict[key[0]]
-            xend = xpos_dict[key[1]]
-            xmid = (xstart + xend) / 2
-            ax.text(xmid-xoffset, ylevel, marker)
-            ax.hlines(y=ylevel, xmin=xstart, xmax=xend, color='black')
+            if marker != 'n.s.' or show_ns:
+                xstart = xpos_dict[key[0]]
+                xend = xpos_dict[key[1]]
+                xmid = (xstart + xend) / 2
+                ax.text(xmid-xoffset, ylevel, marker, fontsize=14)
+                ax.hlines(y=ylevel-0.02, xmin=xstart, xmax=xend, color='black')
     else:
         raise ValueError('test_type must be one of "single" or "one_reference"')
