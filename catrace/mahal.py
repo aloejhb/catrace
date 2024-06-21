@@ -45,7 +45,10 @@ def compute_distances_df(df, window=None, model_window=None, model_trials=None, 
         # Compute inv_cov_mat for each odor
         inv_cov_mats = dict()
         for key, val in cov_mats.items():
-            inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
+            try:
+                inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
+            except:
+                import pdb; pdb.set_trace()
 
     distances_dict = dict()
     for odor1 in odor_list:

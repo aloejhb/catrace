@@ -195,8 +195,12 @@ def process_data_db_parallel(data_func, exp_list,
     dataio_func_partial = partial(dataio_func, data_func=data_func,
                                   out_dir=out_dir, in_dir=in_dir, **kwargs)
     exp_names = [exp[0] for exp in exp_list]
-    with Pool(processes=parallelism) as pool:
-        pool.map(dataio_func_partial, exp_names)
+    if parallelism > 1:
+        with Pool(processes=parallelism) as pool:
+            pool.map(dataio_func_partial, exp_names)
+    else:
+        for exp_name in exp_names:
+            dataio_func_partial(exp_name)
 
 
 def process_data_model_decorator(data_func, exp_list, region_list,

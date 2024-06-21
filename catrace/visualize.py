@@ -145,27 +145,28 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     """
     fig, ax = plt.subplots(figsize=figsize)
 
-    sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=2, alpha=0.4, zorder=1)
+    sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=4, alpha=0.4, zorder=1)
     sns.boxplot(ax=ax, data=datadf, x=xname, y=yname, saturation=0.5,
                 width=0.45, zorder=2,
                 showfliers=False, showcaps=False,
-                medianprops=dict(color=box_color, alpha=0.7, linewidth=2),
-                boxprops=dict(color=box_color, alpha=0.7, fill=False, linewidth=2),
-                whiskerprops=dict(color=box_color, linewidth=2, alpha=0.7))
-    ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
+                medianprops=dict(color=box_color, alpha=0.95, linewidth=4),
+                boxprops=dict(color=box_color, alpha=0.95, fill=False, linewidth=4),
+                whiskerprops=dict(color=box_color, linewidth=4, alpha=0.7))
+    ax.axhline(0, linestyle='--', color='0.2', alpha=0.85)
 
     # Calculate means
     means = datadf.groupby(xname, sort=False)[yname].mean()
     # Add mean to the boxplot
     for i, mean in enumerate(means):
-        ax.plot([i-0.2, i+0.2], [mean, mean], color='red', lw=2)
+        ax.plot([i-0.2, i+0.2], [mean, mean], color='red', linewidth=3)
 
     ax.set_xlabel('')
+    label_fontsize = 24
     # Adjusting the font size and rotation of x-axis tick labels
-    ax.tick_params(axis='x', labelsize=16)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    ax.tick_params(axis='x', labelsize=label_fontsize)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=label_fontsize)
 
-    ax.set_ylabel(ylabel, fontsize=16)
+    ax.set_ylabel(ylabel, fontsize=label_fontsize)
 
     current_ylim = ax.get_ylim()
     ylevel = 1.02*current_ylim[1]

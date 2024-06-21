@@ -429,9 +429,15 @@ def select_cell_type_wrapper(func):
         return func(dff, **kwargs)
     return wrapped_func
 
+def select_cell_type(dff, cell_type=None):
+    if cell_type is not None:
+        dff = dff.xs(cell_type, level='cell_type', axis=1)
+    return dff
+
 def select_cell_type_odors_neurons(dff, cell_type, odors, select_func_name, **kwargs):
     if cell_type is not None:
         dff = dff.xs(cell_type, level='cell_type', axis=1)
+    dff = ptt.select_odors_df(dff, odors)
     dff = ptt.sort_odors(dff, odors)
     if select_func_name == 'select_neuron_by_ensemble':
         dff = select_neuron_by_ensemble(dff, **kwargs)
