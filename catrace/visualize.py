@@ -162,7 +162,7 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     means = datadf.groupby(xname, sort=False)[yname].mean()
     # Add mean to the boxplot
     for i, mean in enumerate(means):
-        ax.plot([i-0.2, i+0.2], [mean, mean], color='red', linewidth=3)
+        ax.plot([i-0.2, i+0.2], [mean, mean], color='red', linewidth=3, zorder=3)
 
     ax.set_xlabel('')
     label_fontsize = 24
@@ -223,3 +223,49 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
                 ax.hlines(y=ylevel-0.02, xmin=xstart, xmax=xend, color='black')
     else:
         raise ValueError('test_type must be one of "single" or "one_reference"')
+
+
+def plot_boxplot_with_significance_multi_cond(datadf, yname, test_results, box_color='green'):
+    """
+    Plot boxplot with significance annotations
+
+    Args:
+        datadf: DataFrame with a multi-level index ['cond', 'fish_id'] and columns 'odor' and `yname`.
+        test_results: Dictionary with keys as tuples (cond1, cond2, odor) and values as test results.
+        yname: Name of the column in `datadf` to plot.
+    """
+    # Reset index if needed to make 'cond' and 'fish_id' regular columns for plotting
+    datadf = datadf.reset_index()
+
+    fig, ax = plt.subplots(figsize=(10, 5))  # Adjusted size for better visibility
+
+    # Plotting stripplot and boxplot with hue
+    # sns.stripplot(ax=ax, x='odor', y=yname, hue='cond', data=datadf, jitter=True, dodge=True, size=2, alpha=0.2, zorder=1)
+    sns.boxplot(ax=ax, x='odor', y=yname, hue='cond', data=datadf, saturation=0.5,
+                width=0.45, zorder=2, dodge=True,
+                showfliers=False, showcaps=False,
+                medianprops=dict(linewidth=2))
+                #boxprops=dict(fill=False, linewidth=2),
+                # whiskerprops=dict(linewidth=2))
+
+                #medianprops=dict(color=box_color, linewidth=2),
+                #boxprops=dict(color=box_color, fill=False, linewidth=2),
+                #whiskerprops=dict(color=box_color, linewidth=2))
+
+    ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
+    ax.set_ylabel(yname)
+
+    # Handling annotations for significance
+    # current_ylim = ax.get_ylim()
+    # ymax = 1.02 * current_ylim[1]
+    # for odor, results in test_results.items():
+    #     for comparison, result in results['Dunn_naive'].items():
+    #         if comparison != 'naive':  # Ignore naive-naive comparison
+    #             cond1, cond2 = 'naive', comparison
+    #             odor_pos = datadf['odor'].unique().tolist().index(odor)
+    #             cond_pos = datadf['cond'].unique().tolist().index(cond2)
+    #             position = odor_pos + (cond_pos) * 0.2
+    #             p_value = result
+    #             ax.text(position, ymax, pvalue_to_marker(p_value))
+
+    return fig, ax

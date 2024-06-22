@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.stats import mannwhitneyu
+from scipy.stats import mannwhitneyu, kruskal
+from scikit_posthocs import posthoc_dunn
 
 
 def incremental_histogram(data, bins, chunk_size=10000, normalize=True):
@@ -95,3 +96,43 @@ def apply_mann_whitney_pair(df):
     stat, p = mannwhitneyu(data1, data2, alternative='two-sided')
     results = {('trained', 'naive'): {'statistic': stat, 'p-value': p}}
     return results
+
+
+def apply_test_each_odor_by_cond(df, yname):
+    """
+    Perform statistical tests for each odor, comparing conditions within each odor.
+
+    Args:
+        df: DataFrame with multiindex (fish_id, cond) and each column is an odor_id.
+        yname: Name of the column to analyze.
+
+    Returns:
+        Dictionary with overall test results and pairwise comparisons against 'naive'.
+    """
+ 
+    test_results = {}
+    
+    # Process each odor separately
+    for odor_id in df.columns:
+        statdf = df[[odor_id]].reset_index()  # Reset index to access 'cond' and 'fish_id' as regular columns
+        statdf.rename(columns={odor_id: yname}, inplace=True)
+        # statdf = statdf.reset_index(level='cond')        
+        
+        # Kruskal-Wallis test
+        data_by_condition = [group.values for name, group in statdf.groupby("cond")]
+        stat, p_value = kruskal(*data_by_condition)
+        
+        # Post-hoc Dunn test for pairwise comparisons against 'naive'
+        if 'naive' in statdf['cond'].unique():
+            dunn_test_results = posthoc_dunn(statdf, val_col=yname, group_col='cond', p_adjust='bonferroni')
+            naive_comparisons = dunn_test_results['naive']
+        else:
+            naive_comparisons = "No naive condition present"
+        
+        # Store results
+        test_results[odor_id] = {
+            'Kruskal': {'statistic': stat, 'p_value': p_value},
+            'Dunn_naive': naive_comparisons
+        }
+
+    return test_results
