@@ -72,15 +72,26 @@ def apply_mann_whitney(df):
           Keys are odor names and values are dictionaries with keys 'statistic' and 'p-value'.
     """
     results = {}
-    for odor in df.columns:
+    for col in df.columns:
         # Split data into naive and trained
-        naive_data = df.xs('naive', level='cond')[odor]
-        trained_data = df.xs('trained', level='cond')[odor]
-        
+        naive_data = df.xs('naive', level='cond')[col]
+        trained_data = df.xs('trained', level='cond')[col]
+
         # Perform the Mann-Whitney U test
         stat, p = mannwhitneyu(naive_data, trained_data, alternative='two-sided')
         
         # Store results
-        results[odor] = {'statistic': stat, 'p-value': p}
+        results[col] = {'statistic': stat, 'p-value': p}
     
+    return results
+
+def apply_mann_whitney_pair(df):
+    group_name1 = 'naive'
+    group_name2 = 'trained'
+
+    data1 = df.xs(group_name1, level='cond')
+    data2 = df.xs(group_name2, level='cond')
+
+    stat, p = mannwhitneyu(data1, data2, alternative='two-sided')
+    results = {('trained', 'naive'): {'statistic': stat, 'p-value': p}}
     return results

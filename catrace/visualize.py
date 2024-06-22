@@ -133,6 +133,9 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    test_results,
                                    test_type='single', ref_key=None,
                                    figsize=(5,3),
+                                   ylim=None,
+                                   hline_y=0,
+                                   show_ns=True,
                                    pvalue_marker_xoffset=0.01,
                                    box_color='green'):
     """
@@ -152,7 +155,8 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                 medianprops=dict(color=box_color, alpha=0.95, linewidth=4),
                 boxprops=dict(color=box_color, alpha=0.95, fill=False, linewidth=4),
                 whiskerprops=dict(color=box_color, linewidth=4, alpha=0.7))
-    ax.axhline(0, linestyle='--', color='0.2', alpha=0.85)
+    if hline_y is not None:
+        ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.85)
 
     # Calculate means
     means = datadf.groupby(xname, sort=False)[yname].mean()
@@ -167,10 +171,13 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=label_fontsize)
 
     ax.set_ylabel(ylabel, fontsize=label_fontsize)
+    if ylim:
+        ax.set_ylim(ylim)
 
     current_ylim = ax.get_ylim()
     ylevel = 1.02*current_ylim[1]
-    plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=ref_key, pvalue_marker_xoffset=pvalue_marker_xoffset)
+    plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=ref_key,
+                       show_ns=show_ns, pvalue_marker_xoffset=pvalue_marker_xoffset)
 
     # Removing the top and right spines
     sns.despine(ax=ax)
@@ -194,7 +201,7 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
 
     if test_type == 'single':
         for key, val in test_results.items():
-            marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
+            marker, xoffset = pvalue_to_marker(val['p-value'], **kwargs)
             if marker != 'n.s.' or show_ns:
                 ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
     elif test_type == 'one_reference':
@@ -207,7 +214,7 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
                     ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
     elif test_type == 'pairwise':
         for key, val in test_results.items():
-            marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
+            marker, xoffset = pvalue_to_marker(val['p-value'], **kwargs)
             if marker != 'n.s.' or show_ns:
                 xstart = xpos_dict[key[0]]
                 xend = xpos_dict[key[1]]
