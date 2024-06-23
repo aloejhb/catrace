@@ -201,7 +201,7 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
 
     if test_type == 'single':
         for key, val in test_results.items():
-            marker, xoffset = pvalue_to_marker(val['p-value'], **kwargs)
+            marker, xoffset = pvalue_to_marker(val['p_value'], **kwargs)
             if marker != 'n.s.' or show_ns:
                 ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
     elif test_type == 'one_reference':
@@ -214,7 +214,7 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
                     ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
     elif test_type == 'pairwise':
         for key, val in test_results.items():
-            marker, xoffset = pvalue_to_marker(val['p-value'], **kwargs)
+            marker, xoffset = pvalue_to_marker(val['p_value'], **kwargs)
             if marker != 'n.s.' or show_ns:
                 xstart = xpos_dict[key[0]]
                 xend = xpos_dict[key[1]]
@@ -225,8 +225,9 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
         raise ValueError('test_type must be one of "single" or "one_reference"')
 
 
-def plot_boxplot_with_significance_multi_cond(datadf, yname, test_results,
+def plot_boxplot_with_significance_multi_cond(datadf, yname, ylabel, test_results,
                                               ylim=None,
+                                              label_fontsize = 24,
                                               show_ns=False, box_color='green'):
     """
     Plot boxplot with significance annotations
@@ -240,22 +241,30 @@ def plot_boxplot_with_significance_multi_cond(datadf, yname, test_results,
     datadf = datadf.reset_index()
 
     fig, ax = plt.subplots(figsize=(10, 5))  # Adjusted size for better visibility
+    nconds = datadf['cond'].nunique()
 
     # Plotting stripplot and boxplot with hue
     sns.stripplot(ax=ax, x='odor', y=yname, hue='cond', data=datadf, jitter=True, dodge=True, size=2, alpha=0.8, zorder=1)
     sns.boxplot(ax=ax, x='odor', y=yname, hue='cond', data=datadf, saturation=0.5,
                 zorder=2, dodge=True,
                 showfliers=False, showcaps=False, fill=False)
-                # medianprops=dict(linewidth=2),
-                # boxprops=dict(fill=False, linewidth=2),
-                # whiskerprops=dict(linewidth=2))
 
-                #medianprops=dict(color=box_color, linewidth=2),
-                #boxprops=dict(color=box_color, fill=False, linewidth=2),
-                #whiskerprops=dict(color=box_color, linewidth=2))
+    # Add mean points
+    mean_points = datadf.groupby(['odor', 'cond'], as_index=False, sort=False)[yname].mean()
+    sns.pointplot(ax=ax, x='odor', y=yname, hue='cond', data=mean_points, 
+                  dodge=0.6, markers='D', linestyle='none', zorder=3, markersize=5)
+
+    # Adjust the legend to show only one set of hue labels
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[nconds*2:], labels[nconds*2:])
+
 
     ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
-    ax.set_ylabel(yname)
+    ax.set_ylabel(ylabel, fontsize=label_fontsize)
+
+    ax.set_xlabel('')
+    ax.tick_params(axis='x', labelsize=label_fontsize)
+    ax.tick_params(axis='y', labelsize=16)
 
     if ylim:
         ax.set_ylim(ylim)
@@ -263,18 +272,18 @@ def plot_boxplot_with_significance_multi_cond(datadf, yname, test_results,
     # Handling annotations for significance
     current_ylim = ax.get_ylim()
     ymax = 1.02 * current_ylim[1]
-    nconds = datadf['cond'].nunique()
     for odor, results in test_results.items():
         for comparison, result in results['Dunn_naive'].items():
             if comparison != 'naive':  # Ignore naive-naive comparison
                 cond1, cond2 = 'naive', comparison
                 odor_pos = datadf['odor'].unique().tolist().index(odor)
                 cond_pos = datadf['cond'].unique().tolist().index(cond2)
-                position = odor_pos + (cond_pos - nconds/2 + 0.5) * 0.14
+                position = odor_pos + (cond_pos - nconds/2+0.5) * 0.205
                 p_value = result
                 marker, xoffset = pvalue_to_marker(p_value)
                 if marker !='n.s.' or show_ns:
-                    ax.text(position-xoffset, ymax, marker)
+                    fontsize = 18
+                    ax.text(position-xoffset*fontsize*0.2, ymax, marker, fontsize=fontsize)
     sns.despine(ax=ax)
 
     return fig, ax

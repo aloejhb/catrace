@@ -31,13 +31,14 @@ def compute_mftma(dff, with_center_corr=False, kappa=0, n_t=200, n_reps=1):
 def compute_ma_io(exp_name, in_dir, out_dir, ma_window=None,
                   sample_size=None, random_state=None,
                   odors=None,
-                  with_center_corr=False, kappa=0):
+                  with_center_corr=False,
+                  **kwargs):
     dff = read_df(in_dir, exp_name).dropna()
     if sample_size is not None:
         dff = sample_neuron(dff, sample_size=sample_size, random_state=random_state)
     dff = select_time_points(dff, ma_window)
     dff = select_odors_df(dff, odors)
-    ma_result = compute_mftma(dff, with_center_corr=with_center_corr, kappa=kappa)
+    ma_result = compute_mftma(dff, with_center_corr=with_center_corr, **kwargs)
     np.savez(pjoin(out_dir, f'{exp_name}.npz'), **ma_result)
 
 # def compute_mftma_io(input_file, config_file, output_file):

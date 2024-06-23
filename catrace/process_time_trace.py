@@ -219,28 +219,21 @@ def get_select_neuron_tag(config):
     return tag
 
 
-def _get_top_n_positions(df, n):
-    # Identify the positions of the top n values for each row
-    top_positions_per_row = df.apply(lambda x: list(x.argsort()[::-1].head(n).values), axis=1)
-    all_positions = [position for positions in top_positions_per_row for position in positions]
+def _find_top_indices(row, ensemble_size):
+    return row.nlargest(ensemble_size).index
+
+
+def _get_ensemble_positions(df, ensemble_size):
+    all_positions = set().union(*df.apply(lambda row: _find_top_indices(row, ensemble_size), axis=1))
+    all_positions = list(all_positions)
     return all_positions
 
 
-def _sample_positions(all_positions, sample_size=50):
-    # Randomly select sample_size positions from the list
-    unique_positions = list(set(all_positions))
-    if len(unique_positions) <= sample_size:
-        raise ValueError(f'Cannot sample {sample_size} neurons from total {len(unique_positions)} neurons.')
-    return list(np.random.choice(unique_positions, size=sample_size, replace=False))
-
-
 def select_neuron_by_ensemble(dff, window, top_n_per_odor):
-    dff = select_time_points(dff, window)
-    response = dff.groupby(level='odor').mean().max()
-    all_positions = _get_top_n_positions(dff, top_n_per_odor)
-    # pos = _sample_positions(all_positions, sample_size)
-    idx = dff.columns[all_positions]
-    dff_select = dff.loc[:, idx]
+    dff_in_window = select_time_points(dff, window)
+    response = dff_in_window.groupby(level='odor', sort=False).mean()
+    all_positions = _get_ensemble_positions(response, top_n_per_odor)
+    dff_select = dff.loc[:, all_positions]
     return dff_select
 
 

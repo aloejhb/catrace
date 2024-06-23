@@ -82,7 +82,7 @@ def apply_mann_whitney(df):
         stat, p = mannwhitneyu(naive_data, trained_data, alternative='two-sided')
         
         # Store results
-        results[col] = {'statistic': stat, 'p-value': p}
+        results[col] = {'statistic': stat, 'p_value': p}
     
     return results
 
@@ -94,7 +94,7 @@ def apply_mann_whitney_pair(df):
     data2 = df.xs(group_name2, level='cond')
 
     stat, p = mannwhitneyu(data1, data2, alternative='two-sided')
-    results = {('trained', 'naive'): {'statistic': stat, 'p-value': p}}
+    results = {('trained', 'naive'): {'statistic': stat, 'p_value': p}}
     return results
 
 
