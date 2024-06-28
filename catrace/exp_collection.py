@@ -381,6 +381,24 @@ def mean_mat_over_cond(mat_list, exp_cond_list, cond_list):
         avg_mats[cond] = average_df
     return avg_mats
 
+
+def mean_mat_over_cond_with_nan(mat_list, exp_cond_list, cond_list):
+    avg_mats = dict()
+    for cond in cond_list:
+        filtered_dfs = [df for df, con in zip(mat_list, exp_cond_list) if con == cond]
+        # Convert list of dataframes to 3D numpy array
+        stacked_array = np.stack([df.values for df in filtered_dfs], axis=0)
+        
+        # Compute the nanmean along the first axis (axis=0)
+        nanmean_array = np.nanmean(stacked_array, axis=0)
+        
+        # Convert the result back to a dataframe
+        average_df = pd.DataFrame(nanmean_array, columns=filtered_dfs[0].columns, index=filtered_dfs[0].index)
+        
+        avg_mats[cond] = average_df
+    return avg_mats
+
+
 def mean_mat(mat_list):
     average_df = pd.DataFrame().reindex_like(mat_list[0])
 

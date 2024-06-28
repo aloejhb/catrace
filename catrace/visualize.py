@@ -183,16 +183,16 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     sns.despine(ax=ax)
     return fig, ax
 
-def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01):
+def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01, fontsize=24):
     significance_levels = {0.001: '***', 0.01: '**', 0.05: '*'}
     for sig_level, marker in significance_levels.items():
         if p_value < sig_level:
-            xoffset = len(marker) * pvalue_marker_xoffset
+            xoffset = len(marker) * pvalue_marker_xoffset*fontsize/14*1.7
             return marker, xoffset
-    return 'n.s.', 4*pvalue_marker_xoffset
+    return 'n.s.', 4*pvalue_marker_xoffset*fontsize/14
 
 
-def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_ns=True, **kwargs):
+def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_ns=True, fontsize=24, **kwargs):
     # Getting the positions and labels
     xticks = ax.get_xticks()
     xlabels = [label.get_text() for label in ax.get_xticklabels()]
@@ -201,7 +201,7 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
 
     if test_type == 'single':
         for key, val in test_results.items():
-            marker, xoffset = pvalue_to_marker(val['p_value'], **kwargs)
+            marker, xoffset = pvalue_to_marker(val['p_value'], fontsize=fontsize, **kwargs)
             if marker != 'n.s.' or show_ns:
                 ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
     elif test_type == 'one_reference':
@@ -209,23 +209,24 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
             raise ValueError('ref_key must be specified when test_type is "one_reference"')
         for key, val in test_results.items():
             if key != ref_key:
-                marker, xoffset = pvalue_to_marker(val['p'], **kwargs)
+                marker, xoffset = pvalue_to_marker(val['p'], fontsize=fontsize, **kwargs)
                 if marker != 'n.s.' or show_ns:
-                    ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
+                    ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=fontsize)
     elif test_type == 'pairwise':
         for key, val in test_results.items():
-            marker, xoffset = pvalue_to_marker(val['p_value'], **kwargs)
+            marker, xoffset = pvalue_to_marker(val['p_value'], fontsize=fontsize, **kwargs)
             if marker != 'n.s.' or show_ns:
                 xstart = xpos_dict[key[0]]
                 xend = xpos_dict[key[1]]
                 xmid = (xstart + xend) / 2
-                ax.text(xmid-xoffset, ylevel, marker, fontsize=14)
-                ax.hlines(y=ylevel-0.02, xmin=xstart, xmax=xend, color='black')
+                ax.text(xmid-xoffset, ylevel, marker, fontsize=fontsize)
+                ax.hlines(y=ylevel*0.97, xmin=xstart, xmax=xend, color='black')
     else:
         raise ValueError('test_type must be one of "single" or "one_reference"')
 
 
 def plot_boxplot_with_significance_multi_cond(datadf, yname, ylabel, test_results,
+                                              figsize=(10, 5),
                                               ylim=None,
                                               label_fontsize = 24,
                                               show_ns=False, box_color='green'):
@@ -240,7 +241,7 @@ def plot_boxplot_with_significance_multi_cond(datadf, yname, ylabel, test_result
     # Reset index if needed to make 'cond' and 'fish_id' regular columns for plotting
     datadf = datadf.reset_index()
 
-    fig, ax = plt.subplots(figsize=(10, 5))  # Adjusted size for better visibility
+    fig, ax = plt.subplots(figsize=figsize)  # Adjusted size for better visibility
     nconds = datadf['cond'].nunique()
 
     # Plotting stripplot and boxplot with hue
@@ -256,7 +257,7 @@ def plot_boxplot_with_significance_multi_cond(datadf, yname, ylabel, test_result
 
     # Adjust the legend to show only one set of hue labels
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[nconds*2:], labels[nconds*2:])
+    ax.legend(handles[nconds*2:], labels[nconds*2:], ncol=4, loc='lower right')
 
 
     ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
@@ -282,8 +283,8 @@ def plot_boxplot_with_significance_multi_cond(datadf, yname, ylabel, test_result
                 p_value = result
                 marker, xoffset = pvalue_to_marker(p_value)
                 if marker !='n.s.' or show_ns:
-                    fontsize = 18
-                    ax.text(position-xoffset*fontsize*0.2, ymax, marker, fontsize=fontsize)
+                    fontsize = 14
+                    ax.text(position-xoffset*fontsize*0.05, ymax, marker, fontsize=fontsize)
     sns.despine(ax=ax)
 
     return fig, ax

@@ -42,7 +42,7 @@ def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, figsize=(10,4), 
     return fig
 
 
-def plot_trace_avg(trace, frame_rate, odor_list=None, ax=None, show_legend=False, yname='spike_prob'):
+def plot_trace_avg(trace, frame_rate=1, cut_time=0, ax=None, show_legend=False, yname='spike_prob', linewidth=2):
     """
     Plot averaged time trace for each odor
 
@@ -59,18 +59,18 @@ def plot_trace_avg(trace, frame_rate, odor_list=None, ax=None, show_legend=False
         ax (axis object): Default is None. If ax is not provided, it will create
                           a new figure. Otherwise it will plot on the given axis.
     """
-    odor_avg = trace.groupby(level=['odor', 'time']).mean().T.mean()
-    # if odor_list:
-    #     odor_avg = odor_avg.reindex(odor_list)
+    odor_avg = trace.groupby(level=['odor', 'time'], sort=False).mean().T.mean()
     tvec = odor_avg.index.get_level_values('time')
-    xvec = tvec / frame_rate
+    xvec = tvec / frame_rate - cut_time
     odor_avg = odor_avg.reset_index()
     odor_avg = odor_avg.rename(columns={0: yname})
-    sns.lineplot(odor_avg, x='time', y=yname, hue='odor', ax=ax)
+    odor_avg['time'] = xvec
+    sns.lineplot(odor_avg, x='time', y=yname, hue='odor', ax=ax, linewidth=linewidth)
     if not show_legend:
         ax.legend().remove()
     else:
-        ax.legend(loc=2, prop={'size': 6})
+        ax.legend(loc=1, prop={'size': 20})
+    sns.despine(ax=ax)
 
 def plot_average_time_trace(dff):
     plt.plot(dff.groupby('time').mean().mean(axis=1))

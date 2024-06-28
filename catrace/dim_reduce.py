@@ -125,15 +125,21 @@ def select_and_pca(df, odor_list, window, n_components):
     return embeddf, model
 
 
-
-def compute_umap(pattern, umap_params):
-    latent = umap.UMAP(**umap_params).fit_transform(pattern)
-    embeddf = get_embeddf(latent, pattern.index)
+def compute_umap(df, umap_params, scale=False):
+    if scale:
+        scaled_df = standard_scale(df)
+    else:
+        scaled_df = df
+    latent = umap.UMAP(**umap_params).fit_transform(scaled_df)
+    embeddf = get_embeddf(latent, scaled_df.index)
     return embeddf
 
 
-def compute_pca_umap(df, n_components, umap_params):
-    scaled_df = standard_scale(df)
+def compute_pca_umap(df, n_components, umap_params, scale=False):
+    if scale:
+        scaled_df = standard_scale(df)
+    else:
+        scaled_df = df
     pca_latent = compute_pca(scaled_df, n_components)
     umap_latent = compute_umap(pca_latent, umap_params)
     return umap_latent
@@ -277,7 +283,7 @@ def plot_on_poincare_disk(embeddf, ax=None, plot_type='scatter'):
     ax.axis('off')
 
 
-def plot_embed_2d(embeddf, component_idx, ax, clr_cycle=None, plot_type='scatter'):
+def plot_embed_2d(embeddf, component_idx, ax, clr_cycle=None, markers=None, marker_size=2, plot_type='scatter'):
     odor_list = embeddf.index.unique('odor').tolist()
     if clr_cycle is None:
         clr_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -288,6 +294,7 @@ def plot_embed_2d(embeddf, component_idx, ax, clr_cycle=None, plot_type='scatter
     for name, group in groups:
         cidx = odor_list.index(name)
         color = clr_cycle[cidx]
+        marker = markers[cidx]
 
         trials = group.index.get_level_values('trial').unique()
         for trial in trials:
@@ -305,8 +312,8 @@ def plot_embed_2d(embeddf, component_idx, ax, clr_cycle=None, plot_type='scatter
                 lc = LineCollection(segments, cmap=cmap, norm=norm)
                 lc.set_array(np.arange(len(x)))
                 ax.add_collection(lc)
-            ax.scatter(x, y, label=name, marker='o',
-                       alpha=0.7, color=color, s=1)
+            ax.scatter(x, y, label=name, marker=marker,
+                       alpha=0.7, color=color, s=marker_size)
 
 
 def plot_latent(embeddf, component_idx, ax=None):

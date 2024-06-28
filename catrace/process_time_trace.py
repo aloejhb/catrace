@@ -84,6 +84,29 @@ def align_tracedf(tracedf, onsetdf, pre_time, post_time, frame_rate):
     return cut_df
 
 
+def align_dff(dff, delays, exp_name):
+    max_delay = delays.max()
+    keep_points = len(dff.index.unique('time')) - max_delay
+    # Shift time course to the left by delay
+    # Remove redundant time points at the end
+    delay = delays.xs(exp_name, level='fish_id').to_numpy()[0]
+    start_time = dff.index.unique('time').min() + delay
+    end_time = start_time + keep_points - 1
+    dff_aligned = ptt.select_time_points(dff, window=[start_time, end_time])
+    # Re-number the time points
+    # For spike_prob, we still start from 32
+    dff_aligned.rename_axis(index={'time': 'orig_time'}, inplace=True)
+    new_time = dff_aligned.index.get_level_values('orig_time') - delay
+    # Append the new 'time' level to the existing MultiIndex
+    dff_aligned.index = pd.MultiIndex.from_arrays(
+        [dff_aligned.index.get_level_values('odor'), dff_aligned.index.get_level_values('trial'), new_time],
+        names=['odor', 'trial', 'time']
+    )
+
+    return dff_aligned
+
+
+
 def select_response(tracedf, snr_thresh, base_window, response_window, frame_rate):
     base_fwindow = convert_sec_to_frame(base_window, frame_rate)
     response_fwindow = convert_sec_to_frame(response_window, frame_rate)
@@ -331,6 +354,7 @@ def select_odors_df(df, odors):
     sedf.set_index('new_odor', append=True, inplace=True)
     sedf.index = sedf.index.droplevel('odor')
     sedf.rename_axis(index={'new_odor': 'odor'}, inplace=True)
+    sedf = sedf.reorder_levels(['odor', 'trial', 'time'])
     return sedf
 
 
@@ -338,7 +362,7 @@ def sort_odors(df, odor_list):
     cat_odor = pd.CategoricalDtype(categories=odor_list, ordered=True)
     idx = df.index.names.index('odor')
     df.index = df.index.set_levels(df.index.levels[idx].astype(cat_odor),
-                             level='odor')
+                                   level='odor')
     # df = df.sort_values('odor') # this alters the order of other levels
     groups = []
     keys = []

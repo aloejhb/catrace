@@ -58,7 +58,7 @@ def compute_sparseness(x):
     
     return sparseness
 
-def apply_mann_whitney(df):
+def apply_mann_whitney(df, naive_name='naive', trained_name='trained'):
     """
     Mann Whitney U test for manifold analysis measurements
 
@@ -75,8 +75,8 @@ def apply_mann_whitney(df):
     results = {}
     for col in df.columns:
         # Split data into naive and trained
-        naive_data = df.xs('naive', level='cond')[col]
-        trained_data = df.xs('trained', level='cond')[col]
+        naive_data = df.xs(naive_name, level='cond')[col]
+        trained_data = df.xs(trained_name, level='cond')[col]
 
         # Perform the Mann-Whitney U test
         stat, p = mannwhitneyu(naive_data, trained_data, alternative='two-sided')
@@ -86,15 +86,16 @@ def apply_mann_whitney(df):
     
     return results
 
-def apply_mann_whitney_pair(df):
-    group_name1 = 'naive'
-    group_name2 = 'trained'
-
-    data1 = df.xs(group_name1, level='cond')
-    data2 = df.xs(group_name2, level='cond')
+def apply_mann_whitney_pair(df, yname=None, group_name1='naive', group_name2='trained'):
+    if yname is None:
+        data1 = df.xs(group_name1, level='cond')
+        data2 = df.xs(group_name2, level='cond')
+    else:
+        data1 = df[df['cond'] == group_name1][yname]
+        data2 = df[df['cond'] == group_name2][yname]
 
     stat, p = mannwhitneyu(data1, data2, alternative='two-sided')
-    results = {('trained', 'naive'): {'statistic': stat, 'p_value': p}}
+    results = {(group_name1, group_name2): {'statistic': stat, 'p_value': p}}
     return results
 
 
