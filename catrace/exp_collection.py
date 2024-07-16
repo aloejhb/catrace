@@ -76,7 +76,9 @@ def plot_explist(data_list, plot_func, sharex=False,
 
 
 def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
-                           sharey=False, *args, **kwargs):
+                           sharey=False,
+                           width=10, height=2,
+                           *args, **kwargs):
     total_exp = len(data_list)
     cond_list = list(dict.fromkeys(exp_cond_list))
     cond_count = [exp_cond_list.count(cond) for cond in cond_list]
@@ -88,7 +90,7 @@ def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
 
     axidx_list = [_get_axidx(k, cond_cumsum, nrow_list, ncol) for k in range(total_exp)]
 
-    figsize=[10, 2*total_nrow]
+    figsize=[width, height*total_nrow]
     fig, axes = plt.subplots(total_nrow, ncol, sharex=sharex,
                              sharey=sharey, figsize=figsize)
     for idx, data in enumerate(data_list):
