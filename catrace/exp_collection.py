@@ -180,20 +180,25 @@ def process_data_db_decorator(data_func, exp_list,
 
     return process_data_db
 
-def dataio_func(exp_name, data_func, out_dir, in_dir=None, **kwargs):
+def dataio_func(exp_name, data_func, out_dir, in_dir=None,
+                save_func=None,  **kwargs):
     if in_dir:
         df = read_df(in_dir, exp_name)
-        outdf = data_func(df, **kwargs)
+        results = data_func(df, **kwargs)
     else:
-        outdf = data_func(exp_name, **kwargs)
-    update_df(outdf, out_dir, exp_name)
+        results = data_func(exp_name, **kwargs)
+    if save_func is None:
+        save_func = update_df
+    save_func(results, out_dir, exp_name)
 
 
 def process_data_db_parallel(data_func, exp_list,
                             out_dir, in_dir,
+                            save_func=None,
                             parallelism=1, **kwargs):
     dataio_func_partial = partial(dataio_func, data_func=data_func,
-                                  out_dir=out_dir, in_dir=in_dir, **kwargs)
+                                  out_dir=out_dir, in_dir=in_dir,
+                                  save_func=save_func, **kwargs)
     exp_names = [exp[0] for exp in exp_list]
     if parallelism > 1:
         with Pool(processes=parallelism) as pool:

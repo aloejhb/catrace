@@ -242,24 +242,6 @@ def get_select_neuron_tag(config):
     return tag
 
 
-def _find_top_indices(row, ensemble_size):
-    return row.nlargest(ensemble_size).index
-
-
-def _get_ensemble_positions(df, ensemble_size):
-    all_positions = set().union(*df.apply(lambda row: _find_top_indices(row, ensemble_size), axis=1))
-    all_positions = list(all_positions)
-    return all_positions
-
-
-def select_neuron_by_ensemble(dff, window, top_n_per_odor):
-    dff_in_window = select_time_points(dff, window)
-    response = dff_in_window.groupby(level='odor', sort=False).mean()
-    all_positions = _get_ensemble_positions(response, top_n_per_odor)
-    dff_select = dff.loc[:, all_positions]
-    return dff_select
-
-
 def get_select_neuron_func(criterion_func, thresh=None, head=None):
     def func(dfovf, **kwargs):
         criteria = criterion_func(dfovf, **kwargs)
@@ -460,4 +442,9 @@ def select_cell_type_odors_neurons(dff, cell_type, odors, select_func_name, **kw
         dff = select_neuron_by_ensemble(dff, **kwargs)
     else:
         raise ValueError(f'Unrecognized select_func_name {select_func_name}. So far only select_neuron_by_ensemble is supported.')
+    return dff
+
+def select_odors_and_sort(dff, odors):
+    dff = select_odors_df(dff, odors)
+    dff = sort_odors(dff, odors)
     return dff

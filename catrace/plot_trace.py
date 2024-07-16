@@ -59,7 +59,7 @@ def plot_trace_avg(trace, frame_rate=1, cut_time=0, ax=None, show_legend=False, 
         ax (axis object): Default is None. If ax is not provided, it will create
                           a new figure. Otherwise it will plot on the given axis.
     """
-    odor_avg = trace.groupby(level=['odor', 'time'], sort=False).mean().T.mean()
+    odor_avg = trace.groupby(level=['odor', 'time'], sort=False, observed=False).mean().T.mean()
     tvec = odor_avg.index.get_level_values('time')
     xvec = tvec / frame_rate - cut_time
     odor_avg = odor_avg.reset_index()
