@@ -14,6 +14,7 @@ from .frame_time import convert_sec_to_frame
 from . import process_time_trace as ptt
 from . import frame_time
 from . import utils
+from .process_neuron import select_neuron_by_assembly
 
 def compute_dfovf(trace, fzero_twindow, frame_rate=1, intensity_offset=0,
                   fzero_percent=0.5):
@@ -439,7 +440,7 @@ def select_cell_type_odors_neurons(dff, cell_type, odors, select_func_name, **kw
     dff = ptt.select_odors_df(dff, odors)
     dff = ptt.sort_odors(dff, odors)
     if select_func_name == 'select_neuron_by_ensemble':
-        dff = select_neuron_by_ensemble(dff, **kwargs)
+        dff = select_neuron_by_assembly(dff, **kwargs)
     else:
         raise ValueError(f'Unrecognized select_func_name {select_func_name}. So far only select_neuron_by_ensemble is supported.')
     return dff
