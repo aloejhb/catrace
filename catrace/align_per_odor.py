@@ -6,20 +6,28 @@ import pandas as pd
 def gaussian(x, amplitude, mean, stddev):
     return amplitude * np.exp(-((x - mean) ** 2) / (2 * stddev ** 2))
 
-# Function to fit the Gaussian to the data for a single odor
-def fit_gaussian_to_odor(time_points, activity_values):
+def fit_gaussian_to_odor(time_points, activity_values, stddev_bounds=(1, 5)):
     # Initial guess for the parameters: amplitude, mean, stddev
-    initial_guess = [activity_values.max(), time_points.mean(), time_points.std()]
+    # amplitude: maximum value of the activity
+    # mean: time where the maximum value occurs
+    # stddev
+    initial_guess = [activity_values.max(), time_points[np.argmax(activity_values)], 2]
     
+    # Define bounds for the parameters: (amplitude, mean, stddev)
+    # amplitude: [0, np.inf] (positive and unbounded)
+    # mean: [min(time_points), max(time_points)] (within the range of time points)
+    # stddev: [stddev_bounds[0], stddev_bounds[1]] (within the specified bounds)
+    lower_bounds = [0, min(time_points), stddev_bounds[0]]
+    upper_bounds = [np.inf, max(time_points), stddev_bounds[1]]
+
     # Fit the Gaussian function to the data
     try:
-        params, _ = curve_fit(gaussian, time_points, activity_values, p0=initial_guess)
+        params, _ = curve_fit(gaussian, time_points, activity_values, p0=initial_guess, bounds=(lower_bounds, upper_bounds))
         return params
     except RuntimeError:
         return None
 
-# Main function to fit Gaussians and find peak times
-def find_peak_times(odor_avg, window):
+def find_peak_times(odor_avg, window, stddev_bounds=(1, 5)):
     odor_avg = odor_avg.loc[:, window[0]:window[1]]
     # Convert columns to float (time points)
     time_points = np.array(odor_avg.columns, dtype=float)
@@ -28,7 +36,7 @@ def find_peak_times(odor_avg, window):
     results = {}
     for odor in odor_avg.index:
         activity_values = odor_avg.loc[odor].values
-        params = fit_gaussian_to_odor(time_points, activity_values)
+        params = fit_gaussian_to_odor(time_points, activity_values, stddev_bounds)
         if params is not None:
             amplitude, mean, stddev = params
             results[odor] = mean
