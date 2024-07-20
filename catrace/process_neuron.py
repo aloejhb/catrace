@@ -6,10 +6,15 @@ from .exp_collection import update_df
 
 def append_neuron_id(dff):
     neuron_id = pd.RangeIndex(start=0, stop=dff.shape[1], step=1)
-    dff.columns = pd.MultiIndex.from_arrays([dff.columns.get_level_values('plane'),
-                                           dff.columns.get_level_values('neuron'),
-                                           neuron_id],
-                                           names=['plane', 'neuron', 'neuron_id'])
+    if 'plane' in dff.columns.names:
+        dff.columns = pd.MultiIndex.from_arrays([dff.columns.get_level_values('plane'),
+                                            dff.columns.get_level_values('neuron'),
+                                            neuron_id],
+                                            names=['plane', 'neuron', 'neuron_id'])
+    else:
+        dff.columns = pd.MultiIndex.from_arrays([dff.columns.get_level_values('neuron'),
+                                            neuron_id],
+                                            names=['neuron', 'neuron_id'])
     return dff
 
 
