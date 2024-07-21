@@ -27,7 +27,7 @@ def plot_exp_pattern_correlation(dfovf_cut, odor_list, frame_rate,
     im = pcr.plot_pattern_correlation(pat, ax, clim=(0, 1))
 
 
-def load_dfovf(exp_name, region_name, data_root_dir):
+def load_dfovf(exp_name, region_name, data_root_dir, cut_time=12):
     plane_nb_list = np.array([1,2,3,4]) - 1
     num_trial = 3
     odor_list = ['phe', 'trp', 'arg', 'tdca', 'tca', 'gca', 'acsf', 'spont']
@@ -37,28 +37,13 @@ def load_dfovf(exp_name, region_name, data_root_dir):
     tracedf = dataio.load_trace_file(data_root_dir, exp_subdir, plane_nb_list, num_trial, odor_list)
 
     # Cut first X second to exclude PMT off period
-    cut_time = 12
     cut_win = frame_time.convert_sec_to_frame([cut_time, 40], frame_rate)
     tracedf = ptt.cut_tracedf(tracedf, cut_win)
 
     # Calculate dF/F
-    fzero_twindow = np.array([0.5, 2.5])
+    fzero_twindow = np.array([0.5, 2.5]) + 12 - cut_time
     dfovf = ptt.compute_dfovf(tracedf, fzero_twindow, frame_rate, intensity_offset=-10)
 
-    # # Detect or set response onset
-    # xwindow = ((np.array([15, 20])-cut_time)*frame_rate).astype('int')
-    # onset_param = dict(thresh=0.013, sigma=3, xwindow=xwindow)
-    # dfovf_avg, y, dy = ptt.detect_tracedf_onset(dfovf, onset_param, debug=True)
-    # dfovf_avg['onset'] = 70
-    # # dfovf_avg['onset'] = dfovf_avg['onset'].astype('int32')
-
-
-    # # Align time traces to onset
-    # pre_time = 4
-    # post_time = 18
-    # dfovf_cut = ptt.align_tracedf(dfovf, dfovf_avg['onset'],
-    #                               pre_time, post_time, frame_rate)
-    # dfovf_restack = ptt.restack_as_pattern(dfovf_cut)
     return dfovf
 
 def plot_explist(data_list, plot_func, sharex=False,

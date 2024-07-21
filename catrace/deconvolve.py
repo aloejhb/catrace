@@ -22,7 +22,7 @@ class DeconvolveConfig:
 
 def compute_noise_levels(trace_df, sampling_rate,
                          baseline_window=None):
-    if baseline_window:
+    if baseline_window is not None:
         time_indices = trace_df.index.get_level_values('time')
         baseline = trace_df[(time_indices >= baseline_window[0]) &
                             (time_indices <= baseline_window[1])]
