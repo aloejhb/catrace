@@ -107,36 +107,6 @@ def align_dff(dff, delays, exp_name):
     return dff_aligned
 
 
-def align_odors(dff, delays):
-    # Initialize an empty list to collect the results
-    aligned_data = []
-    # delays has index odor and value for delay as a dataframe
-    # Iterate over each odor and its corresponding shift from the pandas series delays
-    for odor, shift in delays.items():
-        # Extract data for the current odor
-        odor_data = dff.xs(odor, level='odor', drop_level=False)
-
-        # Initialize a list to collect the shifted trials for the current odor
-        shifted_trials = []
-
-        # Group by 'trial' and shift each trial
-        for trial, trial_data in odor_data.groupby(level='trial'):
-            shifted_trial = trial_data.shift(-shift)
-            shifted_trials.append(shifted_trial)
-
-        # Combine the shifted trials back together
-        shifted_data = pd.concat(shifted_trials)
-
-        # Collect the shifted data
-        aligned_data.append(shifted_data)
-
-    # Concatenate all aligned data into a single DataFrame
-    dff_odors_aligned = pd.concat(aligned_data).sort_index()
-
-    return dff_odors_aligned
-
-
-
 def select_response(tracedf, snr_thresh, base_window, response_window, frame_rate):
     base_fwindow = convert_sec_to_frame(base_window, frame_rate)
     response_fwindow = convert_sec_to_frame(response_window, frame_rate)
