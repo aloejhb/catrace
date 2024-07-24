@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import mannwhitneyu, kruskal
+from scipy.stats import mannwhitneyu, kruskal, ttest_ind
 from scikit_posthocs import posthoc_dunn
 
 
@@ -86,15 +86,25 @@ def apply_mann_whitney(df, naive_name='naive', trained_name='trained'):
     
     return results
 
-def apply_mann_whitney_pair(df, yname=None, group_name1='naive', group_name2='trained'):
-    if yname is None:
-        data1 = df.xs(group_name1, level='cond')
-        data2 = df.xs(group_name2, level='cond')
+def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', test_type='mannwhitneyu'):
+    if 'cond' in df.index.names:
+        level = 'cond'
     else:
-        data1 = df[df['cond'] == group_name1][yname]
-        data2 = df[df['cond'] == group_name2][yname]
+        level = 'condition'
+    
+    if yname is None:
+        data1 = df.xs(group_name1, level=level)
+        data2 = df.xs(group_name2, level=level)
+    else:
+        data1 = df[df[level] == group_name1][yname]
+        data2 = df[df[level] == group_name2][yname]
 
-    stat, p = mannwhitneyu(data1, data2, alternative='two-sided')
+    if test_type == 'ttest':
+        stat, p = ttest_ind(data1, data2, alternative='two-sided')
+    elif test_type == 'mannwhitneyu':
+        stat, p = mannwhitneyu(data1, data2, alternative='two-sided')
+    else:
+        raise ValueError("Invalid test_type. Choose either 't-test' or 'mannwhitneyu'")
     results = {(group_name1, group_name2): {'statistic': stat, 'p_value': p}}
     return results
 

@@ -4,6 +4,8 @@ import seaborn as sns
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
+from .stats import apply_test_pair
+
 def load_colormap(name):
     current_folder = os.path.dirname(os.path.abspath(__file__))
     if name == 'clut2b':
@@ -288,3 +290,27 @@ def plot_boxplot_with_significance_multi_cond(datadf, yname, ylabel, test_result
     sns.despine(ax=ax)
 
     return fig, ax
+
+def plot_measure(measure_name, mdff, name_to_label=None,
+                 test_type='mannwhitneyu'):
+    sub_mean_madff = mdff[[measure_name]]
+
+    test_results = apply_test_pair(sub_mean_madff, test_type=test_type)
+    if 'cond' in mdff.index.names:
+        xname = 'cond'
+    else:
+        xname = 'condition'
+    yname = measure_name
+    if name_to_label is not None:
+        ylabel = name_to_label[measure_name]
+    else:
+        ylabel = yname
+    datadf = sub_mean_madff.reset_index()
+    fig, ax = plot_boxplot_with_significance(datadf, xname, yname, ylabel,
+                                            test_results, test_type='pairwise', ref_key='naive',
+                                            figsize=(2.5, 6),
+                                            hline_y=None,
+                                            pvalue_marker_xoffset=0.034,
+                                            box_color='tab:blue')
+    plt.tight_layout()
+    return fig, ax, test_results
