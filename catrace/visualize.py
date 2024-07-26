@@ -354,7 +354,11 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
                                            ylim=None,
                                            label_fontsize=24,
                                            show_zero_line=False,
-                                           show_ns=False,):
+                                           show_ns=False,
+                                           box_color='#1f77b4',
+                                           tick_label_fontsize=16,
+                                           ax_label_fontsize=20,
+                                           star_fontsize=16):
     datadf  = datadf.reset_index()
 
     if ax is None:
@@ -364,27 +368,35 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
 
     cond_name = 'condition'
 
-    sns.stripplot(ax=ax, x=cond_name, y=yname, data=datadf, jitter=True, size=2, alpha=0.8, zorder=1)
+    sns.stripplot(ax=ax, x=cond_name, y=yname, data=datadf, color='black', jitter=True, size=4, alpha=0.4, zorder=1)
     sns.boxplot(ax=ax, x=cond_name, y=yname, data=datadf, saturation=0.5,
-                zorder=2, showfliers=False, showcaps=False, boxprops=dict(facecolor="none"))
+                zorder=2, showfliers=False, showcaps=False,
+                medianprops=dict(color=box_color, alpha=0.95, linewidth=3),
+                boxprops=dict(edgecolor=box_color, alpha=0.95, fill=False, linewidth=3),
+                whiskerprops=dict(color=box_color, linewidth=3, alpha=0.7))
+    
 
     mean_points = datadf.groupby([cond_name], as_index=False, sort=False, observed=True)[yname].mean()
     sns.pointplot(ax=ax, x=cond_name, y=yname, data=mean_points, 
-                  markers='D', linestyle='none', zorder=3, markersize=5)
+                  markers='D', linestyle='none', zorder=3, markersize=5, color='#d62728')
 
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles[datadf[cond_name].nunique():], labels[datadf[cond_name].nunique():], ncol=4, loc='lower right')
 
     if show_zero_line:
         ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
-    ax.set_ylabel(ylabel, fontsize=label_fontsize)
+    ax.set_ylabel(ylabel, fontsize=ax_label_fontsize)
 
     ax.set_xlabel('')
-    ax.tick_params(axis='x', labelsize=label_fontsize)
-    ax.tick_params(axis='y', labelsize=16)
+    ax.tick_params(axis='x', labelsize=tick_label_fontsize)
+    ax.tick_params(axis='y', labelsize=tick_label_fontsize)
 
     if ylim:
         ax.set_ylim(ylim)
+
+    ticks = ax.get_xticks()
+    ax.set_xticks(ticks) 
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=tick_label_fontsize)
 
     xtick_labels = ax.get_xticklabels()
     xtick_labels = [label.get_text() for label in xtick_labels]
@@ -396,8 +408,7 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
             position = cond_pos
             marker, xoffset = pvalue_to_marker(p_value)
             if marker != 'n.s.' or show_ns:
-                fontsize = 14
-                ax.text(position - xoffset * fontsize * 0.05, ymax, marker, fontsize=fontsize)
+                ax.text(position - xoffset * star_fontsize * 0.05, ymax, marker, fontsize=star_fontsize)
     sns.despine(ax=ax)
 
     return fig, ax
@@ -432,7 +443,9 @@ def plot_all_measure_by_cond(mdff, measure_names=None, name_to_label=None, test_
     if measure_names is None:
         measure_names = mdff.columns
 
-    fig, axs = plt.subplots(1, len(measure_names), figsize=(7.5*len(measure_names), 7))
+    ncol = 3
+    nrow = np.ceil(len(measure_names) / ncol).astype(int)
+    fig, axs = plt.subplots(nrow, ncol, figsize=(4*ncol, 4*nrow))
     test_results_list = []
     for measure_name, ax in zip(measure_names, axs.flatten()):
         _, ax, test_results = plot_measure_by_cond(measure_name, mdff,
@@ -440,4 +453,5 @@ def plot_all_measure_by_cond(mdff, measure_names=None, name_to_label=None, test_
                                                     test_type=test_type,
                                                     ax=ax)
         test_results_list.append(test_results)
+    plt.tight_layout()
     return fig, axs, test_results_list
