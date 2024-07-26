@@ -104,7 +104,7 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
     elif test_type == 'mannwhitneyu':
         stat, p = mannwhitneyu(data1, data2, alternative='two-sided')
     else:
-        raise ValueError("Invalid test_type. Choose either 't-test' or 'mannwhitneyu'")
+        raise ValueError("Invalid test_type. Choose either 'ttest' or 'mannwhitneyu'")
     results = {(group_name1, group_name2): {'statistic': stat, 'p_value': p}}
     return results
 
@@ -145,5 +145,33 @@ def apply_test_each_odor_by_cond(df, yname):
             'Kruskal': {'statistic': stat, 'p_value': p_value},
             'Dunn_naive': naive_comparisons
         }
+
+    return test_results
+
+
+def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
+    cond_name = 'condition'
+    test_results = {}
+
+    statdf = df.reset_index()
+    statdf.rename(columns={df.columns[0]: yname}, inplace=True)
+    # Convert categorical condition column to str
+    statdf[cond_name] = statdf[cond_name].astype(str)
+    # Drop unused columns, to supress warnings
+    statdf = statdf[[yname, cond_name]]
+
+    data_by_condition = [group[yname].values for name, group in statdf.groupby("condition", sort=False, observed=True)]
+    stat, p_value = kruskal(*data_by_condition)
+
+    if naive_name in statdf[cond_name].unique():
+        dunn_test_results = posthoc_dunn(statdf, val_col=yname, group_col=cond_name, p_adjust='bonferroni')
+        naive_comparisons = dunn_test_results[naive_name]
+    else:
+        raise ValueError("No naive condition present")
+
+    test_results = {
+        'Kruskal': {'statistic': stat, 'p_value': p_value},
+        'Dunn_naive': naive_comparisons
+    }
 
     return test_results

@@ -4,7 +4,7 @@ import seaborn as sns
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
-from .stats import apply_test_pair
+from .stats import apply_test_pair, apply_test_by_cond
 
 def load_colormap(name):
     current_folder = os.path.dirname(os.path.abspath(__file__))
@@ -134,6 +134,7 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    ylabel,
                                    test_results,
                                    test_type='single', ref_key=None,
+                                   ax=None,
                                    figsize=(5,3),
                                    ylim=None,
                                    hline_y=0,
@@ -142,20 +143,18 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    box_color='green'):
     """
     Plot boxplot with significance annotations
-
-    Args:
-        datadf: DataFrame with columns 'odor' and `yname`.
-        test_results: Dictionary with keys as odor names and values as test results.
-        yname: Name of the column in `datadf` to plot.
     """
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = 'dummy'
 
     sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=4, alpha=0.4, zorder=1)
     sns.boxplot(ax=ax, data=datadf, x=xname, y=yname, saturation=0.5,
                 width=0.45, zorder=2,
                 showfliers=False, showcaps=False,
                 medianprops=dict(color=box_color, alpha=0.95, linewidth=4),
-                boxprops=dict(color=box_color, alpha=0.95, fill=False, linewidth=4),
+                boxprops=dict(edgecolor=box_color, alpha=0.95, fill=False, linewidth=4),
                 whiskerprops=dict(color=box_color, linewidth=4, alpha=0.7))
     if hline_y is not None:
         ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.85)
@@ -169,9 +168,13 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     ax.set_xlabel('')
     label_fontsize = 24
     # Adjusting the font size and rotation of x-axis tick labels
+    ticks = ax.get_xticks()
+    ax.set_xticks(ticks) 
     ax.tick_params(axis='x', labelsize=label_fontsize)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=label_fontsize)
 
+    y_tick_label_fontsize = 18
+    ax.tick_params(axis='y', labelsize=y_tick_label_fontsize)
     ax.set_ylabel(ylabel, fontsize=label_fontsize)
     if ylim:
         ax.set_ylim(ylim)
@@ -227,23 +230,32 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
         raise ValueError('test_type must be one of "single" or "one_reference"')
 
 
-def plot_boxplot_with_significance_multi_cond(datadf, yname, ylabel, test_results,
+def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_results,
+                                              ax=None,
                                               figsize=(10, 5),
                                               ylim=None,
                                               label_fontsize = 24,
                                               show_ns=False, box_color='green'):
     """
-    Plot boxplot with significance annotations
+    Plot boxplot with significance annotations for multiple conditions and odors
 
     Args:
-        datadf: DataFrame with a multi-level index ['cond', 'fish_id'] and columns 'odor' and `yname`.
-        test_results: Dictionary with keys as tuples (cond1, cond2, odor) and values as test results.
-        yname: Name of the column in `datadf` to plot.
+        datadf: DataFrame, data to plot
+        yname: str, column name for y-axis
+        ylabel: str, label for y-axis
+        test_results: dict, statistical test results
+        ax: Axes, axis to plot on
+        figsize: tuple, figure size
+        ylim: tuple, y-axis limits
+        label_fontsize: int, font size for labels
     """
     # Reset index if needed to make 'cond' and 'fish_id' regular columns for plotting
     datadf = datadf.reset_index()
 
-    fig, ax = plt.subplots(figsize=figsize)  # Adjusted size for better visibility
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)  # Adjusted size for better visibility
+    else:
+        fig = 'dummy'
     nconds = datadf['cond'].nunique()
 
     # Plotting stripplot and boxplot with hue
@@ -291,8 +303,11 @@ def plot_boxplot_with_significance_multi_cond(datadf, yname, ylabel, test_result
 
     return fig, ax
 
-def plot_measure(measure_name, mdff, name_to_label=None,
-                 test_type='mannwhitneyu'):
+def plot_measure(measure_name, mdff,
+                 name_to_label=None,
+                 test_type='mannwhitneyu',
+                 ax=None,
+                 figsize=(2.5, 6)):
     sub_mean_madff = mdff[[measure_name]]
 
     test_results = apply_test_pair(sub_mean_madff, test_type=test_type)
@@ -307,10 +322,122 @@ def plot_measure(measure_name, mdff, name_to_label=None,
         ylabel = yname
     datadf = sub_mean_madff.reset_index()
     fig, ax = plot_boxplot_with_significance(datadf, xname, yname, ylabel,
-                                            test_results, test_type='pairwise', ref_key='naive',
-                                            figsize=(2.5, 6),
-                                            hline_y=None,
-                                            pvalue_marker_xoffset=0.034,
-                                            box_color='tab:blue')
+                                    test_results, test_type='pairwise',
+                                    ref_key='naive',
+                                    ax=ax,
+                                    figsize=figsize,
+                                    hline_y=None,
+                                    pvalue_marker_xoffset=0.034,
+                                    box_color='tab:blue')
     plt.tight_layout()
     return fig, ax, test_results
+
+def plot_all_measures(mdff, measure_names=None, name_to_label=None, test_type='mannwhitneyu'):
+    if measure_names is None:
+        measure_names = mdff.columns
+
+    fig, axs = plt.subplots(1, len(measure_names), figsize=(5*len(measure_names), 7))
+    test_results_list = []
+    for measure_name, ax in zip(measure_names, axs.flatten()):
+        _, ax, test_results = plot_measure(measure_name, mdff,     
+                                           name_to_label=name_to_label, 
+                                           test_type=test_type,
+                                           ax=ax)
+        test_results_list.append(test_results)
+    return fig, axs, test_results_list
+
+
+
+def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
+                                           ax=None,
+                                           figsize=(10, 5),
+                                           ylim=None,
+                                           label_fontsize=24,
+                                           show_zero_line=False,
+                                           show_ns=False,):
+    datadf  = datadf.reset_index()
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = 'dummy'
+
+    cond_name = 'condition'
+
+    sns.stripplot(ax=ax, x=cond_name, y=yname, data=datadf, jitter=True, size=2, alpha=0.8, zorder=1)
+    sns.boxplot(ax=ax, x=cond_name, y=yname, data=datadf, saturation=0.5,
+                zorder=2, showfliers=False, showcaps=False, boxprops=dict(facecolor="none"))
+
+    mean_points = datadf.groupby([cond_name], as_index=False, sort=False, observed=True)[yname].mean()
+    sns.pointplot(ax=ax, x=cond_name, y=yname, data=mean_points, 
+                  markers='D', linestyle='none', zorder=3, markersize=5)
+
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[datadf[cond_name].nunique():], labels[datadf[cond_name].nunique():], ncol=4, loc='lower right')
+
+    if show_zero_line:
+        ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
+    ax.set_ylabel(ylabel, fontsize=label_fontsize)
+
+    ax.set_xlabel('')
+    ax.tick_params(axis='x', labelsize=label_fontsize)
+    ax.tick_params(axis='y', labelsize=16)
+
+    if ylim:
+        ax.set_ylim(ylim)
+
+    xtick_labels = ax.get_xticklabels()
+    xtick_labels = [label.get_text() for label in xtick_labels]
+    current_ylim = ax.get_ylim()
+    ymax = 1.02 * current_ylim[1]
+    for cond, p_value in test_results['Dunn_naive'].items():
+        if cond != 'naive':
+            cond_pos = xtick_labels.index(cond)
+            position = cond_pos
+            marker, xoffset = pvalue_to_marker(p_value)
+            if marker != 'n.s.' or show_ns:
+                fontsize = 14
+                ax.text(position - xoffset * fontsize * 0.05, ymax, marker, fontsize=fontsize)
+    sns.despine(ax=ax)
+
+    return fig, ax
+
+
+
+def plot_measure_by_cond(measure_name, mdff, name_to_label=None,
+                         figsize=(10, 5),
+                         test_type='kruskal', **kwargs):
+    cond_name = 'condition'
+    submadf_by_cond = mdff[[measure_name]]
+    # naive_mean = submadf_by_cond.xs('naive', level=cond_name).mean()
+    # delta = (submadf_by_cond - naive_mean) / naive_mean * 100
+    delta = submadf_by_cond
+    yname = measure_name
+    if name_to_label is None:
+        ylabel = yname
+    else:
+        ylabel = name_to_label[yname]
+
+    results = apply_test_by_cond(delta, measure_name, test_type=test_type)
+
+    datadf = delta.reset_index()
+    datadf.rename(columns={0: yname}, inplace=True)
+
+    fig, ax = plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, results, figsize=figsize, show_zero_line=False,
+                                                     show_ns=False, **kwargs)
+    return fig, ax, results
+
+
+def plot_all_measure_by_cond(mdff, measure_names=None, name_to_label=None, test_type='kruskal'):
+    if measure_names is None:
+        measure_names = mdff.columns
+
+    fig, axs = plt.subplots(1, len(measure_names), figsize=(7.5*len(measure_names), 7))
+    test_results_list = []
+    for measure_name, ax in zip(measure_names, axs.flatten()):
+        _, ax, test_results = plot_measure_by_cond(measure_name, mdff,
+                                                    name_to_label=name_to_label,
+                                                    test_type=test_type,
+                                                    ax=ax)
+        test_results_list.append(test_results)
+    return fig, axs, test_results_list
