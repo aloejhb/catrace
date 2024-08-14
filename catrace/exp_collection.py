@@ -63,6 +63,7 @@ def plot_explist(data_list, plot_func, sharex=False,
 def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
                            sharey=False,
                            width=10, height=2,
+                           fish_ids=None,
                            *args, **kwargs):
     total_exp = len(data_list)
     cond_list = list(dict.fromkeys(exp_cond_list))
@@ -81,10 +82,10 @@ def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
     for idx, data in enumerate(data_list):
         axidx = axidx_list[idx]
         ax = axes.flatten()[axidx]
-        show_legend = False
-        if idx == len(data_list)-1:
-            show_legend = True
-        plot_func(data, *args, **kwargs, ax=ax)#, show_legend=show_legend)
+        if fish_ids is not None:
+            fish_id = fish_ids[idx]
+            kwargs.update({'fish_id': fish_id})
+        plot_func(data, *args, **kwargs, ax=ax)
     plt.tight_layout()
     return fig, axes
 
