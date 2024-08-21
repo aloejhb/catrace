@@ -306,15 +306,13 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
 def plot_measure(measure_name, mdff,
                  name_to_label=None,
                  test_type='mannwhitneyu',
+                 condition_name='condition',
                  ax=None,
                  figsize=(2.5, 6)):
     sub_mean_madff = mdff[[measure_name]]
 
     test_results = apply_test_pair(sub_mean_madff, test_type=test_type)
-    if 'cond' in mdff.index.names:
-        xname = 'cond'
-    else:
-        xname = 'condition'
+    xname = condition_name
     yname = measure_name
     if name_to_label is not None:
         ylabel = name_to_label[measure_name]
@@ -331,6 +329,7 @@ def plot_measure(measure_name, mdff,
                                     box_color='tab:blue')
     plt.tight_layout()
     return fig, ax, test_results
+
 
 def plot_all_measures(mdff, measure_names=None, name_to_label=None, test_type='mannwhitneyu'):
     if measure_names is None:

@@ -68,3 +68,33 @@ def dict_to_command_line_args(params):
 def load_config(file_path, config_class):
     with open(file_path, 'r') as file:
         return config_class.from_json(file.read())
+    
+
+def load_json_to_dataclass(filename: str, dataclass_type: DataClassJsonMixin):
+    """
+    Load a JSON file and parse it into a dataclass object.
+    
+    Args:
+    filename (str): The path to the JSON file.
+    dataclass_type (Type[T]): The dataclass type to parse the JSON into.
+    
+    Returns:
+    T: An instance of the provided dataclass type.
+    
+    Raises:
+    FileNotFoundError: If the specified file doesn't exist.
+    json.JSONDecodeError: If the file contains invalid JSON.
+    """
+    try:
+        with open(filename, 'r') as file:
+            json_data = file.read()
+        # Ensure the dataclass is decorated with dataclass_json
+
+        if not hasattr(dataclass_type, 'from_json'):
+            raise TypeError(f"{dataclass_type.__name__} must be decorated with @dataclass_json")
+        return dataclass_type.from_json(json_data)
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The file {filename} was not found.")
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(f"Invalid JSON in {filename}: {str(e)}", e.doc, e.pos)

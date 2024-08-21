@@ -246,7 +246,7 @@ def process_dataframe_decorator(data_func, level=['fish_id', 'cond'], axis=1):
     return process_dataframe
 
 
-def read_df(collect_name, exp_name, region=None, db_dir=''):
+def read_df(collect_name, exp_name, region=None, db_dir='', verbose=True):
     """
     Read the data frame of a single experiment and brain region
     Args:
@@ -257,7 +257,8 @@ def read_df(collect_name, exp_name, region=None, db_dir=''):
     Returns:
         df: pandas.DataFrame, the data frame containing required data
     """
-    print(exp_name, region)
+    if verbose:
+        print(exp_name, region)
     filename = get_filename(exp_name, region, 'pkl')
     df_file = os.path.join(db_dir, collect_name, filename)
     df = pd.read_pickle(df_file)

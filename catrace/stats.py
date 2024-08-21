@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import mannwhitneyu, kruskal, ttest_ind
 from scikit_posthocs import posthoc_dunn
+import pandas as pd
 
 
 def incremental_histogram(data, bins, chunk_size=10000, normalize=True):
@@ -175,3 +176,33 @@ def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
     }
 
     return test_results
+
+
+def pool_training_conditions(df, cond_mapping):
+    df_pooled = df.copy()
+
+    new_cond = df_pooled.index.get_level_values('condition').map(cond_mapping)
+
+    # Assigne new cond as a new column
+    df_pooled['condition'] = new_cond
+    # Drop the original 'condition' level from the MultiIndex
+    df_pooled = df_pooled.reset_index(level='condition', drop=True)
+    # Set the new 'condition' column as the condition level in the MultiIndex
+    df_pooled = df_pooled.set_index('condition', append=True)
+    df_pooled = sort_conditions(df_pooled, ['naive', 'trained'])
+    return df_pooled
+
+
+def sort_conditions(df, conditions):
+    cats = pd.CategoricalDtype(categories=conditions, ordered=True)
+    idx = df.index.names.index('condition')
+    df.index = df.index.set_levels(df.index.levels[idx].astype(cats),
+                                   level='condition')
+    # df = df.sort_values('condition') # this alters the order of other levels
+    groups = []
+    keys = []
+    for key, group in df.groupby(level='condition', observed=True):
+        groups.append(group)
+        keys.append(key)
+    df_sorted = pd.concat(groups)
+    return df_sorted

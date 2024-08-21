@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize_scalar
 
 def bi_exponential(x, a1, b1, b2, c, t0):
     """
@@ -15,8 +15,49 @@ def bi_exponential(x, a1, b1, b2, c, t0):
     """
     return a1 * (1 - np.exp(-b1 * (x-t0))) * np.exp(-b2 * (x-t0)) + c
 
+def compute_biexp_peak_time(params):
+    """
+    Compute the peak time of the double exponential function.
+    Args:
+        params: parameters of the double exponential function (a1, b1, b2, c, t0)
+    Returns:
+        peak_time: time at which the function reaches its maximum
+    """
+    a1, b1, b2, c, t0 = params
+    
+    # Define the function to minimize (negative of bi_exponential to find the maximum)
+    def neg_bi_exponential(x):
+        return -bi_exponential(x, a1, b1, b2, c, t0)
+    
+    # Use a scalar minimization method to find the peak time
+    # The initial guess could be near t0, and the bounds can be adjusted as needed
+    result = minimize_scalar(neg_bi_exponential, bounds=(t0, t0 + 100), method='bounded')
+    
+    # The peak time will be the result of the minimization
+    peak_time = result.x
+    
+    return peak_time
+
+def fit_bi_exponential(x_data, y_data, initial_guess=None, maxfev=10000):
+    """
+    Fit a double exponential function to the data
+    Args:
+        x_data: time
+        y_data: spike probability
+        initial_guess: initial guess for the parameters
+    Returns:
+        params: parameters of the double exponential function
+    """
+    if initial_guess is None:
+        initial_guess = [4, 0.1, 0.1, 0.1, 0]
+
+    params, _ = curve_fit(bi_exponential, x_data, y_data, p0=initial_guess, maxfev=maxfev)
+
+    return params
+
+
 # Function to fit double exponential and return parameters for each odor
-def fit_double_exponential_for_each_odor(df):
+def fit_bi_exponential_for_each_odor(df):
     params_dict = {}
 
     # Group by odor
