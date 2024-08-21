@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import mannwhitneyu, kruskal, ttest_ind
+from scipy.stats import mannwhitneyu, kruskal, ttest_ind, bootstrap
 from scikit_posthocs import posthoc_dunn
 import pandas as pd
 
@@ -88,10 +88,11 @@ def apply_mann_whitney(df, naive_name='naive', trained_name='trained'):
     return results
 
 def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', test_type='mannwhitneyu'):
-    if 'cond' in df.index.names:
+    if 'cond' in df.index.names or 'cond' in df.columns.names:
         level = 'cond'
     else:
         level = 'condition'
+    
     
     if yname is None:
         data1 = df.xs(group_name1, level=level)
@@ -101,12 +102,34 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
         data2 = df[df[level] == group_name2][yname]
 
     if test_type == 'ttest':
-        stat, p = ttest_ind(data1, data2, alternative='two-sided')
+        stat, p_value = ttest_ind(data1, data2, alternative='two-sided')
     elif test_type == 'mannwhitneyu':
-        stat, p = mannwhitneyu(data1, data2, alternative='two-sided')
+        stat, p_value = mannwhitneyu(data1, data2, alternative='two-sided')
+    elif test_type == 'bootstrap':
+        # Combine data for bootstrapping
+        data = (data1.to_numpy(), data2.to_numpy())
+        # Define the statistic to calculate the difference in means
+        def _mean_diff(sample1, sample2, axis=-1):
+            mean1 = np.mean(sample1, axis=axis)
+            mean2 = np.mean(sample2, axis=axis)
+            return mean1 - mean2
+
+        # Perform the bootstrap using BCa method for bias-corrected confidence intervals
+        res = bootstrap(data, statistic=_mean_diff, n_resamples=10000, method='BCa', paired=False, confidence_level=0.95)
+        # Calculate the observed difference
+        observed_diff = _mean_diff(data[0].T, data[1].T)
+        # Get the bootstrap distribution
+        bootstrap_distribution = res.bootstrap_distribution
+        print(np.mean(np.abs(bootstrap_distribution)))
+        print(np.std(np.abs(bootstrap_distribution)))
+        print(np.abs(observed_diff))
+        # Calculate the p-value for a two-sided test
+        p_value = np.mean(np.abs(bootstrap_distribution) >= np.abs(observed_diff))
+        print(p_value)
+        stat = observed_diff
     else:
         raise ValueError("Invalid test_type. Choose either 'ttest' or 'mannwhitneyu'")
-    results = {(group_name1, group_name2): {'statistic': stat, 'p_value': p}}
+    results = {(group_name1, group_name2): {'statistic': stat, 'p_value': p_value}}
     return results
 
 

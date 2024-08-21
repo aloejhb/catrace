@@ -76,17 +76,17 @@ def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hl
     Plot responses and statistical test results
     """
     current_palette = sns.color_palette()
-    conds = df['cond'].unique()
+    conditions = df['condition'].unique()
 
-    palette = dict(zip(conds, current_palette))
+    palette = dict(zip(conditions, current_palette))
     #{"phe-arg": current_palette[0], "arg-phe": current_palette[1], 'phe-trp':current_palette[2], 'naive':current_palette[3]}
     fig, ax = plt.subplots(figsize=(10, 6))
     if plot_type == 'box':
-        sns.boxplot(ax=ax, data=df, x='cond', y=yname, palette=palette, gap=.1, showfliers=False, fill=False, whis=(1,99))
+        sns.boxplot(ax=ax, data=df, x='condition', y=yname, palette=palette, gap=.1, showfliers=False, fill=False, whis=(1,99))
     elif plot_type == 'violin':
-        sns.violinplot(ax=ax, data=df, x='cond', y=yname, palette=palette, gap=.1, fill=False)
+        sns.violinplot(ax=ax, data=df, x='condition', y=yname, palette=palette, gap=.1, fill=False)
     elif plot_type == 'strip':
-        sns.stripplot(ax=ax, data=df, x='cond', y=yname, palette=palette, jitter=True, dodge=True)
+        sns.stripplot(ax=ax, data=df, x='condition', y=yname, palette=palette, jitter=True, dodge=True)
     else:
         raise ValueError('plot_type must be one of "box", "violin", or "strip"')
 
@@ -97,24 +97,24 @@ def plot_response_by_cond(df, yname, plot_type='box', naive_comparisons=None, hl
     if naive_comparisons is not None:
         significance_levels = {0.001: '***', 0.01: '**', 0.05: '*'}
 
-        num_conds = df['cond'].nunique()
+        num_conditions = df['condition'].nunique()
 
         xmin = 0
-        xmax = num_conds - 1
+        xmax = num_conditions - 1
 
         y_max = df[yname].max() * stat_y_max
         y_offset = (df[yname].max() - df[yname].min()) * stat_y_offset  # Slight offset above the violin
 
         starred = False
-        for i, cond in enumerate(naive_comparisons.index):
-            if cond != 'naive':
-                p_value = naive_comparisons.loc[cond]
+        for i, condition in enumerate(naive_comparisons.index):
+            if condition != 'naive':
+                p_value = naive_comparisons.loc[condition]
                 for sig_level, marker in significance_levels.items():
                     if p_value < sig_level:
                         if not starred:
                             starred = True
                         # Place the text annotation above the violin
-                        x_pos = np.where(df['cond'].unique() == cond)[0]
+                        x_pos = np.where(df['condition'].unique() == condition)[0]
                         ax.text(x_pos, y_max+y_offset, marker, ha='center', va='bottom', color='black')
                         break  # Found the significant level, no need to check further
         if starred:

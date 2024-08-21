@@ -453,4 +453,6 @@ def shift_timepoints(dff, offset):
         [dff.index.get_level_values('odor'), dff.index.get_level_values('trial'), new_time],
         names=['odor', 'trial', 'time']
     )
+    # Remove the timepoints that are now negative
+    dff = dff[dff.index.get_level_values('time') >= 0]
     return dff
