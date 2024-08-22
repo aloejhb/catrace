@@ -183,11 +183,17 @@ def dataio_func(exp_name, data_func, out_dir, in_dir=None,
 def process_data_db_parallel(data_func, exp_list,
                             out_dir, in_dir,
                             save_func=None,
-                            parallelism=1, **kwargs):
+                            parallelism=1, seeds=None, params={}):
     dataio_func_partial = partial(dataio_func, data_func=data_func,
                                   out_dir=out_dir, in_dir=in_dir,
-                                  save_func=save_func, **kwargs)
-    exp_names = [exp[0] for exp in exp_list]
+                                  save_func=save_func, **params)
+    if seeds is not None:
+        # Redefine the function to accept exp_name and seed
+        dataio_func_partial = lambda exp_name, seed: dataio_func_partial(exp_name, seed=seed)
+        exp_names = [(exp[0], seed) for exp, seed in zip(exp_list, seeds)]
+    else:
+        exp_names = [exp[0] for exp in exp_list]
+
     if parallelism > 1:
         with Pool(processes=parallelism) as pool:
             pool.map(dataio_func_partial, exp_names)

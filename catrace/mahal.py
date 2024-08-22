@@ -77,18 +77,13 @@ def compute_distances_df(df, window=None, model_window=None, model_trials=None, 
     return distances_df
 
 
-def sample_neuron_and_select_odors(df, sample_size, random_state=None, odor_list=None):
+def sample_neuron_and_select_odors(df, sample_size, seed=None, odor_list=None):
     df = df.dropna()
-    df = ptt.sample_neuron(df, sample_size=sample_size, random_state=random_state)
+    df = ptt.sample_neuron(df, sample_size=sample_size, random_state=seed)
     if odor_list is not None:
         df = ptt.select_odors_df(df, odor_list)
         df = ptt.sort_odors(df, odor_list)
     return df
-
-def sample_neuron_and_comopute_distance_df(df, sample_size, random_state=None, odor_list=None, **kwargs):
-    df = sample_neuron_and_select_odors(df, sample_size, random_state, odor_list)
-    dist_df = compute_distances_df(df, **kwargs)
-    return dist_df
 
 
 def compute_distances_mat(df, odor_list, **kwargs):
@@ -97,8 +92,8 @@ def compute_distances_mat(df, odor_list, **kwargs):
     return dist_mat
 
 
-def sample_neuron_and_comopute_distance_mat(df, sample_size, random_state=None, **kwargs):
-    df = ptt.sample_neuron(df, sample_size=sample_size, random_state=random_state)
+def sample_neuron_and_comopute_distance_mat(df, sample_size, seed=None, **kwargs):
+    df = ptt.sample_neuron(df, sample_size=sample_size, seed=seed)
     dist_mat = compute_distances_mat(df, **kwargs)
     return dist_mat
 

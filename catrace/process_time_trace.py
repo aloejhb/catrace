@@ -261,8 +261,8 @@ class SelectEnsembleConfig:
     window: list[str] # although named time window, by far it corresponds to the frame window
     top_n_per_odor: int
 
-def sample_neuron(dfovf, sample_size, random_state=None):
-    return dfovf.sample(n=sample_size, axis=1, random_state=random_state)
+def sample_neuron(dfovf, sample_size, seed=None):
+    return dfovf.sample(n=sample_size, axis=1, random_state=seed)
 
 
 def select_neuron(dfovf: pd.DataFrame,
