@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import itertools
 import pickle
-import re
+import inspect
 from sklearn import decomposition
 from functools import partial
 from multiprocessing import Pool
@@ -180,26 +180,38 @@ def dataio_func(exp_name, data_func, out_dir, in_dir=None,
     save_func(results, out_dir, exp_name)
 
 
-def process_data_db_parallel(data_func, exp_list,
-                            out_dir, in_dir,
-                            save_func=None,
-                            parallelism=1, seeds=None, params={}):
-    dataio_func_partial = partial(dataio_func, data_func=data_func,
-                                  out_dir=out_dir, in_dir=in_dir,
-                                  save_func=save_func, **params)
-    if seeds is not None:
-        # Redefine the function to accept exp_name and seed
-        dataio_func_partial = lambda exp_name, seed: dataio_func_partial(exp_name, seed=seed)
-        exp_names = [(exp[0], seed) for exp, seed in zip(exp_list, seeds)]
+# Move the wrapper function outside
+def dataio_func_wrapper(exp_name, seed, data_func, out_dir, in_dir, save_func, params, data_func_accepts_seed):
+    # If data_func accepts a seed, include it; otherwise, don't pass it
+    if data_func_accepts_seed:
+        dataio_func(data_func=data_func, exp_name=exp_name, out_dir=out_dir,
+                    in_dir=in_dir, save_func=save_func, seed=seed, **params)
     else:
-        exp_names = [exp[0] for exp in exp_list]
+        dataio_func(data_func=data_func, exp_name=exp_name, out_dir=out_dir,
+                    in_dir=in_dir, save_func=save_func, **params)
+
+def process_data_db_parallel(data_func, exp_list,
+                             out_dir, in_dir,
+                             save_func=None,
+                             parallelism=1, seeds=None, params={}):
+    # Check if the data_func accepts the 'seed' argument
+    data_func_accepts_seed = 'seed' in inspect.signature(data_func).parameters
+
+    # Create list of tuples of exp_name and seed (None if seeds are not provided)
+    if seeds is not None:
+        exp_names_with_seeds = [(exp[0], seed) for exp, seed in zip(exp_list, seeds)]
+    else:
+        exp_names_with_seeds = [(exp[0], None) for exp in exp_list]
 
     if parallelism > 1:
         with Pool(processes=parallelism) as pool:
-            pool.map(dataio_func_partial, exp_names)
+            # Use starmap to pass multiple arguments to the function
+            pool.starmap(dataio_func_wrapper, 
+                         [(exp_name, seed, data_func, out_dir, in_dir, save_func, params, data_func_accepts_seed) 
+                          for exp_name, seed in exp_names_with_seeds])
     else:
-        for exp_name in exp_names:
-            dataio_func_partial(exp_name)
+        for exp_name, seed in exp_names_with_seeds:
+            dataio_func_wrapper(exp_name, seed, data_func, out_dir, in_dir, save_func, params, data_func_accepts_seed)
 
 
 def process_data_model_decorator(data_func, exp_list, region_list,
