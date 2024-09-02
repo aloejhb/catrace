@@ -185,7 +185,7 @@ def mean_pattern_in_time_window(df, time_window, frame_rate):
     all_levels = list(df.index.names)
     all_levels.remove('time')
     # Group by except time, sort=False keeps the original order
-    pattern = df_filtered.groupby(level=all_levels, sort=False).mean()
+    pattern = df_filtered.groupby(level=all_levels, sort=False, observed=True).mean()
     return pattern
 
 

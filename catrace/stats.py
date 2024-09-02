@@ -129,7 +129,7 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
         stat = observed_diff
     else:
         raise ValueError("Invalid test_type. Choose either 'ttest' or 'mannwhitneyu'")
-    results = {(group_name1, group_name2): {'statistic': stat, 'p_value': p_value}}
+    results = {(group_name1, group_name2): {'statistic': stat[0], 'p_value': p_value[0]}}
     return results
 
 

@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import itertools
 import matplotlib.pyplot as plt
+import seaborn as sns
 from scipy.stats import sem
 from importlib import reload
 from scipy.ndimage import gaussian_filter1d
@@ -41,14 +42,105 @@ def compute_similarity_mat(dfovf, time_window, frame_rate, similarity_func):
     sim_mat = pd.DataFrame(sim_mat, index=pattern.index, columns=pattern.index)
     return sim_mat
 
-def compute_similarity_mat_timecourse(dfovf, bin_size, frame_rate, similarity_func):
-    import pdb; pdb.set_trace()
-    # TODO
-    # mats = []
 
-    # for i in range(0, dfovf.shape[1], bin_size):
-    #     mat = compute_similarity_mat(dfovf[:, i:i+bin_size], time_window, frame_rate, similarity_func)
-    #     mats.append(mat)
+def compute_similarity_mat_timecourse(dff, window_size, similarity_func):
+    """Compute similarity matrix timecourse."""
+    times = dff.index.unique(level='time')
+    start_time = times[0]
+    end_time = times[-1]
+
+    # Generate windows using np.arange
+    windows = [(start, min(start + window_size, end_time)) 
+               for start in np.arange(start_time, end_time, window_size)]
+
+    corrmat_tvec = []
+    for window in windows:
+        corrmat = compute_similarity_mat(dff, window, frame_rate=1, similarity_func=similarity_func)
+        corrmat_tvec.append(corrmat)
+    
+    # Combine the list of correlation matrices into a single DataFrame
+    corrmat_df = pd.concat(corrmat_tvec, keys=windows, names=['start_time', 'end_time'])
+    
+    return corrmat_df
+
+
+def plot_correlation_timecourse(corrmat_df, row_col_indices, ax=None):
+    """
+    Plot the mean and standard deviation of correlation time traces across time.
+    
+    Parameters:
+    - corrmat_df: DataFrame with correlation matrices, indexed by (start_time, end_time, odor, trial).
+    - row_col_indices: List of tuples, each containing:
+        - First element: tuple (odor, trial) for row selection.
+        - Second element: tuple (odor, trial) for column selection.
+    """
+    
+    time_traces = []
+    
+    # Extract the time traces based on the provided row_col_indices
+    for (row_idx, col_idx) in row_col_indices:
+        trace = corrmat_df.xs(row_idx, level=['odor', 'trial'], axis=0).xs(col_idx, level=['odor', 'trial'], axis=1)
+        time_traces.append(trace)
+    
+    # Convert list of time traces into a DataFrame
+    time_traces_df = pd.concat(time_traces, axis=1)
+    
+    # Calculate mean and standard deviation across time
+    mean_trace = time_traces_df.mean(axis=1)
+    std_trace = time_traces_df.std(axis=1)
+    
+    # Create the plot
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Plot mean trace
+    sns.lineplot(x=mean_trace.index.get_level_values('start_time'), y=mean_trace, label='Mean', ax=ax)
+    
+    # Plot standard deviation as shaded area
+    ax.fill_between(mean_trace.index.get_level_values('start_time'), 
+                    mean_trace - std_trace, 
+                    mean_trace + std_trace, 
+                    color='blue', alpha=0.3, label='Std Dev')
+    
+    # Set plot labels and title
+    ax.set_title('Mean and Std Dev of Correlation Timecourse')
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Correlation')
+    ax.legend()
+
+
+def get_same_odor_diff_trial(corrmat_df):
+    """
+    Generate row_col_indices for upper right corners of sub-matrices in corrmat_df.
+    These correspond to the entries between different trials but the same odors.
+    
+    Parameters:
+    - corrmat_df: DataFrame with correlation matrices, indexed by (start_time, end_time, odor, trial).
+    
+    Returns:
+    - row_col_indices: List of tuples where each tuple contains:
+        - First element: tuple (odor, trial) for row selection.
+        - Second element: tuple (odor, trial) for column selection.
+    """
+    
+    row_col_indices = []
+    odors = corrmat_df.index.get_level_values('odor').unique()
+
+    for odor in odors:
+        trials = corrmat_df.loc[(slice(None), slice(None), odor, slice(None))].index.get_level_values('trial').unique()
+        trial_pairs = [(trials[i], trials[j]) for i in range(len(trials)) for j in range(i + 1, len(trials))]
+        
+        for trial1, trial2 in trial_pairs:
+            row_col_indices.append(((odor, trial1), (odor, trial2)))
+
+    return row_col_indices
+
+def plot_same_odor_diff_trial(corrmat_df, ax=None):
+    # Get the row_col_indices for same odor but different trials
+    row_col_indices = get_same_odor_diff_trial(corrmat_df)
+    
+    # Plot the correlation timecourse using the calculated indices
+    plot_correlation_timecourse(corrmat_df, row_col_indices, ax=ax)
 
 
 def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8, title=''):

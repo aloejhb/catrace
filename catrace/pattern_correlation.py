@@ -3,6 +3,7 @@ import sys
 import pandas as pd
 import numpy as np
 import itertools
+import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import sem
 from importlib import reload
@@ -93,6 +94,7 @@ def compute_pattern_correlation(dfovf, time_window, frame_rate):
     corrmat = np.corrcoef(pattern.to_numpy())
     corrmat = pd.DataFrame(corrmat, index=pattern.index, columns=pattern.index)
     return corrmat
+
 
 
 def plot_pattern_correlation(df, ax=None, clim=None, title='', cmap='turbo', show_legend=False):
