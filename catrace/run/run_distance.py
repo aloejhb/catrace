@@ -3,6 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 import catrace.exp_collection as ecl
@@ -15,6 +16,7 @@ from itertools import product
 from matplotlib.backends.backend_pdf import PdfPages
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
+from scipy.stats import mannwhitneyu
 
 from catrace.dataset import DatasetConfig
 from catrace.utils import load_config
@@ -155,23 +157,71 @@ def plot_matrix_per_condition(avg_simdf, conditions, cmap='turbo', clim=None):
     return fig, axs
 
 
-def get_group_vs_group(avg_simdf, odor_group1, odor_group2):
-    if 'sample' in avg_simdf.index.names:
-        avg_simdf = avg_simdf.loc[(slice(None), slice(None), slice(None), odor_group1), odor_group2]
-    else:
-        avg_simdf = avg_simdf.loc[(slice(None), slice(None), odor_group1), odor_group2]
-    return avg_simdf
+# def get_group_vs_group(avg_simdf, odor_group1, odor_group2):
+#     if 'sample' in avg_simdf.index.names:
+#         avg_simdf = avg_simdf.loc[(slice(None), slice(None), slice(None), odor_group1), odor_group2]
+#     else:
+#         avg_simdf = avg_simdf.loc[(slice(None), slice(None), odor_group1), odor_group2]
+#     return avg_simdf
+
+
+import pandas as pd
+
+def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=True):
+    # Get tuples of (odor1, odor2) that are in the group
+    odor_tuples = [(odor1, odor2) for odor1 in odor1_group for odor2 in odor2_group]
+    # Remove the tuples that have the same odor1 and odor2
+    odor_tuples = [odor_tuple for odor_tuple in odor_tuples if odor_tuple[0] != odor_tuple[1]]
+    
+    # Conditionally deduplicate the odor_tuples by sorting and removing duplicates
+    if deduplicate:
+        odor_tuples = list({tuple(sorted(odor_tuple)) for odor_tuple in odor_tuples})
+    
+    # Stack the DataFrame so that 'ref_odor' becomes part of the MultiIndex
+    dff_stacked = dff.stack()  # This moves the columns (ref_odor) into the index
+    
+    # Rename the stacked column for clarity
+    dff_stacked.name = 'value'
+    
+    # Use pd.IndexSlice to slice through the MultiIndex
+    idx = pd.IndexSlice
+    
+    # Prepare the filter based on odor_tuples
+    filtered_dfs = []
+    for odor1, odor2 in odor_tuples:
+        # Slice through MultiIndex using `odor1` and `odor2` while preserving other levels
+        if 'sample' in dff_stacked.index.names:  # Adjust for additional levels (like 'sample')
+            sliced_df = dff_stacked.loc[idx[:, :, :, odor1, odor2]]
+        else:  # Default case with two extra levels before 'odor' and 'ref_odor'
+            sliced_df = dff_stacked.loc[idx[:, :, odor1, odor2]]
+        
+        filtered_dfs.append(sliced_df)
+    
+    # Concatenate all the filtered DataFrames
+    gvg = pd.concat(filtered_dfs, keys=odor_tuples)
+    
+    # Rename the first two levels of the index to 'odor' and 'ref_odor'
+    new_index_names = list(gvg.index.names)
+    
+    if len(new_index_names) >= 2:  # Ensure there are at least two levels to rename
+        new_index_names[0] = 'odor'      # First level becomes 'odor'
+        new_index_names[1] = 'ref_odor'  # Second level becomes 'ref_odor'
+    
+    # Apply the new index names
+    gvg = gvg.rename_axis(new_index_names, axis=0)
+    
+    # Convert the final gvg to a DataFrame with the specified column name (measure_name)
+    gvg_df = gvg.to_frame(name=measure_name)
+    
+    return gvg_df
 
 
 # Statistics on odors
-def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vsname, naive_name='naive', normalize_to_percent=False):
-    subsimdf = get_group_vs_group(avg_simdf, group1, group2)
-    subsimdf = subsimdf.loc[(slice(None), selected_conditions, slice(None)), :]
-    subsimdf = subsimdf.stack('ref_odor').to_frame()
-    # Remove the rows where odor is the same as ref_odor
-    subsimdf = subsimdf[subsimdf.index.get_level_values('odor') != subsimdf.index.get_level_values('ref_odor')]
-
-    # rename the column as D_E or D_M
+def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vsname, naive_name='naive'):
+    if metric == 'mahal':
+        deduplicate = False
+    else:
+        deduplicate = True
     if metric == 'mahal':
         measure_name = 'D_M'
     elif metric == 'euclidean':
@@ -180,7 +230,17 @@ def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vs
         measure_name = 'center D_E'
     else:
         raise ValueError(f'Unknown metric: {metric}')
-    subsimdf.rename(columns={0: measure_name}, inplace=True)
+    subsimdf = get_group_vs_group(avg_simdf, group1, group2, measure_name=measure_name,
+                                  deduplicate=deduplicate)
+    # Select conditions
+    subsimdf = subsimdf[subsimdf.index.get_level_values('condition').isin(selected_conditions)]
+    # subsimdf = subsimdf.loc[(slice(None), selected_conditions, slice(None)), :]
+    # subsimdf = subsimdf.stack('ref_odor').to_frame()
+    # Remove the rows where odor is the same as ref_odor
+
+    # rename the column as D_E or D_M
+
+    # subsimdf.rename(columns={0: measure_name}, inplace=True)
 
     # Map naive to naive, others to trained
     condition_map = {cond: 'trained' if cond != naive_name else 'naive' for cond in selected_conditions}
@@ -194,14 +254,18 @@ def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vs
     return fig, ax, test_results, pooled_subsimdf
 
 
-def normalize_to_percent(pooled_subsimdf):
+def normalize_to_percent(pooled_subsimdf, normalize=True):
     # From pooled_subsimdf, get the rows where condition is naive
     pooled_subsimdf_naive = pooled_subsimdf[pooled_subsimdf.index.get_level_values('condition') == 'naive']
     # Compute the mean of naive
     pooled_subsimdf_naive_mean = pooled_subsimdf_naive.groupby(['odor', 'ref_odor']).mean()
     # Subtract the pooled_subsimdf_naive_mean from pooled_subsimdf and then normalize by the pooled_subsimdf_naive_mean
-    pooled_subsimdf_normailized = (pooled_subsimdf - pooled_subsimdf_naive_mean) / pooled_subsimdf_naive_mean * 100
-    return pooled_subsimdf_normailized
+    pooled_subsimdf_normailized = pooled_subsimdf - pooled_subsimdf_naive_mean
+    if normalize:
+        pooled_subsimdf_normailized = pooled_subsimdf_normailized / pooled_subsimdf_naive_mean * 100
+    # Get the rows where condition is not naive
+    pooled_subsimdf_normalized_trained = pooled_subsimdf_normailized[pooled_subsimdf_normailized.index.get_level_values('condition') != 'naive']
+    return pooled_subsimdf_normalized_trained
 
 
 # Statisitcs on CS odors
@@ -304,6 +368,23 @@ def combine_figures_to_grid(figs, nrows, ncols):
     return fig
 
 
+def compare_vs(vskeys, subsimdfs, measure_name):
+    #vskeys = ['aa_vs_ba', 'aa_vs_aa']
+    normalized_subsimdfs = {key: normalize_to_percent(subsimdfs[key]) for key in vskeys}
+    concat_subsimdf = pd.concat([normalized_subsimdfs[vskeys[0]], normalized_subsimdfs[vskeys[1]]], keys=vskeys)
+    # rename the level of keys to vsname
+    concat_subsimdf.index = concat_subsimdf.index.rename('vsname', level=0)
+    fig, ax = plt.subplots()
+    sns.boxplot(x='vsname', y=measure_name, data=concat_subsimdf.reset_index())
+    # Use mannwhitneyu to compare the two groups
+    vs1 = normalized_subsimdfs[vskeys[0]][measure_name].to_numpy()
+    vs2 = normalized_subsimdfs[vskeys[1]][measure_name].to_numpy()
+    _, pvalue = mannwhitneyu(vs1, vs2)
+    vs_tag = '__'.join(vskeys)
+    ax.set_title(f'{vs_tag} p={pvalue:.6f}')
+    return fig, ax, concat_subsimdf
+
+
 @dataclass_json
 @dataclass
 class RunDistanceParams:
@@ -324,8 +405,7 @@ class RunDistanceParams:
     vs_same_ylim: list = None
     cmap: str = 'turbo'
     clim: list = None
-    normalize_to_percent: bool = False
-
+    do_compare_cs: bool = False
 
 
 def run_distance(params: RunDistanceParams):
@@ -383,7 +463,7 @@ def run_distance(params: RunDistanceParams):
     vsdict = {'aa_vs_ba': (dsconfig.odors_aa, dsconfig.odors_ba),
               'aa_vs_aa': (dsconfig.odors_aa, dsconfig.odors_aa),
               'ba_vs_aa': (dsconfig.odors_ba, dsconfig.odors_aa)}
-    if dsconfig.odors_cs is not None:
+    if params.do_compare_cs:
         vsdict.update({'cs_vs_ba': (dsconfig.odors_cs, dsconfig.odors_ba),
                        'ba_vs_cs': (dsconfig.odors_ba, dsconfig.odors_cs),
                        'cs_plus_vs_cs_minus': ([dsconfig.odors_cs[0]], [dsconfig.odors_cs[1]])})
@@ -392,28 +472,27 @@ def run_distance(params: RunDistanceParams):
     stats = {}
     subsimdfs = {}
     for vsname, (group1, group2) in vsdict.items():
-        fig, ax, test_results, pooled_subsimdf = stat_of_odor_pair(group1, group2, dsconfig.conditions, avg_simdf, metric, vsname, naive_name=params.naive_name, normalize_to_percent=params.normalize_to_percent)
+        fig, ax, test_results, pooled_subsimdf = stat_of_odor_pair(group1, group2, dsconfig.conditions, avg_simdf, metric, vsname, naive_name=params.naive_name)
         vsfigs.append(fig)
         vsaxs.append(ax)
         stats[vsname] = list(test_results.values())[0]
         subsimdfs[vsname] = pooled_subsimdf
 
-    # Compare percentage changes in aa_vs_ba and aa_vs_aa
-    # Cncatenate subsimdf of aa_vs_ba and aa_vs_aa
+    if metric == 'mahal':
+        measure_name = 'D_M'
+    elif metric == 'euclidean':
+        measure_name = 'D_E'
+    elif metric == 'center_euclidean':
+        measure_name = 'center D_E'
+    else:
+        raise ValueError(f'Unknown metric: {metric}')
+    # Compare percentage changes
     vskeys = ['aa_vs_ba', 'aa_vs_aa']
-    normalized_subsimdfs = {key: normalize_to_percent(subsimdfs[key]) for key in vskeys}
-    concat_subsimdf = pd.concat([normalized_subsimdfs['aa_vs_ba'], normalized_subsimdfs['aa_vs_aa']], keys=['aa_vs_ba', 'aa_vs_aa'])
-    # rename the level of keys to vsname
-    concat_subsimdf.index = concat_subsimdf.index.rename('vsname', level=0)
-    fig, ax = plt.subplots()
-    import seaborn as sns
-    sns.boxplot(x='vsname', y='D_M', data=concat_subsimdf.reset_index())
-    # Use mannwhitneyu to compare the two groups
-    from scipy.stats import mannwhitneyu
-    aa_vs_ba = normalized_subsimdfs['aa_vs_ba']['D_M'].to_numpy()
-    aa_vs_aa = normalized_subsimdfs['aa_vs_aa']['D_M'].to_numpy()
-    _, pvalue = mannwhitneyu(aa_vs_ba, aa_vs_aa)
-    ax.set_title(f'aa_vs_ba vs aa_vs_aa, p={pvalue}')
+    fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
+    if params.do_compare_cs:
+        vskeys = ['cs_vs_ba', 'cs_plus_vs_cs_minus']
+        fig, ax, _ = compare_vs(vskeys, subsimdfs, measure_name)
+
 
     if params.vs_same_ylim is not None:
         for vsax in vsaxs:
@@ -440,4 +519,4 @@ def run_distance(params: RunDistanceParams):
             pdf_pages.savefig(fig_combined)
             pdf_pages.savefig(fig_per_fish)
     else:
-        return fig_avg_trace, fig_per_cond, fig_delta, vsfigs, fig_per_fish
+        return fig_avg_trace, fig_per_cond, fig_delta, vsfigs, fig_per_fish, concat_subsimdf
