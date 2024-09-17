@@ -12,6 +12,8 @@ from scipy.spatial.distance import pdist, squareform
 
 from .dataio import load_trace_file
 from .process_time_trace import mean_pattern_in_time_window
+from .process_time_trace import sample_neuron
+from .mahal import compute_distances_mat, compute_center_euclidean_distance_mat
 
 def cosine_distance(mat):
     # Compute the pairwise cosine distances between trials
@@ -43,15 +45,20 @@ def compute_similarity_mat(dfovf, time_window, frame_rate, similarity_func):
     return sim_mat
 
 
-def compute_similarity_mat_timecourse(dff, window_size, similarity_func):
+def compute_similarity_mat_timecourse(dff, window_size, similarity_func, window_method='sliding'):
     """Compute similarity matrix timecourse."""
     times = dff.index.unique(level='time')
     start_time = times[0]
     end_time = times[-1]
 
-    # Generate windows using np.arange
-    windows = [(start, min(start + window_size, end_time)) 
-               for start in np.arange(start_time, end_time, window_size)]
+    if window_method == 'piecewise':
+        # Generate windows using np.arange
+        windows = [(start, min(start + window_size, end_time)) 
+                for start in np.arange(start_time, end_time, window_size)]
+    elif window_method == 'sliding':
+        windows = [(start, start + window_size) for start in times[:-window_size]]
+    else:
+        raise ValueError('Invalid window_method. Choose from "piecewise" or "sliding".')        
 
     corrmat_tvec = []
     for window in windows:
@@ -64,7 +71,7 @@ def compute_similarity_mat_timecourse(dff, window_size, similarity_func):
     return corrmat_df
 
 
-def plot_correlation_timecourse(corrmat_df, row_col_indices, ax=None):
+def plot_correlation_timecourse(corrmat_df, row_col_indices, ax=None, color='blue', label='Mean'):
     """
     Plot the mean and standard deviation of correlation time traces across time.
     
@@ -94,13 +101,13 @@ def plot_correlation_timecourse(corrmat_df, row_col_indices, ax=None):
         fig, ax = plt.subplots(figsize=(10, 6))
     
     # Plot mean trace
-    sns.lineplot(x=mean_trace.index.get_level_values('start_time'), y=mean_trace, label='Mean', ax=ax)
+    sns.lineplot(x=mean_trace.index.get_level_values('start_time'), y=mean_trace, label=label, ax=ax, color=color)
     
     # Plot standard deviation as shaded area
     ax.fill_between(mean_trace.index.get_level_values('start_time'), 
                     mean_trace - std_trace, 
                     mean_trace + std_trace, 
-                    color='blue', alpha=0.3, label='Std Dev')
+                    color=color, alpha=0.3)#, label='Std Dev')
     
     # Set plot labels and title
     ax.set_title('Mean and Std Dev of Correlation Timecourse')
@@ -135,12 +142,12 @@ def get_same_odor_diff_trial(corrmat_df):
 
     return row_col_indices
 
-def plot_same_odor_diff_trial(corrmat_df, ax=None):
+def plot_same_odor_diff_trial(corrmat_df, **kwargs):
     # Get the row_col_indices for same odor but different trials
     row_col_indices = get_same_odor_diff_trial(corrmat_df)
     
     # Plot the correlation timecourse using the calculated indices
-    plot_correlation_timecourse(corrmat_df, row_col_indices, ax=ax)
+    plot_correlation_timecourse(corrmat_df, row_col_indices, **kwargs)
 
 
 def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8, title=''):
@@ -194,3 +201,14 @@ def compute_aavsba(simdf, aa_odors, ba_odors):
         aavsba = simdf.loc[aa_odors, ba_odors].mean().mean()
 
     return aavsba
+
+
+def sample_neuron_and_comopute_distance_mat(df, sample_size, seed=None, metric='center_euclidean', params={}):
+    df = sample_neuron(df, sample_size=sample_size, seed=seed)
+    if metric in ['euclidean', 'mahal']:
+        dist_mat = compute_distances_mat(df, **params)
+    elif metric == 'center_euclidean':
+        dist_mat = compute_center_euclidean_distance_mat(df, **params)
+    else:
+        raise ValueError('Invalid metric. Choose from "euclidean", "mahal", "center_euclidean".')
+    return dist_mat

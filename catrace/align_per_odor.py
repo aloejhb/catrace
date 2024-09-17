@@ -29,7 +29,12 @@ def fit_gaussian_to_odor(time_points, activity_values, stddev_bounds=(1, 5)):
         return None
 
 
-def find_peak_times(odor_avg, window, second_window_size=None, method='gaussian', fit_params={}):
+def find_peak_times(odor_avg, window=None, first_window_size=None, second_window_size=None, method='gaussian', fit_params={}):
+    if first_window_size:
+        avg_timecourse = odor_avg.mean(axis=0)
+        max_time = avg_timecourse.idxmax()
+        window = (int(max_time - first_window_size/2), int(max_time + first_window_size/2))
+
     odor_avg_original = odor_avg.copy()
     odor_avg = odor_avg_original.loc[:, window[0]:window[1]]
     # Convert columns to float (time points)

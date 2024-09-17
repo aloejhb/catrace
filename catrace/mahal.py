@@ -34,7 +34,7 @@ def compute_distances_df(df, window=None, model_window=None, model_trials=None, 
         model_df = model_df[idx]
 
     # Compute center for each odor
-    centers = model_df.groupby(level='odor', sort=False).mean()
+    centers = model_df.groupby(level='odor', sort=False, observed=True).mean()
 
     if metric == 'mahal':
         # Compute cov_mat for each odor
@@ -92,9 +92,22 @@ def compute_distances_mat(df, odor_list, **kwargs):
     return dist_mat
 
 
-def sample_neuron_and_comopute_distance_mat(df, sample_size, seed=None, **kwargs):
-    df = ptt.sample_neuron(df, sample_size=sample_size, seed=seed)
-    dist_mat = compute_distances_mat(df, **kwargs)
+def compute_center_euclidean_distance_mat(df, odor_list, window):
+    df = ptt.select_time_points(df, window)
+    df = ptt.select_odors_and_sort(df, odor_list)
+    centers = df.groupby(level='odor', sort=False, observed=True).mean()
+    # Compute euclidean distance between centers
+    dist_mat = pd.DataFrame(index=odor_list, columns=odor_list, dtype=float)
+    # The level name is 'odor' for the index and 'ref_odor' for the columns
+    dist_mat.index.name = 'odor'
+    dist_mat.columns.name = 'ref_odor'
+
+    for odor1 in odor_list:
+        center1 = centers.loc[odor1]
+        for odor2 in odor_list:
+            center2 = centers.loc[odor2]
+            dist = euclidean(center1, center2)
+            dist_mat.loc[odor1, odor2] = dist
     return dist_mat
 
 

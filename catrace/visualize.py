@@ -140,7 +140,14 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    hline_y=0,
                                    show_ns=True,
                                    pvalue_marker_xoffset=0.01,
-                                   box_color='green'):
+                                   box_color='tab:blue',
+                                   label_fontsize=24,
+                                   y_tick_label_fontsize=18,
+                                   ylevel_scale=1.1,
+                                   mean_marker_color='tab:red',
+                                   strip_size=4,
+                                   do_plot_strip=True,
+                                   x_order=None):
     """
     Plot boxplot with significance annotations
     """
@@ -149,38 +156,39 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     else:
         fig = 'dummy'
 
-    sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=4, alpha=0.4, zorder=1)
+    if do_plot_strip:
+        sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=strip_size, alpha=0.4, zorder=1, order=x_order)
     sns.boxplot(ax=ax, data=datadf, x=xname, y=yname, saturation=0.5,
                 width=0.45, zorder=2,
                 showfliers=False, showcaps=False,
                 medianprops=dict(color=box_color, alpha=0.95, linewidth=4),
                 boxprops=dict(edgecolor=box_color, alpha=0.95, fill=False, linewidth=4),
-                whiskerprops=dict(color=box_color, linewidth=4, alpha=0.7))
+                whiskerprops=dict(color=box_color, linewidth=4, alpha=0.7), order=x_order)
     if hline_y is not None:
         ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.85)
 
     # Calculate means
-    means = datadf.groupby(xname, sort=False)[yname].mean()
-    # Add mean to the boxplot
-    for i, mean in enumerate(means):
-        ax.plot([i-0.2, i+0.2], [mean, mean], color='red', linewidth=3, zorder=3)
+    cond_name = xname
+    mean_points = datadf.groupby([cond_name], as_index=False, sort=False, observed=True)[yname].mean()
+    sns.pointplot(ax=ax, x=cond_name, y=yname, data=mean_points, 
+                  markers='D', linestyle='none', zorder=3, markersize=5, color=mean_marker_color, order=x_order)
 
     ax.set_xlabel('')
-    label_fontsize = 24
     # Adjusting the font size and rotation of x-axis tick labels
     ticks = ax.get_xticks()
     ax.set_xticks(ticks) 
     ax.tick_params(axis='x', labelsize=label_fontsize)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=label_fontsize)
 
-    y_tick_label_fontsize = 18
     ax.tick_params(axis='y', labelsize=y_tick_label_fontsize)
     ax.set_ylabel(ylabel, fontsize=label_fontsize)
     if ylim:
         ax.set_ylim(ylim)
 
-    current_ylim = ax.get_ylim()
-    ylevel = 1.02*current_ylim[1]
+    # Get maximum y value from datadf
+    max_y = datadf[yname].max()
+    # current_ylim = ax.get_ylim()
+    ylevel = ylevel_scale*max_y #current_ylim[1]
     plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=ref_key,
                        show_ns=show_ns, pvalue_marker_xoffset=pvalue_marker_xoffset)
 
@@ -208,7 +216,8 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
         for key, val in test_results.items():
             marker, xoffset = pvalue_to_marker(val['p_value'], fontsize=fontsize, **kwargs)
             if marker != 'n.s.' or show_ns:
-                ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
+                text = ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=14)
+                text.set_gid('pvalue_text')
     elif test_type == 'one_reference':
         if ref_key is None:
             raise ValueError('ref_key must be specified when test_type is "one_reference"')
@@ -216,7 +225,8 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
             if key != ref_key:
                 marker, xoffset = pvalue_to_marker(val['p'], fontsize=fontsize, **kwargs)
                 if marker != 'n.s.' or show_ns:
-                    ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=fontsize)
+                    text = ax.text(xpos_dict[key]-xoffset, ylevel, marker, fontsize=fontsize)
+                    text.set_gid('pvalue_text')
     elif test_type == 'pairwise':
         for key, val in test_results.items():
             marker, xoffset = pvalue_to_marker(val['p_value'], fontsize=fontsize, **kwargs)
@@ -224,8 +234,10 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
                 xstart = xpos_dict[key[0]]
                 xend = xpos_dict[key[1]]
                 xmid = (xstart + xend) / 2
-                ax.text(xmid-xoffset, ylevel, marker, fontsize=fontsize)
-                ax.hlines(y=ylevel*0.97, xmin=xstart, xmax=xend, color='black')
+                text = ax.text(xmid-xoffset, ylevel, marker, fontsize=fontsize)
+                text.set_gid('pvalue_text')
+                line = ax.hlines(y=ylevel*0.97, xmin=xstart, xmax=xend, color='black')
+                line.set_gid('pvalue_line')
     else:
         raise ValueError('test_type must be one of "single" or "one_reference"')
 
@@ -454,3 +466,19 @@ def plot_all_measure_by_cond(mdff, measure_names=None, name_to_label=None, test_
         test_results_list.append(test_results)
     plt.tight_layout()
     return fig, axs, test_results_list
+
+
+def move_pvalue_indicator(ax, line_new_y, text_new_y=None):
+    for collection in ax.collections:
+        if collection.get_gid() == 'pvalue_line':
+            xstart, xend = collection.get_segments()[0][0][0], collection.get_segments()[0][1][0]
+            new_segments = [
+                [(xstart, line_new_y), (xend, line_new_y)]
+            ]
+            collection.set_segments(new_segments)
+
+    if text_new_y is None:
+        text_new_y = line_new_y*1.02
+    for text_obj in ax.texts:
+        if text_obj.get_gid() == 'pvalue_text':
+            text_obj.set_position((text_obj.get_position()[0], text_new_y))
