@@ -1,18 +1,36 @@
 import os
 from os.path import join as pjoin
+from typing import Union
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+
 from catrace.dataset import DatasetConfig
 from catrace.utils import load_config
 from catrace.exp_collection import process_data_db_parallel
 from catrace.process_neuron import (select_cell_type_odors_neurons, save_assembly_results, SelectNeuronParams)
 
 
+@dataclass_json
+@dataclass
+class RunSelectAssemblyParams:
+    config_file: str
+    select_neuron_params: Union[SelectNeuronParams, dict]
+    overwrite_computation: bool = False
+    parallelism: int = 16
+
+    def __post_init__(self):
+        if isinstance(self.select_neuron_params, dict):
+            # Convert the dictionary to a SelectNeuronParams object
+            self.select_neuron_params = SelectNeuronParams.from_dict(self.select_neuron_params)
+
+
 def get_select_neuron_tag(params):
-    if params['method'] == 'perc':
+    if params.method == 'perc':
         # multiply by 100 to get the percentile and convert to string representing integer using f-string specifying with d
-        perc_str = f'{int(params["percentile"]*100):02d}'
-        return f'{params["method"]}{perc_str}'
+        perc_str = f'{int(params.percentile*100):02d}'
+        return f'{params.method}{perc_str}'
     else:
-        return f'{params["method"]}{params["assembly_size"]}'
+        return f'{params.method}{params.assembly_size}'
 
 
 def run_select_assembly(params: RunSelectAssemblyParams):
@@ -28,13 +46,13 @@ def run_select_assembly(params: RunSelectAssemblyParams):
     else:
         out_dir = pjoin(in_dir, select_neuron_tag)
 
-    if not os.path.exists(out_dir) or params.overwrite:
+    if not os.path.exists(out_dir) or params.overwrite_computation:
         os.makedirs(out_dir, exist_ok=True)
         # ptt.save_config(out_dir, select_neuron_config)
         process_data_db_parallel(select_cell_type_odors_neurons, exp_list,
                                  out_dir, in_dir,
                                  save_func=save_assembly_results,
                                  parallelism=params.parallelism,
-                                 **snparams.to_dict()
+                                 params=snparams.to_dict()
                                  )
     return out_dir

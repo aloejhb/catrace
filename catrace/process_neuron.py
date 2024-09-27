@@ -11,10 +11,13 @@ def append_neuron_id(dff):
                                             dff.columns.get_level_values('neuron'),
                                             neuron_id],
                                             names=['plane', 'neuron', 'neuron_id'])
-    else:
+    elif 'neuron' in dff.columns.names:
         dff.columns = pd.MultiIndex.from_arrays([dff.columns.get_level_values('neuron'),
                                             neuron_id],
                                             names=['neuron', 'neuron_id'])
+    else:
+        # Append a new level called neuron_id to the columns
+        dff.columns = pd.MultiIndex.from_arrays([dff.columns, neuron_id], names=[dff.columns.name, 'neuron_id'])
     return dff
 
 
@@ -34,11 +37,13 @@ def get_assembly_positions(df, method='top_indices', **kwargs):
     assemblies = {}
     if method == 'top_indices':
         find_func = find_top_indices
+        args = dict(assembly_size=kwargs['assembly_size'])
     elif method == 'perc':
         find_func = find_top_indices_perc
+        args = dict(threshold=kwargs['threshold'], percentile=kwargs['percentile'])
 
     for odor, row in df.iterrows():
-        indices = find_func(row, **kwargs)
+        indices = find_func(row, **args)
         assemblies[odor] = indices
     return assemblies
 
