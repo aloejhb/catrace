@@ -73,8 +73,8 @@ def select_cell_type_odors_neurons(dff, cell_type, odors, select_func_name, **kw
     if cell_type is not None:
         dff = dff.xs(cell_type, level='cell_type', axis=1)
     dff = select_odors_and_sort(dff, odors)
-    if select_func_name == 'select_neuron_by_ensemble':
+    if select_func_name == 'select_neuron_by_assembly':
         dff = select_neuron_by_assembly(dff, **kwargs)
     else:
-        raise ValueError(f'Unrecognized select_func_name {select_func_name}. So far only select_neuron_by_ensemble is supported.')
+        raise ValueError(f'Unrecognized select_func_name {select_func_name}. So far only select_neuron_by_assembly is supported.')
     return dff

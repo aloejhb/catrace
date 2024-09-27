@@ -157,16 +157,6 @@ def plot_matrix_per_condition(avg_simdf, conditions, cmap='turbo', clim=None):
     return fig, axs
 
 
-# def get_group_vs_group(avg_simdf, odor_group1, odor_group2):
-#     if 'sample' in avg_simdf.index.names:
-#         avg_simdf = avg_simdf.loc[(slice(None), slice(None), slice(None), odor_group1), odor_group2]
-#     else:
-#         avg_simdf = avg_simdf.loc[(slice(None), slice(None), odor_group1), odor_group2]
-#     return avg_simdf
-
-
-import pandas as pd
-
 def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=True):
     # Get tuples of (odor1, odor2) that are in the group
     odor_tuples = [(odor1, odor2) for odor1 in odor1_group for odor2 in odor2_group]
@@ -452,7 +442,6 @@ def run_distance(params: RunDistanceParams):
     
     print('Plotting per condition...')
     fig_per_cond, axs = plot_matrix_per_condition(avg_simdf, dsconfig.conditions, cmap=params.cmap, clim=params.clim)
-    fig_per_cond.savefig(pjoin(report_dir, f'for_Nesibe_per_condition_{params.cmap}.pdf'))
 
     print('Plotting delta matrix...')
     if params.do_reorder_cs:
