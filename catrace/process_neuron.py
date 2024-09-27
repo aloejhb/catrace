@@ -4,6 +4,10 @@ from .process_time_trace import select_time_points, select_odors_and_sort
 from .exp_collection import update_df
 
 
+def sample_neuron(dfovf, sample_size, seed=None):
+    return dfovf.sample(n=sample_size, axis=1, random_state=seed)
+
+
 def append_neuron_id(dff):
     neuron_id = pd.RangeIndex(start=0, stop=dff.shape[1], step=1)
     if 'plane' in dff.columns.names:

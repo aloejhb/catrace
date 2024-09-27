@@ -12,7 +12,7 @@ from scipy.spatial.distance import pdist, squareform
 
 from .dataio import load_trace_file
 from .process_time_trace import mean_pattern_in_time_window
-from .process_time_trace import sample_neuron
+from .process_neuron import sample_neuron
 from .mahal import compute_distances_mat, compute_center_euclidean_distance_mat
 
 def cosine_distance(mat):
