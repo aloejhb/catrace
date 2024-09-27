@@ -406,6 +406,7 @@ class RunDistanceParams:
     cmap: str = 'turbo'
     clim: list = None
     do_compare_cs: bool = False
+    reg: float = 1e-5
 
 
 def run_distance(params: RunDistanceParams):
@@ -434,7 +435,7 @@ def run_distance(params: RunDistanceParams):
                                             seed=seed,
                                             num_repeats=50,
                                             sample_size=sample_size,
-                                            reg=1e-5,
+                                            reg=params.reg,
                                             odors=dsconfig.odors_stimuli, overwrite_computation=overwrite_computation,
                                             parallelism=16)
 
@@ -451,6 +452,7 @@ def run_distance(params: RunDistanceParams):
     
     print('Plotting per condition...')
     fig_per_cond, axs = plot_matrix_per_condition(avg_simdf, dsconfig.conditions, cmap=params.cmap, clim=params.clim)
+    fig_per_cond.savefig(pjoin(report_dir, f'for_Nesibe_per_condition_{params.cmap}.pdf'))
 
     print('Plotting delta matrix...')
     if params.do_reorder_cs:
@@ -488,6 +490,8 @@ def run_distance(params: RunDistanceParams):
         raise ValueError(f'Unknown metric: {metric}')
     # Compare percentage changes
     vskeys = ['aa_vs_ba', 'aa_vs_aa']
+    fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
+    vskeys = ['aa_vs_ba', 'ba_vs_aa']
     fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
     if params.do_compare_cs:
         vskeys = ['cs_vs_ba', 'cs_plus_vs_cs_minus']
