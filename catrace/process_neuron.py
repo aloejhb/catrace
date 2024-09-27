@@ -63,6 +63,7 @@ def select_neuron_by_assembly(dff, window, method='top_indices', **kwargs):
     results = {'dff_select': dff_select, 'assembly_matrix': assembly_matrix}
     return results
 
+
 def save_assembly_results(results, out_dir, exp_name):
     update_df(results['dff_select'], out_dir, exp_name)
     filename = pjoin(out_dir, f'{exp_name}_assembly_matrix.csv')
@@ -78,3 +79,35 @@ def select_cell_type_odors_neurons(dff, cell_type, odors, select_func_name, **kw
     else:
         raise ValueError(f'Unrecognized select_func_name {select_func_name}. So far only select_neuron_by_assembly is supported.')
     return dff
+
+
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+from typing import List, Tuple, Optional
+
+
+@dataclass_json
+@dataclass
+class SelectNeuronParams:
+    cell_type: str
+    odors: List[str]
+    window: Tuple[float, float]
+    method: str
+    select_func_name: str = 'select_neuron_by_assembly'
+    assembly_size: Optional[int] = None
+    threshold: Optional[float] = None
+    percentile: Optional[float] = None
+
+    def __post_init__(self):
+        if self.method == 'top_indices':
+            if self.assembly_size is None:
+                raise ValueError("assembly_size must be provided when method is 'top_indices'.")
+            if self.threshold is not None or self.percentile is not None:
+                raise ValueError("threshold and percentile must be None when method is 'top_indices'.")
+        elif self.method == 'perc':
+            if self.assembly_size is not None:
+                raise ValueError("assembly_size must be None when method is 'perc'.")
+            if self.threshold is None or self.percentile is None:
+                raise ValueError("threshold and percentile must be provided when method is 'perc'.")
+        else:
+            raise ValueError(f"Invalid method '{self.method}'. Supported methods are 'top_indices' and 'perc'.")

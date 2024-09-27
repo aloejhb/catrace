@@ -400,7 +400,6 @@ class RunDistanceParams:
 
 
 def run_distance(params: RunDistanceParams):
-    config_file = params.config_file
     assembly_name = params.assembly_name
     time_window = params.time_window
     sample_size = params.sample_size
@@ -411,7 +410,7 @@ def run_distance(params: RunDistanceParams):
     report_dir = params.report_dir
     summary_name = params.summary_name
 
-    dsconfig= load_config(config_file, DatasetConfig)
+    dsconfig= load_config(params.config_file, DatasetConfig)
     exp_list = dsconfig.exp_list
     trace_dir = dsconfig.processed_trace_dir
     select_neuron_dir = pjoin(trace_dir, assembly_name)
