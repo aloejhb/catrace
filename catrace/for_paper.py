@@ -8,6 +8,7 @@ def save_stats_json(stats, stats_name, paper_fig_dir, tuple_key_to_str=False):
     if tuple_key_to_str:
         if 'raw' in stats.keys():
             stats['raw'] = {'_'.join(k): v for k, v in stats['raw'].items()}
+        if 'shuffled' in stats.keys():
             stats['shuffled'] = {'_'.join(k): v for k, v in stats['shuffled'].items()}
     stats_file = pjoin(paper_fig_dir, f'{stats_name}.json')
     with open(stats_file, 'w') as file:
