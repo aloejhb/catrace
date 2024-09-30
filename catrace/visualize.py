@@ -26,14 +26,16 @@ def plot_pattern_heatmap(pattern, climit=None, ax=None):
         im = ax.imshow(pattern.T, aspect='auto', interpolation='none')
     return im
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
-                   sharey=False, ncol=2, row_height=3.5, col_width=4, *args, **kwargs):
+                   sharey=False, ncol=2, row_height=3.5, col_width=4,
+                   title_fontsize=16, colorbar_fontsize=12,
+                   **kwargs):
     """
     Plot matrices for each training condtion.
     """
     nrow = np.ceil(len(cond_list) /ncol).astype(int)
-    print(nrow)
     figsize=[col_width*ncol, row_height*nrow]
     fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
                              sharey=sharey, figsize=figsize)
@@ -42,10 +44,15 @@ def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
     for idx, name in enumerate(cond_list):
         group = dfs[name]
         ax = axes.flatten()[idx]
-        plot_func(group, *args, **kwargs, ax=ax)
-        ax.set_title(name)
+        plot_func(group, **kwargs, ax=ax)
+        ax.set_title(name, fontsize=title_fontsize)
         img = ax.get_children()[0]
-        fig.colorbar(img, ax=ax)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)  # 'size' controls width, 'pad' controls spacing
+        cbar = fig.colorbar(img, cax=cax)
+        cbar.ax.tick_params(labelsize=colorbar_fontsize)
+        # cbar = fig.colorbar(img, ax=ax)
+        # cbar.ax.tick_params(labelsize=colorbar_fontsize)
 
     plt.tight_layout()
     return fig, axes
@@ -130,6 +137,28 @@ def plot_avgdf(avgdf, ax=None):
     ax.plot(avgdf)
 
 
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+@dataclass_json
+@dataclass
+class PlotBoxplotParams:
+    figsize: tuple = (4, 4)
+    label_fontsize: float = 7
+    y_tick_label_fontsize: float = 7
+    ylevel_scale: float = 1.1
+    pvalue_marker_xoffset: float = 0.034
+    do_plot_strip: bool = True
+    strip_size: float = 1
+    box_width: float=0.45
+    box_linewidth: float=1
+    mean_marker_size: float=1
+    pvalue_marker_fontsize: float=7
+    box_color: str = 'tab:blue'
+    mean_marker_color: str = 'tab:red'
+    hline_y: float = None
+    pvalue_bar_linewidth: float = 1
+
+
 def plot_boxplot_with_significance(datadf, xname, yname,
                                    ylabel,
                                    test_results,
@@ -147,23 +176,28 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    mean_marker_color='tab:red',
                                    strip_size=4,
                                    do_plot_strip=True,
-                                   x_order=None):
+                                   x_order=None,
+                                   box_width=0.45,
+                                   box_linewidth=4,
+                                   mean_marker_size=5,
+                                   pvalue_marker_fontsize=24,
+                                   pvalue_bar_linewidth=1):
     """
     Plot boxplot with significance annotations
     """
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = 'dummy'
+        fig = ax.get_figure()
 
     if do_plot_strip:
         sns.stripplot(ax=ax, x=xname, y=yname, data=datadf, color='black', jitter=True, size=strip_size, alpha=0.4, zorder=1, order=x_order)
     sns.boxplot(ax=ax, data=datadf, x=xname, y=yname, saturation=0.5,
-                width=0.45, zorder=2,
+                width=box_width, zorder=2,
                 showfliers=False, showcaps=False,
-                medianprops=dict(color=box_color, alpha=0.95, linewidth=4),
-                boxprops=dict(edgecolor=box_color, alpha=0.95, fill=False, linewidth=4),
-                whiskerprops=dict(color=box_color, linewidth=4, alpha=0.7), order=x_order)
+                medianprops=dict(color=box_color, alpha=0.95, linewidth=box_linewidth),
+                boxprops=dict(edgecolor=box_color, alpha=0.95, fill=False, linewidth=box_linewidth),
+                whiskerprops=dict(color=box_color, linewidth=box_linewidth, alpha=0.7), order=x_order)
     if hline_y is not None:
         ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.85)
 
@@ -171,7 +205,7 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     cond_name = xname
     mean_points = datadf.groupby([cond_name], as_index=False, sort=False, observed=True)[yname].mean()
     sns.pointplot(ax=ax, x=cond_name, y=yname, data=mean_points, 
-                  markers='D', linestyle='none', zorder=3, markersize=5, color=mean_marker_color, order=x_order)
+                  markers='D', linestyle='none', zorder=3, markersize=mean_marker_size, color=mean_marker_color, order=x_order)
 
     ax.set_xlabel('')
     # Adjusting the font size and rotation of x-axis tick labels
@@ -190,7 +224,10 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     # current_ylim = ax.get_ylim()
     ylevel = ylevel_scale*max_y #current_ylim[1]
     plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=ref_key,
-                       show_ns=show_ns, pvalue_marker_xoffset=pvalue_marker_xoffset)
+                       show_ns=show_ns,
+                       linewidth=pvalue_bar_linewidth,
+                       pvalue_marker_xoffset=pvalue_marker_xoffset,
+                       fontsize=pvalue_marker_fontsize)
 
     # Removing the top and right spines
     sns.despine(ax=ax)
@@ -205,7 +242,7 @@ def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01, fontsize=24):
     return 'n.s.', 4*pvalue_marker_xoffset*fontsize/14
 
 
-def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_ns=True, fontsize=24, **kwargs):
+def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_ns=True, fontsize=24, linewidth=1, **kwargs):
     # Getting the positions and labels
     xticks = ax.get_xticks()
     xlabels = [label.get_text() for label in ax.get_xticklabels()]
@@ -236,7 +273,7 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
                 xmid = (xstart + xend) / 2
                 text = ax.text(xmid-xoffset, ylevel, marker, fontsize=fontsize)
                 text.set_gid('pvalue_text')
-                line = ax.hlines(y=ylevel*0.97, xmin=xstart, xmax=xend, color='black')
+                line = ax.hlines(y=ylevel*0.97, xmin=xstart, xmax=xend, color='black', linewidth=linewidth)
                 line.set_gid('pvalue_line')
     else:
         raise ValueError('test_type must be one of "single" or "one_reference"')
@@ -315,12 +352,12 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
 
     return fig, ax
 
-def plot_measure(measure_name, mdff,
+
+def plot_measure(mdff, measure_name,
                  name_to_label=None,
                  test_type='mannwhitneyu',
                  condition_name='condition',
-                 ax=None,
-                 figsize=(2.5, 6)):
+                 ax=None, params=PlotBoxplotParams()):
     sub_mean_madff = mdff[[measure_name]]
 
     test_results = apply_test_pair(sub_mean_madff, test_type=test_type)
@@ -335,25 +372,24 @@ def plot_measure(measure_name, mdff,
                                     test_results, test_type='pairwise',
                                     ref_key='naive',
                                     ax=ax,
-                                    figsize=figsize,
-                                    hline_y=None,
-                                    pvalue_marker_xoffset=0.034,
-                                    box_color='tab:blue')
+                                    **params.to_dict())
+                                    # pvalue_marker_xoffset=0.034,
+
     plt.tight_layout()
     return fig, ax, test_results
 
 
-def plot_all_measures(mdff, measure_names=None, name_to_label=None, test_type='mannwhitneyu'):
+def plot_all_measures(mdff, measure_names=None, name_to_label=None, test_type='mannwhitneyu', **kwargs):
     if measure_names is None:
         measure_names = mdff.columns
 
     fig, axs = plt.subplots(1, len(measure_names), figsize=(5*len(measure_names), 7))
     test_results_list = []
     for measure_name, ax in zip(measure_names, axs.flatten()):
-        _, ax, test_results = plot_measure(measure_name, mdff,     
+        _, ax, test_results = plot_measure(mdff, measure_name, 
                                            name_to_label=name_to_label, 
                                            test_type=test_type,
-                                           ax=ax)
+                                           ax=ax, **kwargs)
         test_results_list.append(test_results)
     return fig, axs, test_results_list
 

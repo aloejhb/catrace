@@ -145,15 +145,27 @@ def plot_matrix_per_fish(avg_simdf, cmap='turbo'):
     return fig, axs
 
 
+@dataclass_json
+@dataclass
+class PlotDistancePerCondParams:
+    row_height: float = 1.2
+    col_width: float = 2
+    title_fontsize: float = 7
+    colorbar_fontsize: float = 7
+    ylabel_fontsize: float = 7
+    ylabels: list = None
+    ylabel_colors: list = None
+
+
 # Plot matrix per condition
-def plot_matrix_per_condition(avg_simdf, conditions, cmap='turbo', clim=None):
+def plot_matrix_per_condition(avg_simdf, conditions, cmap='turbo', clim=None, params=PlotDistancePerCondParams()):
     simdf_list, exp_cond_list = get_mat_lists(avg_simdf)
     avg_mats = ecl.mean_mat_over_cond(simdf_list, exp_cond_list, conditions)
     if clim is None:
         cmin = min([mat.min().min() for mat in avg_mats.values()])
         cmax = max([mat.max().max() for mat in avg_mats.values()])
         clim = (cmin, cmax)
-    fig, axs = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, clim=clim, cmap=cmap, ncol=2, ylabel_fontsize=12)
+    fig, axs = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, clim=clim, cmap=cmap, ncol=2, **params.to_dict())
     return fig, axs
 
 
@@ -205,9 +217,24 @@ def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=
     
     return gvg_df
 
+@dataclass_json
+@dataclass
+class PlotMeasureParams:
+    title_fontsize: float = 7
+    figsize: tuple = (4, 4)
+    label_fontsize: float = 7
+    y_tick_label_fontsize: float = 7
+    ylevel_scale: float = 1.1
+    pvalue_marker_xoffset: float = 0.034
+    strip_size: float = 4
+    box_width: float=0.45,
+    box_linewidth: float=2
+    mean_marker_size: float=2
+    pvalue_marker_fontsize: float=7
+
 
 # Statistics on odors
-def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vsname, naive_name='naive'):
+def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vsname, naive_name='naive', params=PlotMeasureParams()):
     if metric == 'mahal':
         deduplicate = False
     else:
@@ -236,9 +263,11 @@ def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vs
     condition_map = {cond: 'trained' if cond != naive_name else 'naive' for cond in selected_conditions}
     pooled_subsimdf = pool_training_conditions(subsimdf, condition_map)
 
-    fig, ax, test_results = plot_measure(measure_name, pooled_subsimdf, test_type='mannwhitneyu')
+    params_dict = params.to_dict()
+    title_fontsize = params_dict.pop('title_fontsize')
+    fig, ax, test_results = plot_measure(measure_name, pooled_subsimdf, test_type='mannwhitneyu', **params_dict)
     # Title
-    fig.suptitle(vsname)
+    fig.suptitle(vsname, fontsize=title_fontsize)
     # tight layout
     fig.tight_layout()
     return fig, ax, test_results, pooled_subsimdf
@@ -298,17 +327,39 @@ def compute_diff_to_naive(avg_simdf, do_reorder_cs=False, odor_orders=None, odor
     mean_delta_mat = sum(trained_delta_mats) / len(trained_delta_mats)
     return mean_delta_mat    
 
+@dataclass_json
+@dataclass
+class PlotMeanDeltaMatParams:
+    figsize: tuple = (4, 4)
+    colorbar_fontsize: float = 7
+    ylabel_fontsize: float = 7
+    ylabels: list = None
+    ylabel_colors: list = None
 
-def plot_mean_delta_mat(mean_delta_mat):
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+def plot_mean_delta_mat(mean_delta_mat, params=PlotMeanDeltaMatParams()):
     cmin = mean_delta_mat.min().min()
     cmax = mean_delta_mat.max().max()
     print(cmin, cmax)
     abs_max = max(abs(cmin), abs(cmax))
     clim = (-abs_max, abs_max)
 
-    fig, ax = plt.subplots()
-    img = catpcr.plot_pattern_correlation(mean_delta_mat, ax=ax, cmap='coolwarm', clim=clim)
-    fig.colorbar(img, ax=ax)
+    params_dict = params.to_dict()
+    figsize = params_dict.pop('figsize')
+    fig, ax = plt.subplots(figsize=params.figsize)
+    colorbar_fontsize = params_dict.pop('colorbar_fontsize')
+    img = plot_similarity_mat(mean_delta_mat, ax=ax, cmap='coolwarm', clim=clim,
+                              **params_dict)
+    # Use make_axes_locatable to adjust the size of the colorbar
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)  # 'size' controls width, 'pad' controls spacing
+    cbar = fig.colorbar(img, cax=cax)
+    cbar.ax.tick_params(labelsize=colorbar_fontsize)
+    # color bar tick only labels the min and max and zero
+    cbar.set_ticks([clim[0], 0, clim[1]])
+    #cbar = fig.colorbar(img, ax=ax)
+    # cbar.ax.tick_params(labelsize=colorbar_fontsize)
+    fig.tight_layout()
     return fig, ax
 
 
@@ -377,6 +428,14 @@ def compare_vs(vskeys, subsimdfs, measure_name):
 
 @dataclass_json
 @dataclass
+class PlotDistanceParams:
+    per_cond: PlotDistancePerCondParams
+    mean_delta: PlotMeanDeltaMatParams
+    vs_measure: PlotMeasureParams
+
+
+@dataclass_json
+@dataclass
 class RunDistanceParams:
     config_file: str
     assembly_name: str
@@ -397,6 +456,11 @@ class RunDistanceParams:
     clim: list = None
     do_compare_cs: bool = False
     reg: float = 1e-5
+    do_plot_per_fish: bool = False
+    vsdict: dict = None
+    plot_params: PlotDistanceParams = None
+
+
 
 
 def run_distance(params: RunDistanceParams):
@@ -440,30 +504,40 @@ def run_distance(params: RunDistanceParams):
         avg_simdf = normalize_simdf(avg_simdf)
     
     print('Plotting per condition...')
-    fig_per_cond, axs = plot_matrix_per_condition(avg_simdf, dsconfig.conditions, cmap=params.cmap, clim=params.clim)
+    per_cond_params = params.plot_params.per_cond
+    print(per_cond_params.to_dict())
+    fig_per_cond, axs = plot_matrix_per_condition(avg_simdf, dsconfig.conditions, cmap=params.cmap, clim=params.clim, params=per_cond_params)
 
     print('Plotting delta matrix...')
     if params.do_reorder_cs:
         mean_delta_mat = compute_diff_to_naive(avg_simdf, params.do_reorder_cs, params.odor_orders, dsconfig.odors_aa, naive_name=params.naive_name)
     else:
         mean_delta_mat = compute_diff_to_naive(avg_simdf, do_reorder_cs=params.do_reorder_cs, naive_name=params.naive_name)
-    fig_delta, ax = plot_mean_delta_mat(mean_delta_mat)
+    fig_delta, ax = plot_mean_delta_mat(mean_delta_mat, params.plot_params.mean_delta)
 
     print('Plotting vs statistics...')
-    vsdict = {'aa_vs_ba': (dsconfig.odors_aa, dsconfig.odors_ba),
-              'aa_vs_aa': (dsconfig.odors_aa, dsconfig.odors_aa),
-              'ba_vs_aa': (dsconfig.odors_ba, dsconfig.odors_aa)}
-    if params.do_compare_cs:
-        vsdict.update({'cs_vs_ba': (dsconfig.odors_cs, dsconfig.odors_ba),
-                       'ba_vs_cs': (dsconfig.odors_ba, dsconfig.odors_cs),
-                       'cs_plus_vs_cs_minus': ([dsconfig.odors_cs[0]], [dsconfig.odors_cs[1]])})
-    vsfigs = []
+    if params.vsdict is None:
+        vsdict = {'aa_vs_aa': (dsconfig.odors_aa, dsconfig.odors_aa),
+                'aa_vs_ba': (dsconfig.odors_aa, dsconfig.odors_ba),
+                'ba_vs_aa': (dsconfig.odors_ba, dsconfig.odors_aa),
+                'ba_vs_ba': (dsconfig.odors_ba, dsconfig.odors_ba)}
+        if params.do_compare_cs:
+            vsdict.update({'cs_vs_ba': (dsconfig.odors_cs, dsconfig.odors_ba),
+                        'ba_vs_cs': (dsconfig.odors_ba, dsconfig.odors_cs),
+                        'cs_plus_vs_cs_minus': ([dsconfig.odors_cs[0]], [dsconfig.odors_cs[1]])})
+    else:
+        vsdict = params.vsdict
+    vsfigs = {}
     vsaxs = []
     stats = {}
     subsimdfs = {}
     for vsname, (group1, group2) in vsdict.items():
-        fig, ax, test_results, pooled_subsimdf = stat_of_odor_pair(group1, group2, dsconfig.conditions, avg_simdf, metric, vsname, naive_name=params.naive_name)
-        vsfigs.append(fig)
+        try:
+            fig, ax, test_results, pooled_subsimdf = stat_of_odor_pair(group1, group2, dsconfig.conditions, avg_simdf, metric, vsname, naive_name=params.naive_name, params=params.plot_params.vs_measure)
+        except Exception as err:
+            print(f'Error in {vsname}')
+            raise err
+        vsfigs[vsname] = fig
         vsaxs.append(ax)
         stats[vsname] = list(test_results.values())[0]
         subsimdfs[vsname] = pooled_subsimdf
@@ -476,14 +550,18 @@ def run_distance(params: RunDistanceParams):
         measure_name = 'center D_E'
     else:
         raise ValueError(f'Unknown metric: {metric}')
-    # Compare percentage changes
-    vskeys = ['aa_vs_ba', 'aa_vs_aa']
-    fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
-    vskeys = ['aa_vs_ba', 'ba_vs_aa']
-    fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
-    if params.do_compare_cs:
-        vskeys = ['cs_vs_ba', 'cs_plus_vs_cs_minus']
-        fig, ax, _ = compare_vs(vskeys, subsimdfs, measure_name)
+    
+    if params.vsdict is None:
+        # Compare percentage changes
+        vskeys = ['aa_vs_aa', 'aa_vs_ba']
+        fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
+        vskeys = ['ba_vs_aa', 'aa_vs_ba']
+        fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
+        if params.do_compare_cs:
+            vskeys = ['cs_vs_ba', 'cs_plus_vs_cs_minus']
+            fig, ax, _ = compare_vs(vskeys, subsimdfs, measure_name)
+    else:
+        concat_subsimdf = None
 
 
     if params.vs_same_ylim is not None:
@@ -493,7 +571,8 @@ def run_distance(params: RunDistanceParams):
 
 
     print('Plotting per fish...')
-    fig_per_fish, axs = plot_matrix_per_fish(avg_simdf, cmap=params.cmap)
+    if params.do_plot_per_fish:
+        fig_per_fish, axs = plot_matrix_per_fish(avg_simdf, cmap=params.cmap)
 
     if params.save_output:
         print('Saving stats...')
@@ -509,6 +588,15 @@ def run_distance(params: RunDistanceParams):
             figs = [fig_per_cond, fig_delta] + [None, fig_avg_trace] + vsfigs
             fig_combined = combine_figures_to_grid(figs, nrows=2, ncols=3)
             pdf_pages.savefig(fig_combined)
-            pdf_pages.savefig(fig_per_fish)
-    else:
-        return fig_avg_trace, fig_per_cond, fig_delta, vsfigs, fig_per_fish, concat_subsimdf
+            if params.do_plot_per_fish:
+                pdf_pages.savefig(fig_per_fish)
+
+    output_figs = dict(
+        fig_avg_trace=fig_avg_trace,
+        fig_per_cond=fig_per_cond,
+        fig_delta=fig_delta,
+        vsfigs=vsfigs,
+    )
+    if params.do_plot_per_fish:
+        output_figs['fig_per_fish'] = fig_per_fish
+    return output_figs, concat_subsimdf, stats

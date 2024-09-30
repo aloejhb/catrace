@@ -15,5 +15,6 @@ class DatasetConfig:
     odors_stimuli: list[str] = None
     odors_aa: list[str] = None
     odors_ba: list[str] = None
-    odors_cs: list[str] = None
+    odors_learned: list[str] = None
+    odors_novel: list[str] = None
     onsets: list[int] = None

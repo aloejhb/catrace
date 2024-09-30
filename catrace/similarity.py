@@ -150,7 +150,7 @@ def plot_same_odor_diff_trial(corrmat_df, **kwargs):
     plot_correlation_timecourse(corrmat_df, row_col_indices, **kwargs)
 
 
-def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8, title=''):
+def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8, ylabel_colors=None, ylabels=None, title=''):
     """
     Plot similarity matrix heatmap
 
@@ -166,14 +166,17 @@ def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8
     """
     im = ax.imshow(df.to_numpy(), cmap=cmap)
 
-    color_list = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
-    odor_list = df.index.unique(level='odor')
-    color_dict = dict(zip(odor_list, color_list[:len(odor_list)]))
-    y_labels = [label for label in df.index.get_level_values('odor')]
+    if ylabel_colors is None:
+        ylabel_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+    if ylabels is None:
+        ylabels = [label for label in df.index.get_level_values('odor')]
+
+    color_dict = dict(zip(ylabels, ylabel_colors[:len(ylabels)]))
     tick_pos = np.arange(df.shape[0])
     ax.yaxis.set_tick_params(length=0)
     ax.set_yticks(tick_pos)
-    ax.set_yticklabels(y_labels, fontsize=ylabel_fontsize)
+    print(f'ylabel_ vfontsize: {ylabel_fontsize}')
+    ax.set_yticklabels(ylabels, fontsize=ylabel_fontsize)
     ax.set_xticks([])
 
     for i, ytick in enumerate(ax.get_yticklabels()):
