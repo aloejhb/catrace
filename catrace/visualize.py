@@ -278,6 +278,8 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
     else:
         raise ValueError('test_type must be one of "single" or "one_reference"')
 
+def _get_darker_color(color: str):
+    return sns.set_hls_values(color, l=0.4)
 
 def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_results,
                                                    odor_name='odor',
@@ -292,10 +294,11 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
                                                    box_width=0.45,
                                                    box_linewidth=1,
                                                    strip_size=1,
+                                                   strip_jitter=0.2,
                                                    box_hue_separation_scaler=1.0,
                                                    strip_hue_separation_scaler=1.0,
                                                    mean_dodge=0.4,
-):
+                                                   mean_marker_size=2):
     #### IMPORTANT ####
     # This function requires seaborn version from Bo's fork aloejhb
     ###################
@@ -308,11 +311,14 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
         fig = ax.get_figure()
     nconds = datadf[condition_name].nunique()
 
-    hue_colors = ['tab:blue', 'tab:green']
+    hue_colors = ['tab:blue', 'tab:orange']
+    strip_hue_colors = ['lightgray', 'lightgray']
+    mean_hue_colors = [_get_darker_color(color) for color in hue_colors]
     # Plotting stripplot and boxplot with hue
     sns.stripplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=datadf,
-                  jitter=0.2, dodge=True, size=strip_size, alpha=0.8, zorder=1,
-                  palette=hue_colors, hue_separation_scaler=strip_hue_separation_scaler)
+                  jitter=strip_jitter, dodge=True, size=strip_size, alpha=0.8, zorder=1,
+                  palette=strip_hue_colors,
+                  hue_separation_scaler=strip_hue_separation_scaler)
     sns.boxplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=datadf,
                 saturation=0.5, width=box_width,
                 zorder=2, dodge=True,
@@ -325,7 +331,7 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
     # Add mean points
     mean_points = datadf.groupby([odor_name, condition_name], as_index=False, sort=False)[yname].mean()
     sns.pointplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=mean_points, 
-                  dodge=mean_dodge, markers='D', linestyle='none', zorder=3, markersize=5, palette=hue_colors)
+                  dodge=mean_dodge, markers='D', linestyle='none', zorder=3, markersize=mean_marker_size, palette=mean_hue_colors)
 
     # Adjust the legend to show only one set of hue labels
     handles, labels = ax.get_legend_handles_labels()
@@ -365,6 +371,17 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
                     ax.text(position-xoffset*fontsize*0.05, ymax, marker, fontsize=fontsize)
 
     return fig, ax
+
+
+def plot_measure_multi_odor_cond(mdff, measure_name, odor_name='odor',
+                                 condition_name='condition',
+                                 test_type='mannwhitneyu',
+                                 ax=None, params=PlotBoxplotMultiOdorCondParams()):
+    sub_mean_madff = mdff[[measure_name]]
+
+    test_results = {}
+    for odor, subdf in sub_mean_madff.groupby(odor_name):
+        test_results = apply_test_pair(subdf, test_type=test_type)
 
 
 def plot_measure(mdff, measure_name,
@@ -532,3 +549,7 @@ def move_pvalue_indicator(ax, line_new_y, text_new_y=None):
     for text_obj in ax.texts:
         if text_obj.get_gid() == 'pvalue_text':
             text_obj.set_position((text_obj.get_position()[0], text_new_y))
+
+
+def set_yticks_interval(ax, tick_interval):
+    ax.yaxis.set_minor_locator(plt.MultipleLocator(tick_interval))
