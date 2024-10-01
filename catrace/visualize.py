@@ -364,7 +364,9 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
 
     # Adjust the legend to show only one set of hue labels
     handles, labels = ax.get_legend_handles_labels()
-    legend = ax.legend(handles[nconds*2:], labels[nconds*2:], ncol=4)#, loc='lower right')
+    # legend = ax.legend(handles[nconds*2:], labels[nconds*2:], ncol=4)#, loc='lower right')
+    # Put legend outside the plot on the right
+    legend = ax.legend(handles=handles[nconds*2:], labels=labels[nconds*2:], ncol=1, loc='upper left', bbox_to_anchor=(1, 1))
     # Set the fontsize of the legend
     for text in legend.get_texts():
         text.set_fontsize(legend_fontsize)
