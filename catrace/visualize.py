@@ -281,10 +281,31 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
 def _get_darker_color(color: str):
     return sns.set_hls_values(color, l=0.4)
 
-def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_results,
+
+@dataclass_json
+@dataclass
+class PlotBoxplotMultiOdorCondParams:
+    figsize: tuple = (3.6, 2)
+    ylim: tuple = None
+    label_fontsize: float = 7
+    legend_fontsize: float = 6
+    show_ns: bool = False
+    hline_y: float = None
+    box_width: float = 0.45
+    box_linewidth: float = 1.5
+    strip_size: float = 1
+    strip_jitter: float = 0.15
+    box_hue_separation_scaler: float = 1.4
+    strip_hue_separation_scaler: float = 0.8
+    mean_dodge: float = 0.32
+    mean_marker_size: float = 1.5
+
+def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
+                                                   test_results,
                                                    odor_name='odor',
                                                    condition_name='condition',
                                                    ax=None,
+                                                   ylabel=None,
                                                    figsize=(10, 5),
                                                    ylim=None,
                                                    label_fontsize = 24,
@@ -305,11 +326,17 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
     # Reset index if needed to make condition_name and 'fish_id' regular columns for plotting
     datadf = datadf.reset_index()
 
+    if ylabel is None:
+        ylabel = yname
+
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)  # Adjusted size for better visibility
     else:
         fig = ax.get_figure()
     nconds = datadf[condition_name].nunique()
+
+    # So far assuming only two conditions
+    assert nconds == 2, 'Only two conditions are supported'
 
     hue_colors = ['tab:blue', 'tab:orange']
     strip_hue_colors = ['lightgray', 'lightgray']
@@ -354,6 +381,11 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
 
     sns.despine(ax=ax)
 
+    fig.tight_layout()
+
+    return fig, ax
+
+def not_used_pvalue_marker_multi_odor_multi_cond(ax, datadf, yname, test_results, odor_name='odor', condition_name='condition', show_ns=False):
     # Handling annotations for significance
     current_ylim = ax.get_ylim()
     ymax = 1.02 * current_ylim[1]
@@ -370,8 +402,6 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
                     fontsize = 14
                     ax.text(position-xoffset*fontsize*0.05, ymax, marker, fontsize=fontsize)
 
-    return fig, ax
-
 
 def plot_measure_multi_odor_cond(mdff, measure_name, odor_name='odor',
                                  condition_name='condition',
@@ -381,8 +411,10 @@ def plot_measure_multi_odor_cond(mdff, measure_name, odor_name='odor',
 
     test_results = {}
     for odor, subdf in sub_mean_madff.groupby(odor_name):
-        test_results = apply_test_pair(subdf, test_type=test_type)
-
+        test_results[odor] = apply_test_pair(subdf, test_type=test_type)
+    
+    fig, ax = plot_boxplot_with_significance_multi_odor_cond(mdff, measure_name, test_results, odor_name=odor_name, condition_name=condition_name, **params.to_dict())
+    return fig, ax, test_results
 
 def plot_measure(mdff, measure_name,
                  name_to_label=None,
