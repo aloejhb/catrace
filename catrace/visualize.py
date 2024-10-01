@@ -280,58 +280,73 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
 
 
 def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_results,
-                                              ax=None,
-                                              figsize=(10, 5),
-                                              ylim=None,
-                                              label_fontsize = 24,
-                                              show_ns=False, box_color='green'):
-    """
-    Plot boxplot with significance annotations for multiple conditions and odors
-
-    Args:
-        datadf: DataFrame, data to plot
-        yname: str, column name for y-axis
-        ylabel: str, label for y-axis
-        test_results: dict, statistical test results
-        ax: Axes, axis to plot on
-        figsize: tuple, figure size
-        ylim: tuple, y-axis limits
-        label_fontsize: int, font size for labels
-    """
-    # Reset index if needed to make 'cond' and 'fish_id' regular columns for plotting
+                                                   odor_name='odor',
+                                                   condition_name='condition',
+                                                   ax=None,
+                                                   figsize=(10, 5),
+                                                   ylim=None,
+                                                   label_fontsize = 24,
+                                                   legend_fontsize=16,
+                                                   show_ns=False,
+                                                   hline_y=None,
+                                                   box_width=0.45,
+                                                   box_linewidth=1,
+                                                   strip_size=1,
+                                                   box_hue_separation_scaler=1.0,
+                                                   strip_hue_separation_scaler=1.0,
+                                                   mean_dodge=0.4,
+):
+    #### IMPORTANT ####
+    # This function requires seaborn version from Bo's fork aloejhb
+    ###################
+    # Reset index if needed to make condition_name and 'fish_id' regular columns for plotting
     datadf = datadf.reset_index()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)  # Adjusted size for better visibility
     else:
-        fig = 'dummy'
-    nconds = datadf['cond'].nunique()
+        fig = ax.get_figure()
+    nconds = datadf[condition_name].nunique()
 
+    hue_colors = ['tab:blue', 'tab:green']
     # Plotting stripplot and boxplot with hue
-    sns.stripplot(ax=ax, x='odor', y=yname, hue='cond', data=datadf, jitter=True, dodge=True, size=2, alpha=0.8, zorder=1)
-    sns.boxplot(ax=ax, x='odor', y=yname, hue='cond', data=datadf, saturation=0.5,
+    sns.stripplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=datadf,
+                  jitter=0.2, dodge=True, size=strip_size, alpha=0.8, zorder=1,
+                  palette=hue_colors, hue_separation_scaler=strip_hue_separation_scaler)
+    sns.boxplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=datadf,
+                saturation=0.5, width=box_width,
                 zorder=2, dodge=True,
-                showfliers=False, showcaps=False, fill=False)
+                medianprops=dict(alpha=0.95, linewidth=box_linewidth),
+                boxprops=dict(alpha=0.95, linewidth=box_linewidth),
+                whiskerprops=dict(linewidth=box_linewidth, alpha=0.7), 
+                showfliers=False, showcaps=False, fill=False, palette=hue_colors,
+                hue_separation_scaler=box_hue_separation_scaler)
 
     # Add mean points
-    mean_points = datadf.groupby(['odor', 'cond'], as_index=False, sort=False)[yname].mean()
-    sns.pointplot(ax=ax, x='odor', y=yname, hue='cond', data=mean_points, 
-                  dodge=0.6, markers='D', linestyle='none', zorder=3, markersize=5)
+    mean_points = datadf.groupby([odor_name, condition_name], as_index=False, sort=False)[yname].mean()
+    sns.pointplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=mean_points, 
+                  dodge=mean_dodge, markers='D', linestyle='none', zorder=3, markersize=5, palette=hue_colors)
 
     # Adjust the legend to show only one set of hue labels
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[nconds*2:], labels[nconds*2:], ncol=4, loc='lower right')
+    legend = ax.legend(handles[nconds*2:], labels[nconds*2:], ncol=4)#, loc='lower right')
+    # Set the fontsize of the legend
+    for text in legend.get_texts():
+        text.set_fontsize(legend_fontsize)
 
+    if hline_y is not None:
+        ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.7)
 
-    ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
     ax.set_ylabel(ylabel, fontsize=label_fontsize)
 
     ax.set_xlabel('')
     ax.tick_params(axis='x', labelsize=label_fontsize)
-    ax.tick_params(axis='y', labelsize=16)
+    ax.tick_params(axis='y', labelsize=label_fontsize)
 
     if ylim:
         ax.set_ylim(ylim)
+
+    sns.despine(ax=ax)
 
     # Handling annotations for significance
     current_ylim = ax.get_ylim()
@@ -340,15 +355,14 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname, ylabel, test_r
         for comparison, result in results['Dunn_naive'].items():
             if comparison != 'naive':  # Ignore naive-naive comparison
                 cond1, cond2 = 'naive', comparison
-                odor_pos = datadf['odor'].unique().tolist().index(odor)
-                cond_pos = datadf['cond'].unique().tolist().index(cond2)
+                odor_pos = datadf[odor_name].unique().tolist().index(odor)
+                cond_pos = datadf[condition_name].unique().tolist().index(cond2)
                 position = odor_pos + (cond_pos - nconds/2+0.5) * 0.205
                 p_value = result
                 marker, xoffset = pvalue_to_marker(p_value)
                 if marker !='n.s.' or show_ns:
                     fontsize = 14
                     ax.text(position-xoffset*fontsize*0.05, ymax, marker, fontsize=fontsize)
-    sns.despine(ax=ax)
 
     return fig, ax
 
