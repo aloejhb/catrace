@@ -299,9 +299,10 @@ class PlotBoxplotMultiOdorCondParams:
     strip_hue_separation_scaler: float = 0.8
     mean_dodge: float = 0.32
     mean_marker_size: float = 1.5
+    pvalue_marker_fontsize: float = 7
 
 def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
-                                                   test_results,
+                                                   test_results=None,
                                                    odor_name='odor',
                                                    condition_name='condition',
                                                    ax=None,
@@ -319,7 +320,8 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    box_hue_separation_scaler=1.0,
                                                    strip_hue_separation_scaler=1.0,
                                                    mean_dodge=0.4,
-                                                   mean_marker_size=2):
+                                                   mean_marker_size=2,
+                                                   pvalue_marker_fontsize=7):
     #### IMPORTANT ####
     # This function requires seaborn version from Bo's fork aloejhb
     ###################
@@ -381,9 +383,51 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
 
     sns.despine(ax=ax)
 
+    if test_results is not None:
+        plot_pvalue_marker_multi_odor_two_cond(ax, test_results, 
+                                               datadf,
+                                               condition_name=condition_name,
+                                               hue_separation_scaler=strip_hue_separation_scaler,
+                                               show_ns=show_ns,
+                                               fontsize=pvalue_marker_fontsize)
+
     fig.tight_layout()
 
     return fig, ax
+
+def plot_pvalue_marker_multi_odor_two_cond(ax, test_results, datadf, condition_name='condition', hue_separation_scaler=1.0, show_ns=False,
+                                           fontsize=7):
+    current_ylim = ax.get_ylim()
+    ymax = 1.02 * current_ylim[1]
+    # Getting the positions and labels
+    xticks = ax.get_xticks()
+    xlabels = [label.get_text() for label in ax.get_xticklabels()]
+    # Mapping the labels to their positions
+    xpos_dict = dict(zip(xlabels, xticks))
+
+    def _get_hue_offset(hue_idx, n_hues, hue_separation_scaler, width=0.8):
+        width = width / n_hues
+        full_width = width * n_hues
+        offset = width * hue_idx + width/2 - full_width/2
+        offset *= hue_separation_scaler
+        return offset
+        
+    conditions = datadf[condition_name].unique().tolist()
+    for odor, results in test_results.items():
+        comparison = list(results.keys())[0]
+        result = results[comparison]
+        odor_pos = xpos_dict[odor]
+        cond_idxs = [conditions.index(cond) for cond in comparison]
+        hue_offsets = [_get_hue_offset(cond_idx, len(conditions), hue_separation_scaler) for cond_idx in cond_idxs]
+        hue_poses = [odor_pos + hue_offset for hue_offset in hue_offsets]
+        # Draw a horizontal line between the two conditions
+        ax.hlines(y=ymax*0.97, xmin=hue_poses[0], xmax=hue_poses[1], color='black')
+        pvalue = result['p_value']
+        marker, xoffset = pvalue_to_marker(pvalue, pvalue_marker_xoffset=0.02, fontsize=fontsize)
+        if marker != 'n.s.' or show_ns:
+            xmid = (hue_poses[0] + hue_poses[1]) / 2
+            ax.text(xmid-xoffset, ymax, marker, fontsize=fontsize)
+
 
 def not_used_pvalue_marker_multi_odor_multi_cond(ax, datadf, yname, test_results, odor_name='odor', condition_name='condition', show_ns=False):
     # Handling annotations for significance
@@ -413,7 +457,7 @@ def plot_measure_multi_odor_cond(mdff, measure_name, odor_name='odor',
     for odor, subdf in sub_mean_madff.groupby(odor_name):
         test_results[odor] = apply_test_pair(subdf, test_type=test_type)
     
-    fig, ax = plot_boxplot_with_significance_multi_odor_cond(mdff, measure_name, test_results, odor_name=odor_name, condition_name=condition_name, **params.to_dict())
+    fig, ax = plot_boxplot_with_significance_multi_odor_cond(mdff, measure_name, test_results=test_results, odor_name=odor_name, condition_name=condition_name, **params.to_dict())
     return fig, ax, test_results
 
 def plot_measure(mdff, measure_name,
@@ -584,4 +628,4 @@ def move_pvalue_indicator(ax, line_new_y, text_new_y=None):
 
 
 def set_yticks_interval(ax, tick_interval):
-    ax.yaxis.set_minor_locator(plt.MultipleLocator(tick_interval))
+    ax.yaxis.set_major_locator(plt.MultipleLocator(tick_interval))
