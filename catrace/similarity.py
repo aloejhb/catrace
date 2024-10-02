@@ -215,3 +215,44 @@ def sample_neuron_and_comopute_distance_mat(df, sample_size, seed=None, metric='
     else:
         raise ValueError('Invalid metric. Choose from "euclidean", "mahal", "center_euclidean".')
     return dist_mat
+
+
+def extract_upper_triangle_similarities(simdf):
+    """
+    Extracts the upper triangle (excluding the diagonal) of similarity matrices
+    grouped by the 'odor' level from a DataFrame with a MultiIndex.
+    
+    Parameters:
+    simdf (pd.DataFrame): A DataFrame containing similarity matrices with a MultiIndex 
+                          that has levels 'odor' and 'trial' in both the index and columns.
+    
+    Returns:
+    pd.DataFrame: A DataFrame containing the 'odor' and the corresponding similarity values 
+                  from the upper triangle of the matrices.
+    """
+    
+    # Initialize an empty list to store the results
+    results = []
+
+    # Iterate over each group by the 'odor' level in the index
+    for name, group in simdf.groupby(level='odor', observed=True):
+        # Extract the values of the similarity matrix
+        values = group.values
+        
+        # Get the upper triangle of the matrix, excluding the diagonal
+        upper_triangle = values[np.triu_indices(values.shape[0], k=1)]
+        
+        # Create a DataFrame with the results and add the 'odor' name
+        upper_triangle_df = pd.DataFrame({
+            'odor': name,
+            'similarity_values': upper_triangle
+        })
+        
+        upper_triangle_df.set_index('odor', inplace=True)
+        # Append the DataFrame to the results list
+        results.append(upper_triangle_df.T)
+
+    # Concatenate all results into a single DataFrame
+    final_df = pd.concat(results, axis=1)
+    
+    return final_df

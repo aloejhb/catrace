@@ -24,6 +24,8 @@ from catrace.stats import pool_training_conditions
 from catrace.visualize import plot_measure, plot_conds_mat, move_pvalue_indicator
 from catrace.similarity import plot_similarity_mat, sample_neuron_and_comopute_distance_mat
 
+from .run_utils import plot_avg_trace_with_window
+
 
 # dataclass for compute dist
 @dataclass_json
@@ -40,16 +42,6 @@ class ComputeDistParams:
     odors: list
     overwrite_computation: bool
     parallelism: int
-
-
-def plot_avg_trace_with_window(trace_dir, exp_name, window):
-    dff = ecl.read_df(trace_dir, exp_name)
-    avg_trace = dff.groupby(level='time').mean().mean(axis=1)
-    fig, ax = plt.subplots()
-    ax.plot(avg_trace.index.get_level_values('time'), avg_trace.to_numpy())
-    ax.axvline(window[0], linestyle='--', color='red')
-    ax.axvline(window[1], linestyle='--', color='red')
-    return fig, ax
 
 
 def compute_dist(params: ComputeDistParams):
@@ -493,7 +485,7 @@ def run_distance(params: RunDistanceParams):
                                             parallelism=16)
 
     print('Plotting average trace...')
-    fig_avg_trace, ax = plot_avg_trace_with_window(trace_dir, exp_list[0][0], time_window)
+    fig_avg_trace, ax = plot_avg_trace_with_window(in_dir, exp_list[0][0], time_window)
 
     print('Computing distance matrices...')
     dist_dir = compute_dist(compute_dist_params)
