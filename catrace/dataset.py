@@ -1,3 +1,5 @@
+from .utils import load_config
+
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
@@ -18,3 +20,8 @@ class DatasetConfig:
     odors_learned: list[str] = None
     odors_novel: list[str] = None
     onsets: list[int] = None
+
+
+def load_dataset_config(file_path):
+    config = load_config(file_path, DatasetConfig)
+    return config
