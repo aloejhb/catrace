@@ -4,15 +4,22 @@ import inspect
 from os.path import join as pjoin
 
 
-def save_stats_json(stats, stats_name, paper_fig_dir, tuple_key_to_str=False):
-    if tuple_key_to_str:
-        if 'raw' in stats.keys():
-            stats['raw'] = {'_'.join(k): v for k, v in stats['raw'].items()}
-        if 'shuffled' in stats.keys():
-            stats['shuffled'] = {'_'.join(k): v for k, v in stats['shuffled'].items()}
-    stats_file = pjoin(paper_fig_dir, f'{stats_name}.json')
-    with open(stats_file, 'w') as file:
-        json.dump(stats, file)
+def save_stats_json(results, stats_name, paper_fig_dir, tuple_key_to_str=False):
+    # if results is a dict
+    if isinstance(results, dict):
+        keys = list(results.keys())
+        # if keys[0] is a tuple
+        if isinstance(keys[0], tuple):
+            results = {str(k): v for k, v in results.items()}
+        else:
+            if 'raw' in results.keys():
+                results['raw'] = {'_'.join(k): v for k, v in results['raw'].items()}
+            if 'shuffled' in results.keys():
+                results['shuffled'] = {'_'.join(k): v for k, v in results['shuffled'].items()}
+
+    results_file = pjoin(paper_fig_dir, f'{stats_name}.json')
+    with open(results_file, 'w') as file:
+        json.dump(results, file)
 
 
 def save_figure_for_paper(fig, fig_name, paper_fig_dir):

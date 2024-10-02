@@ -139,6 +139,7 @@ def plot_avgdf(avgdf, ax=None):
 
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
+from typing import Union
 @dataclass_json
 @dataclass
 class PlotBoxplotParams:
@@ -150,10 +151,11 @@ class PlotBoxplotParams:
     do_plot_strip: bool = True
     strip_size: float = 1
     box_width: float=0.45
-    box_linewidth: float=1
+    box_linewidth: float=1.5
     mean_marker_size: float=1
     pvalue_marker_fontsize: float=7
     box_color: str = 'tab:blue'
+    box_colors: list[str] = None
     mean_marker_color: str = 'tab:red'
     hline_y: float = None
     pvalue_bar_linewidth: float = 1
@@ -170,6 +172,7 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    show_ns=True,
                                    pvalue_marker_xoffset=0.01,
                                    box_color='tab:blue',
+                                   box_colors=None,
                                    label_fontsize=24,
                                    y_tick_label_fontsize=18,
                                    ylevel_scale=1.1,
@@ -195,9 +198,12 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     sns.boxplot(ax=ax, data=datadf, x=xname, y=yname, saturation=0.5,
                 width=box_width, zorder=2,
                 showfliers=False, showcaps=False,
-                medianprops=dict(color=box_color, alpha=0.95, linewidth=box_linewidth),
-                boxprops=dict(edgecolor=box_color, alpha=0.95, fill=False, linewidth=box_linewidth),
-                whiskerprops=dict(color=box_color, linewidth=box_linewidth, alpha=0.7), order=x_order)
+                fill=False,
+                color=box_color,
+                colors=box_colors,
+                medianprops=dict(alpha=0.95, linewidth=box_linewidth),
+                boxprops=dict(alpha=0.95, linewidth=box_linewidth),
+                whiskerprops=dict(linewidth=box_linewidth, alpha=0.7), order=x_order)
     if hline_y is not None:
         ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.85)
 
@@ -231,6 +237,7 @@ def plot_boxplot_with_significance(datadf, xname, yname,
 
     # Removing the top and right spines
     sns.despine(ax=ax)
+    fig.tight_layout()
     return fig, ax
 
 def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01, fontsize=24):
