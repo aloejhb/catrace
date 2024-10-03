@@ -74,3 +74,49 @@ def plot_trace_avg(trace, frame_rate=1, cut_time=0, ax=None, show_legend=False, 
 
 def plot_average_time_trace(dff):
     plt.plot(dff.groupby('time').mean().mean(axis=1))
+
+
+def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', label='Mean', err_type='std'):
+    """
+    Plots the mean trace with a shaded area representing the standard deviation.
+
+    Parameters:
+    - time_traces_df: pd.DataFrame
+        A DataFrame where the rows correspond to time points and the columns are different trials or observations.
+    - ax: matplotlib.axes.Axes, optional
+        The axes on which to plot. If not provided, a new figure and axes will be created.
+    - color: str, optional
+        The color of the mean trace and the shaded area representing the standard deviation.
+    - label: str, optional
+        The label for the mean trace.
+    """
+    # Calculate mean and standard deviation across time
+    mean_trace = time_traces_df.mean(axis=1)
+    if err_type == 'std':
+        err_trace = time_traces_df.std(axis=1)
+    elif err_type == 'sem':
+        err_trace = time_traces_df.sem(axis=1)
+
+    # Create the plot
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+    
+    tvec = mean_trace.index.get_level_values('time')
+    xvec = tvec / frame_rate
+
+    # Convert xvec to float
+    xvec = np.array(xvec).astype(float)
+    # Plot mean trace
+    sns.lineplot(x=xvec, y=mean_trace, label=label, ax=ax, color=color)
+    
+    # Plot standard deviation as shaded area
+    ax.fill_between(xvec, 
+                    mean_trace - err_trace, 
+                    mean_trace + err_trace, 
+                    color=color, alpha=0.3)#, label=f'{label} ± std')
+    
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Value')
+    ax.legend()
+
+    return ax
