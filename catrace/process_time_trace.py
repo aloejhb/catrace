@@ -176,10 +176,13 @@ def truncate_df_window(df, frame_window):
     return df_trunc
 
 
-def mean_pattern_in_time_window(df, time_window, frame_rate):
+def mean_pattern_in_time_window(df, time_window, frame_rate=None):
     """Compute pattern of neuron responses averaged within a time window"""
     time_window = np.array(time_window)
-    fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
+    if frame_rate is None:
+        fwindow = time_window
+    else:    
+        fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
     df_filtered = df[(df.index.get_level_values('time') >= fwindow[0])
                      & (df.index.get_level_values('time') <= fwindow[1])]
     all_levels = list(df.index.names)

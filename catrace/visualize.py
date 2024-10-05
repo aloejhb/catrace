@@ -565,13 +565,14 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
     xtick_labels = [label.get_text() for label in xtick_labels]
     current_ylim = ax.get_ylim()
     ymax = 1.02 * current_ylim[1]
-    for cond, p_value in test_results['Dunn_naive'].items():
-        if cond != 'naive':
-            cond_pos = xtick_labels.index(cond)
-            position = cond_pos
-            marker, xoffset = pvalue_to_marker(p_value)
-            if marker != 'n.s.' or show_ns:
-                ax.text(position - xoffset * star_fontsize * 0.05, ymax, marker, fontsize=star_fontsize)
+    if test_results is not None:
+        for cond, p_value in test_results['Dunn_naive'].items():
+            if cond != 'naive':
+                cond_pos = xtick_labels.index(cond)
+                position = cond_pos
+                marker, xoffset = pvalue_to_marker(p_value)
+                if marker != 'n.s.' or show_ns:
+                    ax.text(position - xoffset * star_fontsize * 0.05, ymax, marker, fontsize=star_fontsize)
     sns.despine(ax=ax)
 
     return fig, ax

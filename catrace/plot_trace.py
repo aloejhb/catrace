@@ -42,7 +42,14 @@ def plot_tracedf_heatmap(tracedf, num_trial, odor_list, climit, figsize=(10,4), 
     return fig
 
 
-def plot_trace_avg(trace, frame_rate=1, cut_time=0, ax=None, show_legend=False, yname='spike_prob', linewidth=2):
+def plot_trace_avg(trace, frame_rate=None, cut_time=0, ax=None, show_legend=False,
+                   yname='spike_prob',
+                   linewidth=2,
+                   figsize=(10, 4),
+                   legend_fontsize=6,
+                   label_fontsize=7,
+                   odor_colors=None,
+                   alpha=1):
     """
     Plot averaged time trace for each odor
 
@@ -59,18 +66,37 @@ def plot_trace_avg(trace, frame_rate=1, cut_time=0, ax=None, show_legend=False, 
         ax (axis object): Default is None. If ax is not provided, it will create
                           a new figure. Otherwise it will plot on the given axis.
     """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
     odor_avg = trace.groupby(level=['odor', 'time'], sort=False, observed=False).mean().T.mean()
-    tvec = odor_avg.index.get_level_values('time')
-    xvec = tvec / frame_rate - cut_time
+    xvec = odor_avg.index.get_level_values('time')
+    if frame_rate is not None:
+        xvec = xvec/frame_rate
+    xvec = xvec - cut_time
     odor_avg = odor_avg.reset_index()
     odor_avg = odor_avg.rename(columns={0: yname})
     odor_avg['time'] = xvec
-    sns.lineplot(odor_avg, x='time', y=yname, hue='odor', ax=ax, linewidth=linewidth)
+    if odor_colors is None:
+        palette = sns.color_palette('husl', n_colors=len(odor_avg['odor'].unique()))
+    else:
+        palette = dict(zip(odor_avg['odor'].unique(), odor_colors))
+    sns.lineplot(odor_avg, x='time', y=yname, hue='odor', ax=ax, linewidth=linewidth, palette=palette, alpha=alpha)
     if not show_legend:
         ax.legend().remove()
     else:
-        ax.legend(loc=1, prop={'size': 20})
+        ax.legend(loc=1, prop={'size': legend_fontsize})
+
+    ax.tick_params(axis='both', labelsize=label_fontsize)
+    xlabel = 'Time (s)' if frame_rate is not None else 'Frame'
+    ax.set_xlabel(xlabel, fontsize=label_fontsize)
+    ax.set_ylabel(r'Deconvolved $\Delta F/F$', fontsize=label_fontsize)
     sns.despine(ax=ax)
+
+    fig.tight_layout()
+
+    return fig, ax
 
 def plot_average_time_trace(dff):
     plt.plot(dff.groupby('time').mean().mean(axis=1))

@@ -317,7 +317,7 @@ def concatenate_df_from_db(in_dir: str,
     """
     df_list = [read_df(in_dir, exp[0])\
                for exp in exp_list]
-    all_df = pd.concat(df_list, axis=axis, keys=exp_list, names=['fish_id', 'cond'])
+    all_df = pd.concat(df_list, axis=axis, keys=exp_list, names=['fish_id', 'condition'])
     return all_df
 
 
