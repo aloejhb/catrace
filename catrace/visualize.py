@@ -568,7 +568,7 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
     current_ylim = ax.get_ylim()
     ymax = 1.02 * current_ylim[1]
     if test_results is not None:
-        for cond, p_value in test_results['Dunn_naive'].items():
+        for cond, p_value in test_results['Dunn_naive']['p_values'].items():
             if cond != 'naive':
                 cond_pos = xtick_labels.index(cond)
                 position = cond_pos
@@ -584,7 +584,6 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
 def plot_measure_by_cond(mdff, measure_name, y_label=None,
                          figsize=(10, 5),
                          test_type='kruskal', **kwargs):
-    cond_name = 'condition'
     submadf_by_cond = mdff[[measure_name]]
     # naive_mean = submadf_by_cond.xs('naive', level=cond_name).mean()
     # delta = (submadf_by_cond - naive_mean) / naive_mean * 100

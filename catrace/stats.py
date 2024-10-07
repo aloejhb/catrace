@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import mannwhitneyu, kruskal, ttest_ind, bootstrap
+from scipy.stats import mannwhitneyu, kruskal, ttest_ind, bootstrap, norm
 from scikit_posthocs import posthoc_dunn
 import pandas as pd
 
@@ -173,6 +173,8 @@ def apply_test_each_odor_by_cond(df, yname):
     return test_results
 
 
+import pingouin as pg
+
 def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
     cond_name = 'condition'
     test_results = {}
@@ -182,24 +184,60 @@ def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
     statdf.rename(columns={df.columns[0]: yname}, inplace=True)
     # Convert categorical condition column to str
     statdf[cond_name] = statdf[cond_name].astype(str)
-    # Drop unused columns, to supress warnings
+    # Drop unused columns, to suppress warnings
     statdf = statdf[[yname, cond_name]]
 
-    data_by_condition = [group[yname].values for name, group in statdf.groupby("condition", sort=False, observed=True)]
+    # Prepare data by condition
+    data_by_condition = [group[yname].values for name, group in statdf.groupby(cond_name, sort=False, observed=True)]
+    
+    # Perform Kruskal-Wallis test
     stat, p_value = kruskal(*data_by_condition)
 
+    # Calculate mean and std for each condition
+    means = statdf.groupby(cond_name)[yname].mean().to_dict()
+    stds = statdf.groupby(cond_name)[yname].std().to_dict()
+
+    # Perform Dunn's posthoc test using pingouin
     if naive_name in statdf[cond_name].unique():
-        dunn_test_results = posthoc_dunn(statdf, val_col=yname, group_col=cond_name, p_adjust='bonferroni')
-        naive_comparisons = dunn_test_results[naive_name]
+        # Perform Dunn's test and get the results
+        dunn_results = pg.pairwise_tests(data=statdf, dv=yname, between=cond_name, padjust='bonf')
+
+        # Filter results to only include comparisons involving the naive group
+        naive_comparisons = dunn_results[(dunn_results['A'] == naive_name) | (dunn_results['B'] == naive_name)]
+
+        # Create a dictionary to store p-values and Z statistics for comparisons with naive
+        p_values = {}
+        z_statistics = {}
+        for _, row in naive_comparisons.iterrows():
+            # Identify the other group being compared to naive
+            if row['A'] == naive_name:
+                cond = row['B']
+                # If naive is in A, negate the Z statistic
+                z_statistics[cond] = -row['T']
+            else:
+                cond = row['A']
+                # If naive is in B, use the Z statistic as is
+                z_statistics[cond] = row['T']
+                
+            # Store the p-value
+            p_values[cond] = row['p-corr']
+
+        # Store results in the same format as your original structure
+        test_results = {
+            'Kruskal': {'statistic': stat, 'p_value': p_value},
+            'mean': means,
+            'std': stds,
+            'Dunn_naive': {
+                'p_values': p_values,
+                'z_statistics': z_statistics
+            }
+        }
     else:
         raise ValueError("No naive condition present")
 
-    test_results = {
-        'Kruskal': {'statistic': stat, 'p_value': p_value},
-        'Dunn_naive': naive_comparisons
-    }
-
     return test_results
+
+
 
 
 def pool_training_conditions(df, cond_mapping):

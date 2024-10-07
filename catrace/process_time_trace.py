@@ -192,6 +192,12 @@ def mean_pattern_in_time_window(df, time_window, frame_rate=None):
     return pattern
 
 
+def average_over_trials(df):
+    if 'time' in df.index.names:
+        return df.groupby(level=['odor', 'time']).mean()
+    return df.groupby(level='odor').mean()
+
+
 def permute_odors(df):
     odor_list = df.index.unique('odor').tolist()
     random.shuffle(odor_list)
