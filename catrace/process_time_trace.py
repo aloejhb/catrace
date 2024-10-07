@@ -208,7 +208,11 @@ def select_odors_df(df, odors):
     sedf.set_index('new_odor', append=True, inplace=True)
     sedf.index = sedf.index.droplevel('odor')
     sedf.rename_axis(index={'new_odor': 'odor'}, inplace=True)
-    sedf = sedf.reorder_levels(['odor', 'trial', 'time'])
+    # If time in levels
+    if 'time' in sedf.index.names:
+        sedf = sedf.reorder_levels(['odor', 'trial', 'time'])
+    else:
+        sedf = sedf.reorder_levels(['odor', 'trial'])
     return sedf
 
 

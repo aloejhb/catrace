@@ -177,6 +177,7 @@ def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
     cond_name = 'condition'
     test_results = {}
 
+    # If dataframe has a multiindex, reset it
     statdf = df.reset_index()
     statdf.rename(columns={df.columns[0]: yname}, inplace=True)
     # Convert categorical condition column to str

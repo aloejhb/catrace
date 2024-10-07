@@ -516,12 +516,13 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
                                            figsize=(10, 5),
                                            ylim=None,
                                            label_fontsize=24,
-                                           show_zero_line=False,
                                            show_ns=False,
                                            box_color='#1f77b4',
                                            tick_label_fontsize=16,
                                            ax_label_fontsize=20,
-                                           star_fontsize=16):
+                                           star_fontsize=16,
+                                           plot_strip=True,
+                                           hline_y=None):
     datadf  = datadf.reset_index()
 
     if ax is None:
@@ -531,7 +532,8 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
 
     cond_name = 'condition'
 
-    sns.stripplot(ax=ax, x=cond_name, y=yname, data=datadf, color='black', jitter=True, size=4, alpha=0.4, zorder=1)
+    if plot_strip:
+        sns.stripplot(ax=ax, x=cond_name, y=yname, data=datadf, color='black', jitter=True, size=4, alpha=0.4, zorder=1)
     sns.boxplot(ax=ax, x=cond_name, y=yname, data=datadf, saturation=0.5,
                 zorder=2, showfliers=False, showcaps=False,
                 medianprops=dict(color=box_color, alpha=0.95, linewidth=3),
@@ -546,8 +548,8 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles[datadf[cond_name].nunique():], labels[datadf[cond_name].nunique():], ncol=4, loc='lower right')
 
-    if show_zero_line:
-        ax.axhline(0, linestyle='--', color='0.2', alpha=0.7)
+    if hline_y is not None:
+        ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.7)
     ax.set_ylabel(ylabel, fontsize=ax_label_fontsize)
 
     ax.set_xlabel('')
@@ -579,7 +581,7 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
 
 
 
-def plot_measure_by_cond(measure_name, mdff, name_to_label=None,
+def plot_measure_by_cond(mdff, measure_name, y_label=None,
                          figsize=(10, 5),
                          test_type='kruskal', **kwargs):
     cond_name = 'condition'
@@ -588,18 +590,15 @@ def plot_measure_by_cond(measure_name, mdff, name_to_label=None,
     # delta = (submadf_by_cond - naive_mean) / naive_mean * 100
     delta = submadf_by_cond
     yname = measure_name
-    if name_to_label is None:
+    if y_label is None:
         ylabel = yname
-    else:
-        ylabel = name_to_label[yname]
 
     results = apply_test_by_cond(delta, measure_name, test_type=test_type)
 
     datadf = delta.reset_index()
     datadf.rename(columns={0: yname}, inplace=True)
 
-    fig, ax = plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, results, figsize=figsize, show_zero_line=False,
-                                                     show_ns=False, **kwargs)
+    fig, ax = plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, results, figsize=figsize, show_ns=False, **kwargs)
     return fig, ax, results
 
 

@@ -11,7 +11,13 @@ def group_and_flatten_responses(resp):
             respli.append((cond, resp))
 
     resp_df = pd.DataFrame(respli, columns=['condition', 'response'])
+    resp_df.set_index('condition', inplace=True)
     return resp_df
 
 
-# resp_df['normalized_response'] = resp_df.response / resp_df[resp_df.cond == 'naive'].response.median() * 100
+def normalize_responses(resp_df):
+    # resp_df has one level index 'condtion'
+    # select the 'naive' condition and normalize all responses to it
+    baseline = resp_df.xs('naive').response.median()
+    resp_df['normalized_response'] = (resp_df.response - baseline)/ baseline * 100
+    return resp_df

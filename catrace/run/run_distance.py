@@ -24,6 +24,8 @@ from catrace.stats import pool_training_conditions
 from catrace.visualize import plot_measure, plot_conds_mat, move_pvalue_indicator
 from catrace.similarity import plot_similarity_mat, sample_neuron_and_comopute_distance_mat
 
+from ..visualize import PlotBoxplotParams
+
 from .run_utils import plot_avg_trace_with_window
 
 
@@ -209,24 +211,25 @@ def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=
     
     return gvg_df
 
-@dataclass_json
-@dataclass
-class PlotMeasureParams:
-    title_fontsize: float = 7
-    figsize: tuple = (4, 4)
-    label_fontsize: float = 7
-    y_tick_label_fontsize: float = 7
-    ylevel_scale: float = 1.1
-    pvalue_marker_xoffset: float = 0.034
-    strip_size: float = 4
-    box_width: float=0.45,
-    box_linewidth: float=2
-    mean_marker_size: float=2
-    pvalue_marker_fontsize: float=7
+# @dataclass_json
+# @dataclass
+# class PlotMeasureParams:
+#     title_fontsize: float = 7
+#     figsize: tuple = (4, 4)
+#     label_fontsize: float = 7
+#     y_tick_label_fontsize: float = 7
+#     ylevel_scale: float = 1.1
+#     pvalue_marker_xoffset: float = 0.034
+#     strip_size: float = 4
+#     box_width: float=0.45,
+#     box_linewidth: float=2
+#     mean_marker_size: float=2
+#     pvalue_marker_fontsize: float=7
 
 
 # Statistics on odors
-def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vsname, naive_name='naive', params=PlotMeasureParams()):
+def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vsname, naive_name='naive',
+                      title_fontsize=7, params=PlotBoxplotParams()):
     if metric == 'mahal':
         deduplicate = False
     else:
@@ -255,9 +258,7 @@ def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vs
     condition_map = {cond: 'trained' if cond != naive_name else 'naive' for cond in selected_conditions}
     pooled_subsimdf = pool_training_conditions(subsimdf, condition_map)
 
-    params_dict = params.to_dict()
-    title_fontsize = params_dict.pop('title_fontsize')
-    fig, ax, test_results = plot_measure(measure_name, pooled_subsimdf, test_type='mannwhitneyu', **params_dict)
+    fig, ax, test_results = plot_measure(pooled_subsimdf, measure_name, test_type='mannwhitneyu', params=params)
     # Title
     fig.suptitle(vsname, fontsize=title_fontsize)
     # tight layout
@@ -423,7 +424,7 @@ def compare_vs(vskeys, subsimdfs, measure_name):
 class PlotDistanceParams:
     per_cond: PlotDistancePerCondParams
     mean_delta: PlotMeanDeltaMatParams
-    vs_measure: PlotMeasureParams
+    vs_measure: PlotBoxplotParams
 
 
 @dataclass_json

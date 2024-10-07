@@ -170,7 +170,8 @@ def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8
         ylabel_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
     if ylabels is None:
         ylabels = [label for label in df.index.get_level_values('odor')]
-        ylabel_unique = df.index.unique('odor')
+
+    ylabel_unique = df.index.unique('odor')
     color_dict = dict(zip(ylabel_unique, ylabel_colors[:len(ylabels)]))
     tick_pos = np.arange(df.shape[0])
     ax.yaxis.set_tick_params(length=0)
