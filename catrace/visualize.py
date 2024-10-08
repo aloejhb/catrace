@@ -2,6 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 
 from .stats import apply_test_pair, apply_test_by_cond
@@ -510,47 +511,78 @@ def plot_all_measures(mdff, measure_names=None, name_to_label=None, test_type='m
     return fig, axs, test_results_list
 
 
+@dataclass_json
+@dataclass
+class PlotBoxplotByCondParams:
+    figsize: tuple = (4, 4)
+    label_fontsize: float = 7
+    tick_label_fontsize: float = 7
+    ylevel_scale: float = 1.02
+    do_plot_strip: bool = True
+    strip_size: float = 1
+    box_width: float=0.45
+    box_linewidth: float=1.5
+    box_color: str = 'tab:blue'
+    box_colors: list[str] = None
+    mean_marker_size: float=1
+    mean_marker_color: str = 'tab:red'
+    pvalue_marker_fontsize: float=7
+    pvalue_marker_xoffset: float = 0.5
+    hline_y: float = None
+    hline_linewidth: float = 1.0
+    show_ns: bool = False
+
 
 def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
                                            ax=None,
-                                           figsize=(10, 5),
+                                           figsize=(4, 4),
                                            ylim=None,
-                                           label_fontsize=24,
-                                           show_ns=False,
+                                           tick_label_fontsize=6,
+                                           label_fontsize=7,
+                                           ylevel_scale=1.02,
+                                           do_plot_strip=True,
+                                           strip_size=1,
+                                           box_width: float=0.45,
+                                           box_linewidth: float=1.5,
                                            box_color='#1f77b4',
-                                           tick_label_fontsize=16,
-                                           ax_label_fontsize=20,
-                                           star_fontsize=16,
-                                           plot_strip=True,
-                                           hline_y=None):
+                                           box_colors=None,
+                                           mean_marker_size=1,
+                                           mean_marker_color='tab:red',
+                                           pvalue_marker_fontsize=7,
+                                           pvalue_marker_xoffset: float = 0.034,
+                                           hline_y=None,
+                                           hline_linewidth=1,
+                                           show_ns=False,
+):
     datadf  = datadf.reset_index()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = 'dummy'
+        fig = ax.get_figure()
 
     cond_name = 'condition'
 
-    if plot_strip:
-        sns.stripplot(ax=ax, x=cond_name, y=yname, data=datadf, color='black', jitter=True, size=4, alpha=0.4, zorder=1)
+    if do_plot_strip:
+        sns.stripplot(ax=ax, x=cond_name, y=yname, data=datadf, color='black', jitter=True, size=strip_size, alpha=0.4, zorder=1)
+
     sns.boxplot(ax=ax, x=cond_name, y=yname, data=datadf, saturation=0.5,
-                zorder=2, showfliers=False, showcaps=False,
-                medianprops=dict(color=box_color, alpha=0.95, linewidth=3),
-                boxprops=dict(edgecolor=box_color, alpha=0.95, fill=False, linewidth=3),
-                whiskerprops=dict(color=box_color, linewidth=3, alpha=0.7))
-    
+                width=box_width, zorder=2, showfliers=False, showcaps=False,
+                fill=False, color=box_color, colors=box_colors,
+                medianprops=dict(alpha=0.95, linewidth=box_linewidth),
+                boxprops=dict(alpha=0.95, linewidth=box_linewidth),
+                whiskerprops=dict(linewidth=box_linewidth, alpha=0.7))
 
     mean_points = datadf.groupby([cond_name], as_index=False, sort=False, observed=True)[yname].mean()
     sns.pointplot(ax=ax, x=cond_name, y=yname, data=mean_points, 
-                  markers='D', linestyle='none', zorder=3, markersize=5, color='#d62728')
+                  markers='D', linestyle='none', zorder=3, markersize=mean_marker_size, color=mean_marker_color)
 
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[datadf[cond_name].nunique():], labels[datadf[cond_name].nunique():], ncol=4, loc='lower right')
+    # handles, labels = ax.get_legend_handles_labels()
+    # ax.legend(handles[datadf[cond_name].nunique():], labels[datadf[cond_name].nunique():], ncol=4, loc='lower right')
 
     if hline_y is not None:
-        ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.7)
-    ax.set_ylabel(ylabel, fontsize=ax_label_fontsize)
+        ax.axhline(hline_y, linestyle='--', color='0.2', alpha=0.7, linewidth=hline_linewidth)
+    ax.set_ylabel(ylabel, fontsize=label_fontsize)
 
     ax.set_xlabel('')
     ax.tick_params(axis='x', labelsize=tick_label_fontsize)
@@ -566,7 +598,7 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
     xtick_labels = ax.get_xticklabels()
     xtick_labels = [label.get_text() for label in xtick_labels]
     current_ylim = ax.get_ylim()
-    ymax = 1.02 * current_ylim[1]
+    ymax = ylevel_scale * current_ylim[1]
     if test_results is not None:
         for cond, p_value in test_results['Dunn_naive']['p_values'].items():
             if cond != 'naive':
@@ -574,16 +606,18 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
                 position = cond_pos
                 marker, xoffset = pvalue_to_marker(p_value)
                 if marker != 'n.s.' or show_ns:
-                    ax.text(position - xoffset * star_fontsize * 0.05, ymax, marker, fontsize=star_fontsize)
+                    ax.text(position - xoffset * pvalue_marker_fontsize * pvalue_marker_xoffset, ymax, marker, fontsize=pvalue_marker_fontsize)
     sns.despine(ax=ax)
-
+    fig.tight_layout()
     return fig, ax
 
 
 
-def plot_measure_by_cond(mdff, measure_name, y_label=None,
-                         figsize=(10, 5),
-                         test_type='kruskal', **kwargs):
+def plot_measure_by_cond(mdff: pd.DataFrame,
+                         measure_name: str,
+                         y_label: str=None,
+                         test_type: str='kruskal',
+                         params: PlotBoxplotByCondParams=PlotBoxplotByCondParams()):
     submadf_by_cond = mdff[[measure_name]]
     # naive_mean = submadf_by_cond.xs('naive', level=cond_name).mean()
     # delta = (submadf_by_cond - naive_mean) / naive_mean * 100
@@ -597,7 +631,7 @@ def plot_measure_by_cond(mdff, measure_name, y_label=None,
     datadf = delta.reset_index()
     datadf.rename(columns={0: yname}, inplace=True)
 
-    fig, ax = plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, results, figsize=figsize, show_ns=False, **kwargs)
+    fig, ax = plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, results, **params.to_dict())
     return fig, ax, results
 
 
