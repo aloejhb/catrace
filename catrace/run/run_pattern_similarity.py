@@ -14,7 +14,7 @@ from ..similarity import (compute_similarity_mat, cosine_distance,
                           pattern_correlation, plot_similarity_mat, 
                           extract_upper_triangle_similarities)
 from ..process_time_trace import select_odors_and_sort
-from ..visualize import plot_conds_mat
+from ..visualize import plot_conds_mat, PlotPerCondMatParams
 
 from .run_utils import plot_avg_trace_with_window
 
@@ -76,12 +76,12 @@ def plot_matrix_per_fish(simdf_list, exp_cond_list):
     return fig, axes
 
 
-def plot_matrix_per_cond(simdf_list, exp_cond_list, conditions):
+def plot_matrix_per_cond(simdf_list, exp_cond_list, conditions, params: PlotPerCondMatParams):
     avg_mats = mean_mat_over_cond(simdf_list, exp_cond_list, conditions)
     cmin = min([mat.min().min() for mat in avg_mats.values()])
     cmax = max([mat.max().max() for mat in avg_mats.values()])
-    fig, axes = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, clim=(cmin, cmax), cmap='turbo', ncol=2, ylabel_fontsize=12)
-    return fig, axes
+    fig, axes = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, clim=(cmin, cmax), cmap='turbo', **params.to_dict())
+    return fig
 
 
 def extract_cross_trial_similarity(simdf_list, exp_list):
@@ -100,6 +100,11 @@ def save_cross_trial_similarity(cross_trial_df, out_dir):
     cross_trial_df.to_pickle(cross_trial_path)
     return cross_trial_path
 
+@dataclass_json
+@dataclass
+class PlotPatternSimilarityParams:
+    per_cond: PlotPerCondMatParams = PlotPerCondMatParams()
+
 
 @dataclass_json
 @dataclass
@@ -112,6 +117,8 @@ class RunPatternSimilarityParams:
     do_plot_per_fish: bool = False
     do_plot_per_condition: bool = False
     do_save_cross_trial: bool = False
+    plot_params: PlotPatternSimilarityParams = PlotPatternSimilarityParams()
+
 
 def run_pattern_similarity(params: RunPatternSimilarityParams):
     dsconfig= load_config(params.config_file, DatasetConfig)
@@ -138,14 +145,17 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
         plot_matrix_per_fish(simdf_list, exp_cond_list)
 
     if params.do_plot_per_condition:
-        plot_matrix_per_cond(simdf_list, exp_cond_list, dsconfig.conditions)
+        fig_per_cond = plot_matrix_per_cond(simdf_list, exp_cond_list, dsconfig.conditions, params=params.plot_params.per_cond)
+
+    output_figs = {}
+    output_figs['fig_per_cond'] = fig_per_cond
 
     if params.do_save_cross_trial:
         cross_trial_df = extract_cross_trial_similarity(simdf_list, exp_list)
         cross_trial_path = save_cross_trial_similarity(cross_trial_df, sim_dir)
-        return sim_dir, cross_trial_path
+        return sim_dir, output_figs, cross_trial_path
     
-    return sim_dir
+    return sim_dir, output_figs
 
 
 

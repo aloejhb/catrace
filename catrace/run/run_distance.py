@@ -21,10 +21,10 @@ from scipy.stats import mannwhitneyu
 from catrace.dataset import DatasetConfig
 from catrace.utils import load_config
 from catrace.stats import pool_training_conditions
-from catrace.visualize import plot_measure, plot_conds_mat, move_pvalue_indicator
 from catrace.similarity import plot_similarity_mat, sample_neuron_and_comopute_distance_mat
 
-from ..visualize import PlotBoxplotParams
+from ..visualize import (PlotBoxplotParams, PlotPerCondMatParams,
+                         plot_measure, plot_conds_mat, move_pvalue_indicator)
 
 from .run_utils import plot_avg_trace_with_window
 
@@ -139,27 +139,16 @@ def plot_matrix_per_fish(avg_simdf, cmap='turbo'):
     return fig, axs
 
 
-@dataclass_json
-@dataclass
-class PlotDistancePerCondParams:
-    row_height: float = 1.2
-    col_width: float = 2
-    title_fontsize: float = 7
-    colorbar_fontsize: float = 7
-    ylabel_fontsize: float = 7
-    ylabels: list = None
-    ylabel_colors: list = None
-
-
 # Plot matrix per condition
-def plot_matrix_per_condition(avg_simdf, conditions, cmap='turbo', clim=None, params=PlotDistancePerCondParams()):
+def plot_matrix_per_condition(avg_simdf, conditions, cmap='turbo', clim=None, params=PlotPerCondMatParams()):
     simdf_list, exp_cond_list = get_mat_lists(avg_simdf)
     avg_mats = ecl.mean_mat_over_cond(simdf_list, exp_cond_list, conditions)
     if clim is None:
         cmin = min([mat.min().min() for mat in avg_mats.values()])
         cmax = max([mat.max().max() for mat in avg_mats.values()])
         clim = (cmin, cmax)
-    fig, axs = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, clim=clim, cmap=cmap, ncol=2, **params.to_dict())
+    params.ncol = 2
+    fig, axs = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, clim=clim, cmap=cmap, **params.to_dict())
     return fig, axs
 
 
@@ -210,21 +199,6 @@ def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=
     gvg_df = gvg.to_frame(name=measure_name)
     
     return gvg_df
-
-# @dataclass_json
-# @dataclass
-# class PlotMeasureParams:
-#     title_fontsize: float = 7
-#     figsize: tuple = (4, 4)
-#     label_fontsize: float = 7
-#     y_tick_label_fontsize: float = 7
-#     ylevel_scale: float = 1.1
-#     pvalue_marker_xoffset: float = 0.034
-#     strip_size: float = 4
-#     box_width: float=0.45,
-#     box_linewidth: float=2
-#     mean_marker_size: float=2
-#     pvalue_marker_fontsize: float=7
 
 
 # Statistics on odors
@@ -422,7 +396,7 @@ def compare_vs(vskeys, subsimdfs, measure_name):
 @dataclass_json
 @dataclass
 class PlotDistanceParams:
-    per_cond: PlotDistancePerCondParams
+    per_cond: PlotPerCondMatParams
     mean_delta: PlotMeanDeltaMatParams
     vs_measure: PlotBoxplotParams
 

@@ -4,6 +4,8 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 
 from .stats import apply_test_pair, apply_test_by_cond
 
@@ -26,6 +28,19 @@ def plot_pattern_heatmap(pattern, climit=None, ax=None):
     else:
         im = ax.imshow(pattern.T, aspect='auto', interpolation='none')
     return im
+
+@dataclass_json
+@dataclass
+class PlotPerCondMatParams:
+    ncol: int = 2
+    row_height: float = 1.2
+    col_width: float = 2
+    title_fontsize: float = 7
+    colorbar_fontsize: float = 7
+    ylabel_fontsize: float = 7
+    ylabels: list = None
+    ylabel_colors: list = None
+
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -138,9 +153,6 @@ def plot_avgdf(avgdf, ax=None):
     ax.plot(avgdf)
 
 
-from dataclasses import dataclass
-from dataclasses_json import dataclass_json
-from typing import Union
 @dataclass_json
 @dataclass
 class PlotBoxplotParams:
