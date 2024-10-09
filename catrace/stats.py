@@ -1,4 +1,6 @@
 import numpy as np
+import math
+
 from scipy.stats import mannwhitneyu, kruskal, ttest_ind, bootstrap, norm
 from scikit_posthocs import posthoc_dunn
 import pandas as pd
@@ -193,9 +195,8 @@ def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
     # Perform Kruskal-Wallis test
     stat, p_value = kruskal(*data_by_condition)
 
-    # Calculate mean and std for each condition
-    means = statdf.groupby(cond_name)[yname].mean().to_dict()
-    stds = statdf.groupby(cond_name)[yname].std().to_dict()
+    # Calculate mean, std, and n for each condition
+    summary_stats = statdf.groupby(cond_name)[yname].agg(['mean', 'std', 'count']).to_dict()
 
     # Perform Dunn's posthoc test using pingouin
     if naive_name in statdf[cond_name].unique():
@@ -208,6 +209,7 @@ def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
         # Create a dictionary to store p-values and Z statistics for comparisons with naive
         p_values = {}
         z_statistics = {}
+        n_values = {}
         for _, row in naive_comparisons.iterrows():
             # Identify the other group being compared to naive
             if row['A'] == naive_name:
@@ -221,15 +223,18 @@ def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
                 
             # Store the p-value
             p_values[cond] = row['p-corr']
+            # Store the sample size for the comparison
+            n_values[cond] = (statdf[statdf[cond_name] == naive_name].shape[0], statdf[statdf[cond_name] == cond].shape[0])
 
         # Store results in the same format as your original structure
         test_results = {
-            'Kruskal': {'statistic': stat, 'p_value': p_value},
-            'mean': means,
-            'std': stds,
+            'Kruskal': {'statistic': stat, 'p_value': p_value, 'n': {cond: summary_stats['count'][cond] for cond in summary_stats['count']}},
+            'mean': summary_stats['mean'],
+            'std': summary_stats['std'],
             'Dunn_naive': {
                 'p_values': p_values,
-                'z_statistics': z_statistics
+                'z_statistics': z_statistics,
+                'n': n_values
             }
         }
     else:
@@ -268,3 +273,74 @@ def sort_conditions(df, conditions):
         keys.append(key)
     df_sorted = pd.concat(groups)
     return df_sorted
+
+
+def format_test_results_by_cond(test_results, naive_name='naive'):
+    # Kruskal–Wallis test results
+    n_per_condition = test_results['Kruskal']['n']  # dict of n per condition
+    total_n = sum(n_per_condition.values())
+    degrees_of_freedom = len(n_per_condition) - 1
+    H = test_results['Kruskal']['statistic']
+    P_value = test_results['Kruskal']['p_value']
+    
+    def format_p_value(p_value):
+        import math
+        # Set a minimum threshold for p_value to avoid math domain errors
+        min_p_value = 1e-300  # Adjust this value as needed for your context
+        
+        if p_value <= 0 or p_value < min_p_value:
+            # Handle p_values that are zero or extremely small
+            exponent = int(math.floor(math.log10(min_p_value)))
+            return f"P < 1 × 10^{exponent}"
+        elif p_value < 1e-4:
+            exponent = int(math.floor(math.log10(p_value)))
+            base = p_value / (10 ** exponent)
+            # Ensure base is between 1 and 10
+            return f"P = {base:.1f} × 10^{exponent}"
+        elif p_value < 0.001:
+            return f"P = {p_value:.4f}"
+        else:
+            return f"P = {p_value:.2f}"
+
+
+    
+    # Format Kruskal–Wallis test results
+    H_formatted = f"{H:.2f}"
+    P_value_formatted = format_p_value(P_value)
+    kruskal_sentence = f"(Kruskal–Wallis test, n = {total_n}, d.f. = {degrees_of_freedom}, H = {H_formatted}, {P_value_formatted})."
+    
+    # Dunn's test results
+    n_naive = n_per_condition[naive_name]
+    comparisons = []
+    p_values = test_results['Dunn_naive']['p_values']
+    z_statistics = test_results['Dunn_naive']['z_statistics']
+    n_values = test_results['Dunn_naive']['n']
+    
+    # Get condition names excluding naive
+    condition_names = list(p_values.keys())
+    
+    for cond in condition_names:
+        Q_stat = z_statistics[cond]
+        Q_stat_formatted = f"{Q_stat:.2f}"
+        p_value = p_values[cond]
+        p_value_formatted = format_p_value(p_value)
+        n_cond = n_values[cond][1]  # n_values[cond] = (n_naive, n_cond)
+        comparison_text = f"{cond}, Q = {Q_stat_formatted}, {p_value_formatted}, n = {n_cond}"
+        comparisons.append(comparison_text)
+    
+    # Now, construct the comparisons text
+    if len(comparisons) == 1:
+        comparisons_text = comparisons[0]
+    elif len(comparisons) == 2:
+        comparisons_text = " and ".join(comparisons)
+    else:
+        comparisons_text = "; ".join(comparisons[:-1])
+        comparisons_text += "; and " + comparisons[-1]
+    
+    # Now, construct the Dunn's test sentence
+    dunn_sentence = f"Nonparametric multiple comparisons against {naive_name} (n = {n_naive}): {comparisons_text}."
+
+    # Combine all sentences
+    full_text = f"{kruskal_sentence} {dunn_sentence}"
+    
+    return full_text
