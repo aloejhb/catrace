@@ -21,7 +21,10 @@ from scipy.stats import mannwhitneyu
 from catrace.dataset import DatasetConfig
 from catrace.utils import load_config
 from catrace.stats import pool_training_conditions
-from catrace.similarity import plot_similarity_mat, sample_neuron_and_comopute_distance_mat
+from ..similarity import (plot_similarity_mat,
+                          sample_neuron_and_comopute_distance_mat,
+                          compute_diff_to_naive,
+                          plot_mean_delta_mat, PlotMeanDeltaMatParams)
 
 from ..visualize import (PlotBoxplotParams, PlotPerCondMatParams,
                          plot_measure, plot_conds_mat, move_pvalue_indicator)
@@ -254,80 +257,9 @@ def normalize_to_percent(pooled_subsimdf, normalize=True):
     return pooled_subsimdf_normalized_trained
 
 
-# Statisitcs on CS odors
-def reorder_cs(df, odor_to_cs, odor_orders):
-    df = df.rename(index=odor_to_cs, level='odor')
-    df = df.rename(columns=odor_to_cs, level='ref_odor')
-    df = df.loc[odor_orders, odor_orders]
-    return df
-
-
-# Compute the difference to naive
-def compute_diff_to_naive(avg_simdf, do_reorder_cs=False, odor_orders=None, odors_aa=None, naive_name='naive'):
-    if do_reorder_cs:
-        if odor_orders is None or odors_aa is None:
-            raise ValueError('For reordering CS, odor_orders and odors_aa must be provided.')
-    
+def compute_diff_to_naive_from_simdfdf(avg_simdf, *args, **kwargs):
     simdf_list, exp_cond_list = get_mat_lists(avg_simdf)
-    naive_mats = [simdf for simdf, cond in zip(simdf_list, exp_cond_list) if cond == naive_name]
-    mean_naive_mat = sum(naive_mats)  / len(naive_mats)
-
-    trained_delta_mats = []
-    for simdf, cond in zip(simdf_list, exp_cond_list):
-        if cond == 'naive':
-            continue
-        else:
-            if do_reorder_cs:
-                cs_plus, cs_minus = cond.split('-')
-                cs_plus = cs_plus.capitalize()
-                cs_minus = cs_minus.capitalize()
-                aa3 = [odor for odor in odors_aa if odor not in [cs_plus, cs_minus]][0]
-                odor_to_cs = {cs_plus: 'cs_plus', cs_minus: 'cs_minus', aa3: 'aa3'}
-                # Permute such that the amino acids order is CS+, CS-, AA3
-                newdf = reorder_cs(simdf, odor_to_cs, odor_orders)
-                new_naive_mat = reorder_cs(mean_naive_mat, odor_to_cs, odor_orders)
-            else:
-                newdf = simdf
-                new_naive_mat = mean_naive_mat
-
-            trained_delta_mats.append(newdf - new_naive_mat)
-    mean_delta_mat = sum(trained_delta_mats) / len(trained_delta_mats)
-    return mean_delta_mat    
-
-@dataclass_json
-@dataclass
-class PlotMeanDeltaMatParams:
-    figsize: tuple = (4, 4)
-    colorbar_fontsize: float = 7
-    ylabel_fontsize: float = 7
-    ylabels: list = None
-    ylabel_colors: list = None
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-def plot_mean_delta_mat(mean_delta_mat, params=PlotMeanDeltaMatParams()):
-    cmin = mean_delta_mat.min().min()
-    cmax = mean_delta_mat.max().max()
-    print(cmin, cmax)
-    abs_max = max(abs(cmin), abs(cmax))
-    clim = (-abs_max, abs_max)
-
-    params_dict = params.to_dict()
-    figsize = params_dict.pop('figsize')
-    fig, ax = plt.subplots(figsize=params.figsize)
-    colorbar_fontsize = params_dict.pop('colorbar_fontsize')
-    img = plot_similarity_mat(mean_delta_mat, ax=ax, cmap='coolwarm', clim=clim,
-                              **params_dict)
-    # Use make_axes_locatable to adjust the size of the colorbar
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)  # 'size' controls width, 'pad' controls spacing
-    cbar = fig.colorbar(img, cax=cax)
-    cbar.ax.tick_params(labelsize=colorbar_fontsize)
-    # color bar tick only labels the min and max and zero
-    cbar.set_ticks([clim[0], 0, clim[1]])
-    #cbar = fig.colorbar(img, ax=ax)
-    # cbar.ax.tick_params(labelsize=colorbar_fontsize)
-    fig.tight_layout()
-    return fig, ax
+    return compute_diff_to_naive(simdf_list, exp_cond_list, *args, **kwargs)
 
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -412,12 +344,12 @@ class RunDistanceParams:
     seed: int
     do_normalize_simdf: bool
     do_reorder_cs: bool
+    odor_orders: list = None
+    naive_name: str = 'naive'
     overwrite_computation: bool
     report_dir: str
     summary_name: str
     save_output: bool
-    odor_orders: list = None
-    naive_name: str = 'naive'
     vs_same_ylim: list = None
     cmap: str = 'turbo'
     clim: list = None
@@ -477,9 +409,9 @@ def run_distance(params: RunDistanceParams):
 
     print('Plotting delta matrix...')
     if params.do_reorder_cs:
-        mean_delta_mat = compute_diff_to_naive(avg_simdf, params.do_reorder_cs, params.odor_orders, dsconfig.odors_aa, naive_name=params.naive_name)
+        mean_delta_mat = compute_diff_to_naive_from_simdfdf(avg_simdf, params.do_reorder_cs, params.odor_orders, dsconfig.odors_aa, naive_name=params.naive_name)
     else:
-        mean_delta_mat = compute_diff_to_naive(avg_simdf, do_reorder_cs=params.do_reorder_cs, naive_name=params.naive_name)
+        mean_delta_mat = compute_diff_to_naive_from_simdfdf(avg_simdf, do_reorder_cs=params.do_reorder_cs, naive_name=params.naive_name)
     fig_delta, ax = plot_mean_delta_mat(mean_delta_mat, params.plot_params.mean_delta)
 
     print('Plotting vs statistics...')
@@ -567,3 +499,37 @@ def run_distance(params: RunDistanceParams):
     if params.do_plot_per_fish:
         output_figs['fig_per_fish'] = fig_per_fish
     return output_figs, concat_subsimdf, stats
+
+
+
+vsdict = {
+    'AvsA': (['Phe', 'Trp', 'Arg'], ['Phe', 'Trp', 'Arg']),
+    'BvsB': (['TDCA', 'TCA', 'GCA'], ['TDCA', 'TCA', 'GCA']),
+    'AvsB': (['Phe', 'Trp', 'Arg'], ['TDCA', 'TCA', 'GCA'])
+}
+
+def get_per_vs(vsdict, dff):
+    vsdffs = {}
+    for vsname, (odor1_group, odor2_group) in vsdict.items():
+        dff_vs = get_group_vs_group(dff, odor1_group, odor2_group)
+        vsdffs[vsname] = dff_vs
+    vsdff = pd.concat(vsdffs.values(), keys=vsdffs.keys(), names=['vsname'])
+    return vsdff
+
+vsdff = get_per_vs(vsdict, df_pooled)
+vsdff
+
+
+
+from catrace.visualize import (plot_measure_multi_odor_cond,
+                               PlotBoxplotMultiOdorCondParams,
+                               set_yticks_interval)
+
+plot_box_multi_params = PlotBoxplotMultiOdorCondParams(figsize=(4,2))
+fig, ax, test_results = plot_measure_multi_odor_cond(vsdff, 'capacity', odor_name='vsname', condition_name='condition', params=plot_box_multi_params)
+
+set_yticks_interval(ax, 0.05)
+
+figname = f'{dataset_name}_capacity_vsname'
+save_figure_for_paper(fig, figname, paper_fig_dir)
+# save_stats_json(test_results, figname, paper_fig_dir, tuple_key_to_str=True)

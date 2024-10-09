@@ -9,6 +9,8 @@ from scipy.stats import sem
 from importlib import reload
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.distance import pdist, squareform
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 
 from .dataio import load_trace_file
 from .process_time_trace import mean_pattern_in_time_window
@@ -257,3 +259,82 @@ def extract_upper_triangle_similarities(simdf):
     final_df = pd.concat(results, axis=1)
     
     return final_df
+
+
+# Statisitcs on CS odors
+def reorder_cs(df, odor_to_cs, odor_orders):
+    df = df.rename(index=odor_to_cs, level='odor')
+    if 'ref_odor' in df.columns.names:
+        df = df.rename(columns=odor_to_cs, level='ref_odor')
+    else:
+        df = df.rename(columns=odor_to_cs, level='odor')
+    df = df.loc[odor_orders, odor_orders]
+    return df
+
+
+# Compute the difference to naive
+def compute_diff_to_naive(simdf_list, exp_cond_list, do_reorder_cs=False, odor_orders=None, odors_aa=None, naive_name='naive'):
+    if do_reorder_cs:
+        if odor_orders is None or odors_aa is None:
+            raise ValueError('For reordering CS, odor_orders and odors_aa must be provided.')
+    
+    naive_mats = [simdf for simdf, cond in zip(simdf_list, exp_cond_list) if cond == naive_name]
+    mean_naive_mat = sum(naive_mats)  / len(naive_mats)
+
+    trained_delta_mats = []
+    for simdf, cond in zip(simdf_list, exp_cond_list):
+        if cond == 'naive':
+            continue
+        else:
+            if do_reorder_cs:
+                cs_plus, cs_minus = cond.split('-')
+                cs_plus = cs_plus.capitalize()
+                cs_minus = cs_minus.capitalize()
+                aa3 = [odor for odor in odors_aa if odor not in [cs_plus, cs_minus]][0]
+                odor_to_cs = {cs_plus: 'cs_plus', cs_minus: 'cs_minus', aa3: 'aa3'}
+                # Permute such that the amino acids order is CS+, CS-, AA3
+                newdf = reorder_cs(simdf, odor_to_cs, odor_orders)
+                new_naive_mat = reorder_cs(mean_naive_mat, odor_to_cs, odor_orders)
+            else:
+                newdf = simdf
+                new_naive_mat = mean_naive_mat
+
+            trained_delta_mats.append(newdf - new_naive_mat)
+    mean_delta_mat = sum(trained_delta_mats) / len(trained_delta_mats)
+    return mean_delta_mat    
+
+@dataclass_json
+@dataclass
+class PlotMeanDeltaMatParams:
+    figsize: tuple = (4, 4)
+    colorbar_fontsize: float = 7
+    ylabel_fontsize: float = 7
+    ylabels: list = None
+    ylabel_colors: list = None
+
+
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+def plot_mean_delta_mat(mean_delta_mat, params=PlotMeanDeltaMatParams()):
+    cmin = mean_delta_mat.min().min()
+    cmax = mean_delta_mat.max().max()
+    print(cmin, cmax)
+    abs_max = max(abs(cmin), abs(cmax))
+    clim = (-abs_max, abs_max)
+
+    params_dict = params.to_dict()
+    figsize = params_dict.pop('figsize')
+    fig, ax = plt.subplots(figsize=figsize)
+    colorbar_fontsize = params_dict.pop('colorbar_fontsize')
+    img = plot_similarity_mat(mean_delta_mat, ax=ax, cmap='coolwarm', clim=clim,
+                              **params_dict)
+    # Use make_axes_locatable to adjust the size of the colorbar
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)  # 'size' controls width, 'pad' controls spacing
+    cbar = fig.colorbar(img, cax=cax)
+    cbar.ax.tick_params(labelsize=colorbar_fontsize)
+    # color bar tick only labels the min and max and zero
+    cbar.set_ticks([clim[0], 0, clim[1]])
+    #cbar = fig.colorbar(img, ax=ax)
+    # cbar.ax.tick_params(labelsize=colorbar_fontsize)
+    fig.tight_layout()
+    return fig, ax

@@ -12,7 +12,9 @@ from ..utils import load_config
 from ..exp_collection import (process_data_db_decorator, read_df, plot_explist_with_cond, mean_mat_over_cond)
 from ..similarity import (compute_similarity_mat, cosine_distance,
                           pattern_correlation, plot_similarity_mat, 
-                          extract_upper_triangle_similarities)
+                          extract_upper_triangle_similarities,
+                          compute_diff_to_naive,
+                          plot_mean_delta_mat, PlotMeanDeltaMatParams)
 from ..process_time_trace import select_odors_and_sort
 from ..visualize import plot_conds_mat, PlotPerCondMatParams
 
@@ -100,10 +102,18 @@ def save_cross_trial_similarity(cross_trial_df, out_dir):
     cross_trial_df.to_pickle(cross_trial_path)
     return cross_trial_path
 
+from typing import Union
+
 @dataclass_json
 @dataclass
 class PlotPatternSimilarityParams:
     per_cond: PlotPerCondMatParams = PlotPerCondMatParams()
+    mean_delta: Union[PlotMeanDeltaMatParams, dict] = None
+
+    # if mean_delta is a dict, it will be converted to PlotMeanDeltaMatParams
+    def __post_init__(self):
+        if isinstance(self.mean_delta, dict):
+            self.mean_delta = PlotMeanDeltaMatParams(**self.mean_delta)
 
 
 @dataclass_json
@@ -117,6 +127,9 @@ class RunPatternSimilarityParams:
     do_plot_per_fish: bool = False
     do_plot_per_condition: bool = False
     do_save_cross_trial: bool = False
+    do_reorder_cs: bool = False
+    odor_orders: list = None
+    naive_name: str = 'naive'
     plot_params: PlotPatternSimilarityParams = PlotPatternSimilarityParams()
 
 
@@ -147,8 +160,17 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
     if params.do_plot_per_condition:
         fig_per_cond = plot_matrix_per_cond(simdf_list, exp_cond_list, dsconfig.conditions, params=params.plot_params.per_cond)
 
+    print('Plotting delta matrix...')
+    if params.do_reorder_cs:
+        mean_delta_mat = compute_diff_to_naive(simdf_list, exp_cond_list,params.do_reorder_cs, params.odor_orders, dsconfig.odors_aa, naive_name=params.naive_name)
+    else:
+        mean_delta_mat = compute_diff_to_naive(simdf_list, exp_cond_list, do_reorder_cs=params.do_reorder_cs, naive_name=params.naive_name)
+    print(params.plot_params.mean_delta)
+    fig_delta, ax = plot_mean_delta_mat(mean_delta_mat, params.plot_params.mean_delta)
+
     output_figs = {}
     output_figs['fig_per_cond'] = fig_per_cond
+    output_figs['fig_delta'] = fig_delta
 
     if params.do_save_cross_trial:
         cross_trial_df = extract_cross_trial_similarity(simdf_list, exp_list)
@@ -156,6 +178,3 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
         return sim_dir, output_figs, cross_trial_path
     
     return sim_dir, output_figs
-
-
-
