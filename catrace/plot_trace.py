@@ -86,7 +86,8 @@ def plot_trace_avg(trace, frame_rate=None, cut_time=0, ax=None, show_legend=Fals
     if not show_legend:
         ax.legend().remove()
     else:
-        ax.legend(loc=1, prop={'size': legend_fontsize})
+        # Put legend outside the plot
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': legend_fontsize})
 
     ax.tick_params(axis='both', labelsize=label_fontsize)
     xlabel = 'Time (s)' if frame_rate is not None else 'Frame'
