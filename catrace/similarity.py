@@ -314,7 +314,8 @@ class PlotMeanDeltaMatParams:
 
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-def plot_mean_delta_mat(mean_delta_mat, params=PlotMeanDeltaMatParams()):
+def plot_mean_delta_mat(mean_delta_mat: pd.DataFrame,
+                        params: PlotMeanDeltaMatParams = PlotMeanDeltaMatParams()):
     cmin = mean_delta_mat.min().min()
     cmax = mean_delta_mat.max().max()
     print(cmin, cmax)
@@ -338,3 +339,11 @@ def plot_mean_delta_mat(mean_delta_mat, params=PlotMeanDeltaMatParams()):
     # cbar.ax.tick_params(labelsize=colorbar_fontsize)
     fig.tight_layout()
     return fig, ax
+
+
+def average_mat_over_trials(simdf):
+    #simdf has index levels: odor, trial
+    #simdf has column levels: odor, trial
+    # take average over trials
+    avg_mat = simdf.groupby(level='odor', observed=True).mean().T.groupby(level='odor', observed=True).mean().T
+    return avg_mat

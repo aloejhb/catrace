@@ -10,13 +10,15 @@ from dataclasses_json import dataclass_json
 from ..dataset import DatasetConfig
 from ..utils import load_config
 from ..exp_collection import (process_data_db_decorator, read_df, plot_explist_with_cond, mean_mat_over_cond)
+from ..stats import pool_training_conditions
 from ..similarity import (compute_similarity_mat, cosine_distance,
                           pattern_correlation, plot_similarity_mat, 
                           extract_upper_triangle_similarities,
                           compute_diff_to_naive,
-                          plot_mean_delta_mat, PlotMeanDeltaMatParams)
+                          plot_mean_delta_mat, PlotMeanDeltaMatParams,
+                          average_mat_over_trials)
 from ..process_time_trace import select_odors_and_sort
-from ..visualize import plot_conds_mat, PlotPerCondMatParams
+from ..visualize import plot_conds_mat, PlotPerCondMatParams, plot_measure_multi_odor_cond, PlotBoxplotMultiOdorCondParams
 
 from .run_utils import plot_avg_trace_with_window
 
@@ -102,6 +104,45 @@ def save_cross_trial_similarity(cross_trial_df, out_dir):
     cross_trial_df.to_pickle(cross_trial_path)
     return cross_trial_path
 
+
+def concatenate_simdfs(simdf_lists, exp_list):
+    all_simdf = pd.concat(simdf_lists, keys=exp_list, names=['fish_id', 'condition'])
+    return all_simdf
+
+
+from .run_utils import get_vs_tuple, get_group_vs_group
+
+
+def pool_odor_pair(group1, group2, selected_conditions, all_simdf, measure_name, naive_name='naive', deduplicate=False):
+
+    subsimdf = get_group_vs_group(all_simdf, group1, group2, measure_name=measure_name, deduplicate=deduplicate)
+    # Select conditions
+    subsimdf = subsimdf[subsimdf.index.get_level_values('condition').isin(selected_conditions)]
+
+    # Map naive to naive, others to trained
+    condition_map = {cond: 'trained' if cond != naive_name else 'naive' for cond in selected_conditions}
+    pooled_subsimdf = pool_training_conditions(subsimdf, condition_map)
+
+    return pooled_subsimdf
+
+
+def compute_multi_vs(vsnames, dsconfig, conditions, all_simdf, metric, naive_name):
+    vsdict = {vsname: get_vs_tuple(dsconfig, vsname) for vsname in vsnames}
+
+    subsimdfs = {}
+    for vsname, (group1, group2) in vsdict.items():
+        try:
+            pooled_subsimdf = pool_odor_pair(group1, group2, conditions, all_simdf, metric, naive_name=naive_name)
+        except Exception as err:
+            print(f'Error in {vsname}')
+            raise err
+        subsimdfs[vsname] = pooled_subsimdf
+
+    vsdff = pd.concat(subsimdfs.values(), keys=subsimdfs.keys(),
+                      names=['vsname'])
+    return vsdff
+
+
 from typing import Union
 
 @dataclass_json
@@ -109,6 +150,7 @@ from typing import Union
 class PlotPatternSimilarityParams:
     per_cond: PlotPerCondMatParams = PlotPerCondMatParams()
     mean_delta: Union[PlotMeanDeltaMatParams, dict] = None
+    vs_measure: PlotBoxplotMultiOdorCondParams = PlotBoxplotMultiOdorCondParams()
 
     # if mean_delta is a dict, it will be converted to PlotMeanDeltaMatParams
     def __post_init__(self):
@@ -131,6 +173,7 @@ class RunPatternSimilarityParams:
     odor_orders: list = None
     naive_name: str = 'naive'
     plot_params: PlotPatternSimilarityParams = PlotPatternSimilarityParams()
+    vsnames: list[str] = None
 
 
 def run_pattern_similarity(params: RunPatternSimilarityParams):
@@ -168,9 +211,17 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
     print(params.plot_params.mean_delta)
     fig_delta, ax = plot_mean_delta_mat(mean_delta_mat, params.plot_params.mean_delta)
 
+    avgsimdf_list = [average_mat_over_trials(simdf) for simdf in simdf_list]
+    all_simdf = concatenate_simdfs(avgsimdf_list, exp_list)
+
     output_figs = {}
     output_figs['fig_per_cond'] = fig_per_cond
     output_figs['fig_delta'] = fig_delta
+
+    if params.vsnames is not None:
+        vsdff = compute_multi_vs(params.vsnames, dsconfig, dsconfig.conditions, all_simdf, params.metric, naive_name=params.naive_name)
+        fig_multi_vs, ax, test_results = plot_measure_multi_odor_cond(vsdff, params.metric, odor_name='vsname', condition_name='condition', params=params.plot_params.vs_measure)
+        output_figs['fig_multi_vs'] = fig_multi_vs
 
     if params.do_save_cross_trial:
         cross_trial_df = extract_cross_trial_similarity(simdf_list, exp_list)
@@ -178,3 +229,5 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
         return sim_dir, output_figs, cross_trial_path
     
     return sim_dir, output_figs
+
+

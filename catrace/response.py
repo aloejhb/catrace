@@ -6,7 +6,7 @@ import seaborn as sns
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
-from .dataset import DatasetConfig
+from .dataset import DatasetConfig, get_odors_by_key
 from .exp_collection import concatenate_df_from_db
 from .process_time_trace import (select_odors_and_sort,
                                 mean_pattern_in_time_window,
@@ -95,14 +95,6 @@ def compute_response_flattened(dff, time_window, odors, top_ratio=None):
     resp = group_and_flatten_responses(mean_pattern)
     return resp
 
-
-def get_odors_by_key(dsconfig, odor_key):
-    # odor_key should be a string starting with 'odors_', if not raise an error
-    assert odor_key.startswith('odors_'), 'The key should start with "odors_"'
-    # odor_key should be in the dataset config
-    assert hasattr(dsconfig, odor_key), f'The key "{odor_key}" is not in the dataset config'
-    odors = getattr(dsconfig, odor_key)
-    return odors
 
 
 def load_all_dff(dsconfig):

@@ -20,15 +20,16 @@ from scipy.stats import mannwhitneyu
 
 from catrace.dataset import DatasetConfig
 from catrace.utils import load_config
-from catrace.stats import pool_training_conditions
+from ..stats import pool_training_conditions
 from ..similarity import (plot_similarity_mat,
                           sample_neuron_and_comopute_distance_mat,
                           compute_diff_to_naive,
                           plot_mean_delta_mat, PlotMeanDeltaMatParams)
 
 from ..visualize import (PlotBoxplotParams, PlotPerCondMatParams,
-                         plot_measure, plot_conds_mat, move_pvalue_indicator)
-
+                         plot_measure, plot_conds_mat, move_pvalue_indicator,
+                         plot_measure_multi_odor_cond,
+                         PlotBoxplotMultiOdorCondParams)
 from .run_utils import plot_avg_trace_with_window
 
 
@@ -205,12 +206,12 @@ def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=
 
 
 # Statistics on odors
-def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vsname, naive_name='naive',
-                      title_fontsize=7, params=PlotBoxplotParams()):
+def pool_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, naive_name='naive'):
     if metric == 'mahal':
         deduplicate = False
     else:
         deduplicate = True
+
     if metric == 'mahal':
         measure_name = 'D_M'
     elif metric == 'euclidean':
@@ -219,28 +220,24 @@ def stat_of_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, vs
         measure_name = 'center D_E'
     else:
         raise ValueError(f'Unknown metric: {metric}')
+
     subsimdf = get_group_vs_group(avg_simdf, group1, group2, measure_name=measure_name,
                                   deduplicate=deduplicate)
     # Select conditions
     subsimdf = subsimdf[subsimdf.index.get_level_values('condition').isin(selected_conditions)]
-    # subsimdf = subsimdf.loc[(slice(None), selected_conditions, slice(None)), :]
-    # subsimdf = subsimdf.stack('ref_odor').to_frame()
-    # Remove the rows where odor is the same as ref_odor
-
-    # rename the column as D_E or D_M
-
-    # subsimdf.rename(columns={0: measure_name}, inplace=True)
 
     # Map naive to naive, others to trained
     condition_map = {cond: 'trained' if cond != naive_name else 'naive' for cond in selected_conditions}
     pooled_subsimdf = pool_training_conditions(subsimdf, condition_map)
 
+    return pooled_subsimdf
+
+def plot_single_vs(pooled_subsimdf, vsname, measure_name, title_fontsize=7, params=PlotBoxplotParams()):
     fig, ax, test_results = plot_measure(pooled_subsimdf, measure_name, test_type='mannwhitneyu', params=params)
     # Title
     fig.suptitle(vsname, fontsize=title_fontsize)
     # tight layout
     fig.tight_layout()
-    return fig, ax, test_results, pooled_subsimdf
 
 
 def normalize_to_percent(pooled_subsimdf, normalize=True):
@@ -330,7 +327,7 @@ def compare_vs(vskeys, subsimdfs, measure_name):
 class PlotDistanceParams:
     per_cond: PlotPerCondMatParams
     mean_delta: PlotMeanDeltaMatParams
-    vs_measure: PlotBoxplotParams
+    vs_measure: PlotBoxplotMultiOdorCondParams = PlotBoxplotMultiOdorCondParams()
 
 
 @dataclass_json
@@ -346,10 +343,10 @@ class RunDistanceParams:
     do_reorder_cs: bool
     odor_orders: list = None
     naive_name: str = 'naive'
-    overwrite_computation: bool
-    report_dir: str
-    summary_name: str
-    save_output: bool
+    overwrite_computation: bool = False
+    report_dir: str = None
+    summary_name: str = None
+    save_output: bool = False
     vs_same_ylim: list = None
     cmap: str = 'turbo'
     clim: list = None
@@ -414,6 +411,18 @@ def run_distance(params: RunDistanceParams):
         mean_delta_mat = compute_diff_to_naive_from_simdfdf(avg_simdf, do_reorder_cs=params.do_reorder_cs, naive_name=params.naive_name)
     fig_delta, ax = plot_mean_delta_mat(mean_delta_mat, params.plot_params.mean_delta)
 
+
+    if metric == 'mahal':
+        measure_name = 'D_M'
+    elif metric == 'euclidean':
+        measure_name = 'D_E'
+    elif metric == 'center_euclidean':
+        measure_name = 'center D_E'
+    else:
+        raise ValueError(f'Unknown metric: {metric}')
+
+
+
     print('Plotting vs statistics...')
     if params.vsdict is None:
         vsdict = {'aa_vs_aa': (dsconfig.odors_aa, dsconfig.odors_aa),
@@ -426,29 +435,21 @@ def run_distance(params: RunDistanceParams):
                         'cs_plus_vs_cs_minus': ([dsconfig.odors_cs[0]], [dsconfig.odors_cs[1]])})
     else:
         vsdict = params.vsdict
-    vsfigs = {}
-    vsaxs = []
-    stats = {}
+
     subsimdfs = {}
     for vsname, (group1, group2) in vsdict.items():
         try:
-            fig, ax, test_results, pooled_subsimdf = stat_of_odor_pair(group1, group2, dsconfig.conditions, avg_simdf, metric, vsname, naive_name=params.naive_name, params=params.plot_params.vs_measure)
+            pooled_subsimdf = pool_odor_pair(group1, group2, dsconfig.conditions, avg_simdf, metric, naive_name=params.naive_name)
         except Exception as err:
             print(f'Error in {vsname}')
             raise err
-        vsfigs[vsname] = fig
-        vsaxs.append(ax)
-        stats[vsname] = list(test_results.values())[0]
         subsimdfs[vsname] = pooled_subsimdf
 
-    if metric == 'mahal':
-        measure_name = 'D_M'
-    elif metric == 'euclidean':
-        measure_name = 'D_E'
-    elif metric == 'center_euclidean':
-        measure_name = 'center D_E'
-    else:
-        raise ValueError(f'Unknown metric: {metric}')
+    vsdff = pd.concat(subsimdfs.values(), keys=subsimdfs.keys(),
+                      names=['vsname'])
+    fig_multi_vs, ax, test_results = plot_measure_multi_odor_cond(vsdff, measure_name, odor_name='vsname', condition_name='condition', params=params.plot_params.vs_measure)
+    
+
     
     if params.vsdict is None:
         # Compare percentage changes
@@ -464,9 +465,8 @@ def run_distance(params: RunDistanceParams):
 
 
     if params.vs_same_ylim is not None:
-        for vsax in vsaxs:
-            vsax.set_ylim(params.vs_same_ylim)
-            move_pvalue_indicator(vsax, params.vs_same_ylim[1])
+        #move_pvalue_indicator(vsax, params.vs_same_ylim[1])
+        pass
 
 
     print('Plotting per fish...')
@@ -476,10 +476,10 @@ def run_distance(params: RunDistanceParams):
     if params.save_output:
         print('Saving stats...')
         # Save stats as json
-        print(stats)
-        stats_file = pjoin(report_dir, f'{summary_name}.json')
-        with open(stats_file, 'w') as file:
-            json.dump(stats, file)
+        # print(stats)
+        # stats_file = pjoin(report_dir, f'{summary_name}.json')
+        # with open(stats_file, 'w') as file:
+        #     json.dump(stats, file)
 
         print('Saving summary...')
         with PdfPages(pjoin(report_dir, f'{summary_name}.pdf')) as pdf_pages:
@@ -494,42 +494,8 @@ def run_distance(params: RunDistanceParams):
         fig_avg_trace=fig_avg_trace,
         fig_per_cond=fig_per_cond,
         fig_delta=fig_delta,
-        vsfigs=vsfigs,
+        fig_multi_vs=fig_multi_vs
     )
     if params.do_plot_per_fish:
         output_figs['fig_per_fish'] = fig_per_fish
-    return output_figs, concat_subsimdf, stats
-
-
-
-vsdict = {
-    'AvsA': (['Phe', 'Trp', 'Arg'], ['Phe', 'Trp', 'Arg']),
-    'BvsB': (['TDCA', 'TCA', 'GCA'], ['TDCA', 'TCA', 'GCA']),
-    'AvsB': (['Phe', 'Trp', 'Arg'], ['TDCA', 'TCA', 'GCA'])
-}
-
-def get_per_vs(vsdict, dff):
-    vsdffs = {}
-    for vsname, (odor1_group, odor2_group) in vsdict.items():
-        dff_vs = get_group_vs_group(dff, odor1_group, odor2_group)
-        vsdffs[vsname] = dff_vs
-    vsdff = pd.concat(vsdffs.values(), keys=vsdffs.keys(), names=['vsname'])
-    return vsdff
-
-vsdff = get_per_vs(vsdict, df_pooled)
-vsdff
-
-
-
-from catrace.visualize import (plot_measure_multi_odor_cond,
-                               PlotBoxplotMultiOdorCondParams,
-                               set_yticks_interval)
-
-plot_box_multi_params = PlotBoxplotMultiOdorCondParams(figsize=(4,2))
-fig, ax, test_results = plot_measure_multi_odor_cond(vsdff, 'capacity', odor_name='vsname', condition_name='condition', params=plot_box_multi_params)
-
-set_yticks_interval(ax, 0.05)
-
-figname = f'{dataset_name}_capacity_vsname'
-save_figure_for_paper(fig, figname, paper_fig_dir)
-# save_stats_json(test_results, figname, paper_fig_dir, tuple_key_to_str=True)
+    return output_figs, concat_subsimdf
