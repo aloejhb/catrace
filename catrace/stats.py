@@ -100,8 +100,17 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
         data1 = df.xs(group_name1, level=level)
         data2 = df.xs(group_name2, level=level)
     else:
-        data1 = df[df[level] == group_name1][yname]
-        data2 = df[df[level] == group_name2][yname]
+        if level in df.index.names:
+            data1 = df[df.index.get_level_values(level) == group_name1][yname]
+            data2 = df[df.index.get_level_values(level) == group_name2][yname]
+        elif level in df.columns.names:
+            data1 = df[df[level] == group_name1][yname]
+            data2 = df[df[level] == group_name2][yname]
+        else:
+            raise ValueError("Level not found in index or columns")
+    # Calculate sample sizes
+    n1 = len(data1)
+    n2 = len(data2)
 
     if test_type == 'ttest':
         stat, p_value = ttest_ind(data1, data2, alternative='two-sided')
@@ -131,7 +140,15 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
         stat = observed_diff
     else:
         raise ValueError("Invalid test_type. Choose either 'ttest' or 'mannwhitneyu'")
-    results = {(group_name1, group_name2): {'statistic': stat[0], 'p_value': p_value[0]}}
+    
+    if isinstance(stat, np.ndarray):
+        stat = stat[0]
+    if isinstance(p_value, np.ndarray):
+        p_value = p_value[0]
+    results = {(group_name1, group_name2): {'statistic': stat,
+                                            'p_value': p_value,
+                                            'n1': n1,
+                                            'n2': n2}}
     return results
 
 
@@ -275,6 +292,25 @@ def sort_conditions(df, conditions):
     return df_sorted
 
 
+def format_p_value(p_value):
+    # Set a minimum threshold for p_value to avoid math domain errors
+    min_p_value = 1e-300  # Adjust this value as needed for your context
+    
+    if p_value <= 0 or p_value < min_p_value:
+        # Handle p_values that are zero or extremely small
+        exponent = int(math.floor(math.log10(min_p_value)))
+        return f"P < 1 × 10^{exponent}"
+    elif p_value < 1e-4:
+        exponent = int(math.floor(math.log10(p_value)))
+        base = p_value / (10 ** exponent)
+        # Ensure base is between 1 and 10
+        return f"P = {base:.1f} × 10^{exponent}"
+    elif p_value < 0.001:
+        return f"P = {p_value:.4f}"
+    else:
+        return f"P = {p_value:.2f}"
+
+
 def format_test_results_by_cond(test_results, naive_name='naive'):
     # Kruskal–Wallis test results
     n_per_condition = test_results['Kruskal']['n']  # dict of n per condition
@@ -282,28 +318,7 @@ def format_test_results_by_cond(test_results, naive_name='naive'):
     degrees_of_freedom = len(n_per_condition) - 1
     H = test_results['Kruskal']['statistic']
     P_value = test_results['Kruskal']['p_value']
-    
-    def format_p_value(p_value):
-        import math
-        # Set a minimum threshold for p_value to avoid math domain errors
-        min_p_value = 1e-300  # Adjust this value as needed for your context
-        
-        if p_value <= 0 or p_value < min_p_value:
-            # Handle p_values that are zero or extremely small
-            exponent = int(math.floor(math.log10(min_p_value)))
-            return f"P < 1 × 10^{exponent}"
-        elif p_value < 1e-4:
-            exponent = int(math.floor(math.log10(p_value)))
-            base = p_value / (10 ** exponent)
-            # Ensure base is between 1 and 10
-            return f"P = {base:.1f} × 10^{exponent}"
-        elif p_value < 0.001:
-            return f"P = {p_value:.4f}"
-        else:
-            return f"P = {p_value:.2f}"
 
-
-    
     # Format Kruskal–Wallis test results
     H_formatted = f"{H:.2f}"
     P_value_formatted = format_p_value(P_value)
@@ -344,3 +359,109 @@ def format_test_results_by_cond(test_results, naive_name='naive'):
     full_text = f"{kruskal_sentence} {dunn_sentence}"
     
     return full_text
+
+
+def apply_tests_multi_odor_two_cond(sub_mean_madff, yname, odor_name, test_type='mannwhitneyu'):
+    """
+    Apply tests to subgroups of a DataFrame grouped by odor.
+
+    Parameters:
+    - sub_mean_madff (pd.DataFrame): The DataFrame containing the data.
+    - odor_name (str): The column name to group by.
+    - test_type (str): The type of test to apply. Default is 'kruskal'.
+
+    Returns:
+    - dict: A dictionary with odors as keys and test results as values.
+    """
+    test_results = {}
+    for odor, subdf in sub_mean_madff.groupby(odor_name):
+        test_results[odor] = apply_test_pair(subdf, yname=yname, test_type=test_type)
+    return test_results
+
+
+def format_test_results_multi_odor_two_cond(test_results, test_type='mannwhitneyu'):
+    """
+    Formats the test results into a string suitable for a figure caption.
+    
+    Parameters:
+    - test_results (dict): Dictionary where keys are odors, and values are dictionaries of test results.
+    - test_type (str): The type of test performed ('ttest', 'mannwhitneyu', 'bootstrap').
+    
+    Returns:
+    - str: Formatted string summarizing the test results.
+    """
+    test_names = {
+        'ttest': 't-test',
+        'mannwhitneyu': 'Mann–Whitney U test',
+        'bootstrap': 'Bootstrap test'
+    }
+    test_stat_symbols = {
+        'ttest': 't',
+        'mannwhitneyu': 'U',
+        'bootstrap': 'difference'
+    }
+    
+    sentences = []
+    for odor in test_results:
+        # Get the test result dictionary for this odor
+        odor_results = test_results[odor]
+        # odor_results is a dictionary where key is (group_name1, group_name2), value is {'statistic': stat, 'p_value': p_value, 'n1': n1, 'n2': n2}
+        # Assuming only one key in odor_results
+        for group_pair, result in odor_results.items():
+            group_name1, group_name2 = group_pair
+            statistic = result['statistic']
+            p_value = result['p_value']
+            n1 = result['n1']
+            n2 = result['n2']
+            statistic_formatted = f"{statistic:.2f}"
+            p_value_formatted = format_p_value(p_value)
+            # Now, construct the sentence
+            sentence = (f"For {odor}, comparing {group_name1} (n={n1}) vs {group_name2} (n={n2}): "
+                        f"{test_names[test_type]}, {test_stat_symbols[test_type]} = {statistic_formatted}, {p_value_formatted}.")
+            sentences.append(sentence)
+    
+    # Combine all sentences into one string
+    full_text = " ".join(sentences)
+    return full_text
+
+
+def format_test_results_pair(test_results, test_type='mannwhitneyu'):
+    """
+    Formats the test results from apply_test_pair into a string suitable for a figure caption.
+
+    Parameters:
+    - test_results (dict): Dictionary where keys are (group_name1, group_name2), and values are dictionaries of test results.
+    - test_type (str): The type of test performed ('ttest', 'mannwhitneyu', 'bootstrap').
+
+    Returns:
+    - str: Formatted string summarizing the test results.
+    """
+    test_names = {
+        'ttest': 't-test',
+        'mannwhitneyu': 'Mann–Whitney U test',
+        'bootstrap': 'Bootstrap test'
+    }
+    test_stat_symbols = {
+        'ttest': 't',
+        'mannwhitneyu': 'U',
+        'bootstrap': 'Δ'
+    }
+    
+    # Since test_results should have only one key-value pair
+    if len(test_results) != 1:
+        raise ValueError("test_results should contain exactly one comparison result.")
+    
+    # Extract the comparison result
+    for group_pair, result in test_results.items():
+        group_name1, group_name2 = group_pair
+        statistic = result['statistic']
+        p_value = result['p_value']
+        n1 = result.get('n1', 'N/A')
+        n2 = result.get('n2', 'N/A')
+        statistic_formatted = f"{statistic:.2f}"
+        p_value_formatted = format_p_value(p_value)
+        # Construct the sentence
+        sentence = (f"Comparing {group_name1} (n={n1}) vs {group_name2} (n={n2}): "
+                    f"{test_names.get(test_type, 'Statistical test')}, "
+                    f"{test_stat_symbols.get(test_type, 'stat')} = {statistic_formatted}, {p_value_formatted}.")
+        return sentence

@@ -63,10 +63,13 @@ def plot_hist_by_cond(resp_df, value_name,
                       figsize=(2, 2),
                       label_fontsize=7,
                       tick_label_fontsize=6,
+                      colors=None,
+                      linewidth=1.0,
+                      alpha=0.9
 ):
     fig, ax = plt.subplots(figsize=figsize)
     # Plot histplot with defined bin size
-    sns.histplot(ax=ax, data=resp_df, hue='condition', x=value_name, element="poly", stat="density", common_norm=False, fill=False, binwidth=binwidth)
+    sns.histplot(ax=ax, data=resp_df, hue='condition', x=value_name, element="poly", stat="density", common_norm=False, fill=False, binwidth=binwidth, palette=colors, alpha=alpha, linewidth=linewidth)
     if log_scale:
         ax.set_yscale('log')
     ax.set_xlabel(value_name, fontsize=label_fontsize)
@@ -83,6 +86,7 @@ def plot_hist_by_cond(resp_df, value_name,
         # Adjust font size for legend title
         legend.get_title().set_fontsize(tick_label_fontsize)
 
+    sns.despine()
     fig.tight_layout()
     return fig, ax
 

@@ -226,8 +226,8 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
     if params.do_save_cross_trial:
         cross_trial_df = extract_cross_trial_similarity(simdf_list, exp_list)
         cross_trial_path = save_cross_trial_similarity(cross_trial_df, sim_dir)
-        return sim_dir, output_figs, cross_trial_path
+        return sim_dir, output_figs, test_results, cross_trial_path
     
-    return sim_dir, output_figs
+    return sim_dir, output_figs, test_results
 
 

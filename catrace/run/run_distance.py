@@ -484,7 +484,7 @@ def run_distance(params: RunDistanceParams):
         print('Saving summary...')
         with PdfPages(pjoin(report_dir, f'{summary_name}.pdf')) as pdf_pages:
             # Combine fig_per_cond, fig_delta vsfigs into one page
-            figs = [fig_per_cond, fig_delta] + [None, fig_avg_trace] + vsfigs
+            figs = [fig_per_cond, fig_delta] + [None, fig_avg_trace]
             fig_combined = combine_figures_to_grid(figs, nrows=2, ncols=3)
             pdf_pages.savefig(fig_combined)
             if params.do_plot_per_fish:

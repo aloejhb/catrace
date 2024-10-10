@@ -27,6 +27,7 @@ class RunAverageTimecourseParams:
     dff: pd.DataFrame = None
     odor_colors: dict = None
     alpha: float = 1
+    ylim: tuple = None
 
 def run_average_timecourse(params: RunAverageTimecourseParams):
     dsconfig= load_dataset_config(params.config_file)
@@ -48,7 +49,6 @@ def run_average_timecourse(params: RunAverageTimecourseParams):
         dff = select_odors_and_sort(dff, dsconfig.odors_stimuli)
     else:
         dff = params.dff
-
     # Get figsize, label_fontsize, legend_fontsize, linewidth from params into a dictionary
     params_dict = params.to_dict()
     sub_params = {k: params_dict[k] for k in ['figsize', 'label_fontsize', 'legend_fontsize', 'linewidth', 'odor_colors']}
@@ -58,8 +58,27 @@ def run_average_timecourse(params: RunAverageTimecourseParams):
 
     fig_time, ax = plot_trace_avg(dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True,
                    **sub_params)
+    
+    naive_dff =  dff.xs('naive', level='condition', axis=1, drop_level=False)
+    # trained_dff is the dataframe where condition is not equal to naive
+    trained_dff = dff.loc[:, dff.columns.get_level_values('condition') != 'naive']
+    fig_naive_time, ax = plot_trace_avg(naive_dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True, **sub_params)
+    fig_trained_time, ax = plot_trace_avg(trained_dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True, **sub_params)
+
+
+    outfigs = {}
+    outfigs['fig_frame'] = fig_frame
+    outfigs['fig_time'] = fig_time
+    outfigs['fig_naive_time'] = fig_naive_time
+    outfigs['fig_trained_time'] = fig_trained_time
 
     if params.do_plot_per_fish:
-        return fig_per_fish, fig_frame, fig_time
+        outfigs['fig_per_fish'] = fig_per_fish
 
-    return fig_frame, fig_time, dff
+    if params.ylim is not None:
+        for fig in outfigs.values():
+            ax = fig.get_axes()[0]
+            ax.set_ylim(params.ylim)
+
+
+    return dff, outfigs
