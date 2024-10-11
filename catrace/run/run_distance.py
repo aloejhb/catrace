@@ -498,4 +498,4 @@ def run_distance(params: RunDistanceParams):
     )
     if params.do_plot_per_fish:
         output_figs['fig_per_fish'] = fig_per_fish
-    return output_figs, concat_subsimdf
+    return output_figs, test_results, concat_subsimdf

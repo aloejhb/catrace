@@ -308,7 +308,7 @@ def format_p_value(p_value):
     elif p_value < 0.001:
         return f"P = {p_value:.4f}"
     else:
-        return f"P = {p_value:.2f}"
+        return f"P = {p_value:.3f}"
 
 
 def format_test_results_by_cond(test_results, naive_name='naive'):

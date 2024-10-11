@@ -4,8 +4,7 @@ from ..exp_collection import read_df
 from ..dataset import get_odors_by_key, DatasetConfig
 
 
-def plot_avg_trace_with_window(trace_dir, exp_name, window):
-    dff = read_df(trace_dir, exp_name)
+def plot_avg_trace_with_window_dff(dff, window):
     avg_trace = dff.groupby(level='time').mean().mean(axis=1)
     fig, ax = plt.subplots()
     ax.plot(avg_trace.index.get_level_values('time'), avg_trace.to_numpy())
@@ -13,6 +12,9 @@ def plot_avg_trace_with_window(trace_dir, exp_name, window):
     ax.axvline(window[1], linestyle='--', color='red')
     return fig, ax
 
+def plot_avg_trace_with_window(trace_dir, exp_name, window):
+    dff = read_df(trace_dir, exp_name)
+    return plot_avg_trace_with_window_dff(dff, window)
 
 def get_vs_tuple(dsconfig: DatasetConfig, vsname:str):
     group1, group2 = vsname.split('_vs_')

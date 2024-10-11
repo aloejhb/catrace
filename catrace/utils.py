@@ -98,3 +98,13 @@ def load_json_to_dataclass(filename: str, dataclass_type: DataClassJsonMixin):
         raise FileNotFoundError(f"The file {filename} was not found.")
     except json.JSONDecodeError as e:
         raise json.JSONDecodeError(f"Invalid JSON in {filename}: {str(e)}", e.doc, e.pos)
+
+
+def get_ordered_odor_pairs(all_odors):
+    # Get all pairs of odors, including (A, B) and (B, A)
+    odor_pairs = []
+    for i in range(len(all_odors)):
+        for j in range(len(all_odors)):
+            if i != j:
+                odor_pairs.append((all_odors[i], all_odors[j]))
+    return odor_pairs
