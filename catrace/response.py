@@ -136,3 +136,41 @@ def run_response(params: RunResponseParams):
     return resp, test_results, fig_box, fig_hist
 
 
+from catrace.visualize import plot_measure_multi_odor_cond, PlotBoxplotMultiOdorCondParams
+
+@dataclass_json
+@dataclass
+class RunResponseMultiCategoryParams:
+    dff: pd.DataFrame
+    dsconfig: DatasetConfig
+    time_window: list[int]
+    odor_keys: list[str]
+    boxplot_params: PlotBoxplotMultiOdorCondParams = PlotBoxplotMultiOdorCondParams()
+    histplot_params: dict = None
+    top_ratio: float = None
+
+
+
+def run_response_multi_category(params):
+    resp_dict = {}
+    for odor_key in params.odor_keys:
+        odors = get_odors_by_key(params.dsconfig, odor_key)
+        resp = compute_response_flattened(params.dff, params.time_window, odors, params.top_ratio)
+        resp_dict[odor_key] = resp
+    resp = pd.concat(resp_dict, names=['odor_key'])
+    output_figs = {}
+    fig_box, ax, test_results = plot_measure_multi_odor_cond(resp,
+                                                     'response',
+                                                     odor_name='odor_key',
+                                                     condition_name='condition',
+                                                     test_type='mannwhitneyu',
+                                                     params=params.boxplot_params)
+    output_figs['fig_box'] = fig_box
+
+    hist_figs = {}
+    for odor_key in params.odor_keys:
+        fig_hist, ax = plot_hist_by_cond(resp_dict[odor_key], 'response', **params.histplot_params)
+        hist_figs[odor_key] = fig_hist
+    output_figs['hist_figs'] = hist_figs
+    return resp, test_results, output_figs
+

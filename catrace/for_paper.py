@@ -1,21 +1,20 @@
 import os
 import json
 import inspect
+import copy
 from os.path import join as pjoin
 
 
-def save_stats_json(results, stats_name, paper_fig_dir, tuple_key_to_str=False):
-    # if results is a dict
-    if isinstance(results, dict):
-        keys = list(results.keys())
-        # if keys[0] is a tuple
-        if isinstance(keys[0], tuple):
-            results = {str(k): v for k, v in results.items()}
+def save_stats_json(results, stats_name, paper_fig_dir, tuple_key_to_str=True):
+    results = copy.deepcopy(results)
+    if tuple_key_to_str:
+        if isinstance(list(results.keys())[0], tuple):
+            results = {'_'.join(k): v for k, v in results.items()}
         else:
-            if 'raw' in results.keys():
-                results['raw'] = {'_'.join(k): v for k, v in results['raw'].items()}
-            if 'shuffled' in results.keys():
-                results['shuffled'] = {'_'.join(k): v for k, v in results['shuffled'].items()}
+            for key, value in results.items():
+                sub_results = value
+                if isinstance(list(sub_results.keys())[0], tuple):
+                    results[key] = {'_'.join(k): v for k, v in sub_results.items()}
 
     results_file = pjoin(paper_fig_dir, f'{stats_name}.json')
     with open(results_file, 'w') as file:

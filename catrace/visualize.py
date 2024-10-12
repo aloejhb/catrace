@@ -314,6 +314,7 @@ class PlotBoxplotMultiOdorCondParams:
     hline_y: float = None
     box_width: float = 0.45
     box_linewidth: float = 1.5
+    do_plot_strip: bool = True
     strip_size: float = 1
     strip_jitter: float = 0.15
     strip_alpha: float = 0.9
@@ -338,6 +339,7 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    hline_y=None,
                                                    box_width=0.45,
                                                    box_linewidth=1,
+                                                   do_plot_strip=True,
                                                    strip_size=1,
                                                    strip_jitter=0.2,
                                                    strip_alpha=0.9,
@@ -369,10 +371,11 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
     strip_hue_colors = ['gray', 'gray']
     mean_hue_colors = [_get_darker_color(color) for color in hue_colors]
     # Plotting stripplot and boxplot with hue
-    sns.stripplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=datadf,
-                  jitter=strip_jitter, dodge=True, size=strip_size, alpha=strip_alpha, zorder=1,
-                  palette=strip_hue_colors,
-                  hue_separation_scaler=strip_hue_separation_scaler)
+    if do_plot_strip:
+        sns.stripplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=datadf,
+                    jitter=strip_jitter, dodge=True, size=strip_size, alpha=strip_alpha, zorder=1,
+                    palette=strip_hue_colors,
+                    hue_separation_scaler=strip_hue_separation_scaler)
     sns.boxplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=datadf,
                 saturation=0.5, width=box_width,
                 zorder=2, dodge=True,
@@ -478,7 +481,8 @@ def not_used_pvalue_marker_multi_odor_multi_cond(ax, datadf, yname, test_results
 def plot_measure_multi_odor_cond(mdff, measure_name, odor_name='odor',
                                  condition_name='condition',
                                  test_type='mannwhitneyu',
-                                 ax=None, params=PlotBoxplotMultiOdorCondParams()):
+                                 ax=None,
+                                 params=PlotBoxplotMultiOdorCondParams()):
     sub_mean_madff = mdff[[measure_name]]
 
     test_results = apply_tests_multi_odor_two_cond(sub_mean_madff, yname=measure_name, odor_name=odor_name,  test_type=test_type)
