@@ -169,7 +169,8 @@ def run_response_multi_category(params):
 
     hist_figs = {}
     for odor_key in params.odor_keys:
-        fig_hist, ax = plot_hist_by_cond(resp_dict[odor_key], 'response', **params.histplot_params)
+        sub_resp = resp_dict[odor_key]
+        fig_hist, ax = plot_hist_by_cond(sub_resp, 'response', **params.histplot_params)
         hist_figs[odor_key] = fig_hist
     output_figs['hist_figs'] = hist_figs
     return resp, test_results, output_figs

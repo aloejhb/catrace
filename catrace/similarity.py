@@ -239,6 +239,8 @@ def extract_upper_triangle_similarities(simdf):
 
     # Iterate over each group by the 'odor' level in the index
     for name, group in simdf.groupby(level='odor', observed=True):
+        # Get the columns that odor is name
+        group = group.xs(name, level='odor', axis=1, drop_level=False)
         # Extract the values of the similarity matrix
         values = group.values
         
