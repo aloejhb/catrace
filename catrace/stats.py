@@ -465,3 +465,58 @@ def format_test_results_pair(test_results, test_type='mannwhitneyu'):
                     f"{test_names.get(test_type, 'Statistical test')}, "
                     f"{test_stat_symbols.get(test_type, 'stat')} = {statistic_formatted}, {p_value_formatted}.")
         return sentence
+
+
+
+import statsmodels.api as sm
+import seaborn as sns
+import matplotlib.pyplot as plt
+def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None, figsize=(5, 5)):
+    """
+    Plots a scatter plot with a regression line on the provided axes, including statistical annotations.
+
+    Parameters:
+    - dff: DataFrame containing the data.
+    - x_measure: String, name of the column to use for the x-axis.
+    - y_measure: String, name of the column to use for the y-axis.
+    - hue: String, name of the column to color data points.
+    - ax: Axes object on which to draw the plot.
+    - hue_order: List or None, specifies the order of categorical hue variable.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+    # Create scatter plot
+    sns.scatterplot(data=dff, x=x_measure, y=y_measure, hue=hue, hue_order=hue_order, ax=ax)
+
+    # Fit linear model using statsmodels to extract R-squared and p-value
+    X = sm.add_constant(dff[x_measure])  # Add a constant to the model for the intercept
+    model = sm.OLS(dff[y_measure], X).fit()
+    predictions = model.predict(X)
+
+    # Get p-value, R-squared, and slope
+    p_value = model.f_pvalue
+    r_squared = model.rsquared
+    slope = model.params[x_measure]
+
+    # Plot the regression line
+    ax.plot(dff[x_measure], predictions, color='black', lw=2)
+
+    p_value_srt = format_p_value(p_value)
+    print(p_value_srt)
+    # Annotate the plot with slope, R², and p-value
+    text_str = f'Slope: {slope:.2f}\nR²: {r_squared:.2f}\np-value: {p_value_srt}'
+    if slope < 0:
+        text_pos = (0.05, 0.25)
+    else:
+        text_pos = (0.5, 0.25)
+    ax.text(text_pos[0], text_pos[1], text_str, transform=ax.transAxes, verticalalignment='top', bbox=dict(boxstyle="round", facecolor='white', alpha=0.5),
+            fontsize=14)
+
+    # Enhancing the plot
+    ax.set_xlabel(x_measure, fontsize=20)
+    ax.set_ylabel(y_measure, fontsize=20)
+    ax.legend(title=hue, fontsize=14)
+
+    return fig
