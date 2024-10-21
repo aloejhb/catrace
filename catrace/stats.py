@@ -90,12 +90,17 @@ def apply_mann_whitney(df, naive_name='naive', trained_name='trained'):
     return results
 
 def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', test_type='mannwhitneyu'):
+    import numpy as np
+    from scipy.stats import ttest_ind, mannwhitneyu
+    from scipy.stats import bootstrap
+
+    # Determine the level (either 'cond' or 'condition')
     if 'cond' in df.index.names or 'cond' in df.columns.names:
         level = 'cond'
     else:
         level = 'condition'
     
-    
+    # Extract data for each group
     if yname is None:
         data1 = df.xs(group_name1, level=level)
         data2 = df.xs(group_name2, level=level)
@@ -108,17 +113,30 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
             data2 = df[df[level] == group_name2][yname]
         else:
             raise ValueError("Level not found in index or columns")
+    
+    # Ensure data1 and data2 are one-dimensional arrays
+    data1 = np.asarray(data1).flatten()
+    data2 = np.asarray(data2).flatten()
+
     # Calculate sample sizes
     n1 = len(data1)
     n2 = len(data2)
 
+    # Calculate means and standard deviations
+    mean1 = np.mean(data1)
+    std1 = np.std(data1, ddof=1)  # Using sample standard deviation (ddof=1)
+    mean2 = np.mean(data2)
+    std2 = np.std(data2, ddof=1)
+
+    # Perform the statistical test
     if test_type == 'ttest':
         stat, p_value = ttest_ind(data1, data2, alternative='two-sided')
     elif test_type == 'mannwhitneyu':
         stat, p_value = mannwhitneyu(data1, data2, alternative='two-sided')
     elif test_type == 'bootstrap':
         # Combine data for bootstrapping
-        data = (data1.to_numpy(), data2.to_numpy())
+        data = (data1, data2)
+
         # Define the statistic to calculate the difference in means
         def _mean_diff(sample1, sample2, axis=-1):
             mean1 = np.mean(sample1, axis=axis)
@@ -127,29 +145,94 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
 
         # Perform the bootstrap using BCa method for bias-corrected confidence intervals
         res = bootstrap(data, statistic=_mean_diff, n_resamples=10000, method='BCa', paired=False, confidence_level=0.95)
+
         # Calculate the observed difference
-        observed_diff = _mean_diff(data[0].T, data[1].T)
+        observed_diff = mean1 - mean2
+
         # Get the bootstrap distribution
         bootstrap_distribution = res.bootstrap_distribution
-        print(np.mean(np.abs(bootstrap_distribution)))
-        print(np.std(np.abs(bootstrap_distribution)))
-        print(np.abs(observed_diff))
+
         # Calculate the p-value for a two-sided test
         p_value = np.mean(np.abs(bootstrap_distribution) >= np.abs(observed_diff))
-        print(p_value)
+
         stat = observed_diff
     else:
-        raise ValueError("Invalid test_type. Choose either 'ttest' or 'mannwhitneyu'")
-    
+        raise ValueError("Invalid test_type. Choose 'ttest', 'mannwhitneyu', or 'bootstrap'")
+
+    # Handle cases where stat or p_value are arrays
     if isinstance(stat, np.ndarray):
         stat = stat[0]
     if isinstance(p_value, np.ndarray):
         p_value = p_value[0]
-    results = {(group_name1, group_name2): {'statistic': stat,
-                                            'p_value': p_value,
-                                            'n1': n1,
-                                            'n2': n2}}
+
+    # Store results including means and stds
+    results = {
+        (group_name1, group_name2): {
+            'statistic': stat,
+            'p_value': p_value,
+            'n1': n1,
+            'n2': n2,
+            'mean1': mean1,
+            'std1': std1,
+            'mean2': mean2,
+            'std2': std2
+        }
+    }
     return results
+
+
+def format_test_results_pair(test_results, test_type='mannwhitneyu'):
+    """
+    Formats the test results from apply_test_pair into a string suitable for a figure caption.
+
+    Parameters:
+    - test_results (dict): Dictionary where keys are (group_name1, group_name2), and values are dictionaries of test results.
+    - test_type (str): The type of test performed ('ttest', 'mannwhitneyu', 'bootstrap').
+
+    Returns:
+    - str: Formatted string summarizing the test results.
+    """
+    test_names = {
+        'ttest': 't-test',
+        'mannwhitneyu': 'Mann–Whitney U test',
+        'bootstrap': 'Bootstrap test'
+    }
+    test_stat_symbols = {
+        'ttest': 't',
+        'mannwhitneyu': 'U',
+        'bootstrap': 'Δ'
+    }
+
+    # Since test_results should have only one key-value pair
+    if len(test_results) != 1:
+        raise ValueError("test_results should contain exactly one comparison result.")
+
+    # Extract the comparison result
+    for group_pair, result in test_results.items():
+        group_name1, group_name2 = group_pair
+        statistic = result['statistic']
+        p_value = result['p_value']
+        n1 = result.get('n1', 'N/A')
+        n2 = result.get('n2', 'N/A')
+        mean1 = result.get('mean1', 'N/A')
+        std1 = result.get('std1', 'N/A')
+        mean2 = result.get('mean2', 'N/A')
+        std2 = result.get('std2', 'N/A')
+
+        # Format the statistics
+        statistic_formatted = f"{statistic:.2f}"
+        p_value_formatted = format_p_value(p_value)
+        mean1_formatted = f"{mean1:.2f} ± {std1:.2f}"
+        mean2_formatted = f"{mean2:.2f} ± {std2:.2f}"
+
+        # Construct the sentence
+        sentence = (
+            f"Comparing {group_name1} (mean = {mean1_formatted}, n = {n1}) "
+            f"vs {group_name2} (mean = {mean2_formatted}, n = {n2}): "
+            f"{test_names.get(test_type, 'Statistical test')}, "
+            f"{test_stat_symbols.get(test_type, 'stat')} = {statistic_formatted}, {p_value_formatted}."
+        )
+        return sentence
 
 
 def apply_test_each_odor_by_cond(df, yname):
@@ -352,50 +435,6 @@ def format_test_results_by_cond(test_results, naive_name='naive'):
     P_value_formatted = format_p_value(P_value)
     kruskal_sentence = f"(Kruskal–Wallis test, n = {total_n}, d.f. = {degrees_of_freedom}, H = {H_formatted}, {P_value_formatted})."
 
-    # Detect whether we're dealing with 'Dunn_all_pairs' or 'Dunn_naive'
-    if 'Dunn_all_pairs' in test_results:
-        return_all_pairs = True
-        key_name = 'Dunn_all_pairs'
-    elif 'Dunn_naive' in test_results:
-        return_all_pairs = False
-        key_name = 'Dunn_naive'
-    else:
-        raise ValueError("Test results do not contain Dunn's test results.")
-
-    dunn_results = test_results[key_name]
-
-    p_values = dunn_results['p_values']
-    z_statistics = dunn_results['z_statistics']
-    n_values = dunn_results['n']
-
-    # Format comparisons
-    comparisons_text = format_comparisons(p_values, z_statistics, n_values, n_per_condition, naive_name, return_all_pairs)
-
-    if return_all_pairs:
-        dunn_sentence = f"Nonparametric multiple comparisons between all groups: {comparisons_text}."
-    else:
-        n_naive = n_per_condition[naive_name]
-        dunn_sentence = f"Nonparametric multiple comparisons against {naive_name} (n = {n_naive}): {comparisons_text}."
-
-    # Combine all sentences
-    full_text = f"{kruskal_sentence} {dunn_sentence}"
-
-    return full_text
-
-
-def format_test_results_by_cond(test_results, naive_name='naive'):
-    # Kruskal–Wallis test results
-    n_per_condition = test_results['Kruskal']['n']  # dict of n per condition
-    total_n = sum(n_per_condition.values())
-    degrees_of_freedom = len(n_per_condition) - 1
-    H = test_results['Kruskal']['statistic']
-    P_value = test_results['Kruskal']['p_value']
-
-    # Format Kruskal–Wallis test results
-    H_formatted = f"{H:.2f}"
-    P_value_formatted = format_p_value(P_value)
-    kruskal_sentence = f"(Kruskal–Wallis test, n = {total_n}, d.f. = {degrees_of_freedom}, H = {H_formatted}, {P_value_formatted})."
-
     # Mean and Std for each condition
     means = test_results['mean']
     stds = test_results['std']
@@ -551,49 +590,6 @@ def format_test_results_multi_odor_two_cond(test_results, test_type='mannwhitney
     # Combine all sentences into one string
     full_text = " ".join(sentences)
     return full_text
-
-
-def format_test_results_pair(test_results, test_type='mannwhitneyu'):
-    """
-    Formats the test results from apply_test_pair into a string suitable for a figure caption.
-
-    Parameters:
-    - test_results (dict): Dictionary where keys are (group_name1, group_name2), and values are dictionaries of test results.
-    - test_type (str): The type of test performed ('ttest', 'mannwhitneyu', 'bootstrap').
-
-    Returns:
-    - str: Formatted string summarizing the test results.
-    """
-    test_names = {
-        'ttest': 't-test',
-        'mannwhitneyu': 'Mann–Whitney U test',
-        'bootstrap': 'Bootstrap test'
-    }
-    test_stat_symbols = {
-        'ttest': 't',
-        'mannwhitneyu': 'U',
-        'bootstrap': 'Δ'
-    }
-    
-    # Since test_results should have only one key-value pair
-    if len(test_results) != 1:
-        raise ValueError("test_results should contain exactly one comparison result.")
-    
-    # Extract the comparison result
-    for group_pair, result in test_results.items():
-        group_name1, group_name2 = group_pair
-        statistic = result['statistic']
-        p_value = result['p_value']
-        n1 = result.get('n1', 'N/A')
-        n2 = result.get('n2', 'N/A')
-        statistic_formatted = f"{statistic:.2f}"
-        p_value_formatted = format_p_value(p_value)
-        # Construct the sentence
-        sentence = (f"Comparing {group_name1} (n={n1}) vs {group_name2} (n={n2}): "
-                    f"{test_names.get(test_type, 'Statistical test')}, "
-                    f"{test_stat_symbols.get(test_type, 'stat')} = {statistic_formatted}, {p_value_formatted}.")
-        return sentence
-
 
 
 import statsmodels.api as sm
