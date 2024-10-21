@@ -10,10 +10,12 @@ from dataclasses_json import dataclass_json
 from .stats import apply_test_pair, apply_test_by_cond, apply_tests_multi_odor_two_cond
 
 
-def load_colormap(name):
+def load_colormap(name, remove_top_white=False):
     current_folder = os.path.dirname(os.path.abspath(__file__))
     if name == 'clut2b':
         colormap_data =  np.load(os.path.join(current_folder, '../colormap/clut2b.npy'))
+        if remove_top_white:
+            colormap_data = colormap_data[:-1]
     else:
         raise ValueError('Unknown colormap name')
     colormap = LinearSegmentedColormap.from_list('clut2b', colormap_data)
@@ -41,6 +43,7 @@ class PlotPerCondMatParams:
     ylabel_fontsize: float = 7
     ylabels: list = None
     ylabel_colors: list = None
+    cmap: str = 'turbo'
 
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -160,6 +163,8 @@ class PlotBoxplotParams:
     figsize: tuple = (4, 4)
     label_fontsize: float = 7
     y_tick_label_fontsize: float = 7
+    x_tick_label_fontsize: float = 7
+    ylim: tuple = None
     ylevel_scale: float = 1.1
     pvalue_marker_xoffset: float = 0.034
     do_plot_strip: bool = True
@@ -173,6 +178,8 @@ class PlotBoxplotParams:
     mean_marker_color: str = 'tab:red'
     hline_y: float = None
     pvalue_bar_linewidth: float = 1
+    rotate_xlabels: bool = False
+    do_capitalize_labels: bool = False
 
 
 def plot_boxplot_with_significance(datadf, xname, yname,
@@ -188,7 +195,8 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    box_color='tab:blue',
                                    box_colors=None,
                                    label_fontsize=24,
-                                   y_tick_label_fontsize=18,
+                                   y_tick_label_fontsize=7,
+                                   x_tick_label_fontsize=7,
                                    ylevel_scale=1.1,
                                    mean_marker_color='tab:red',
                                    strip_size=4,
@@ -198,7 +206,9 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    box_linewidth=4,
                                    mean_marker_size=5,
                                    pvalue_marker_fontsize=24,
-                                   pvalue_bar_linewidth=1):
+                                   pvalue_bar_linewidth=1,
+                                   rotate_xlabels=False,
+                                   do_capitalize_labels=False):
     """
     Plot boxplot with significance annotations
     """
@@ -232,7 +242,12 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     ticks = ax.get_xticks()
     ax.set_xticks(ticks) 
     ax.tick_params(axis='x', labelsize=label_fontsize)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=label_fontsize)
+
+    xtick_labels = ax.get_xticklabels()
+    if rotate_xlabels:
+        ax.set_xticklabels(xtick_labels, rotation=45, ha='right', fontsize=x_tick_label_fontsize)
+    else:
+        ax.set_xticklabels(xtick_labels, fontsize=x_tick_label_fontsize)
 
     ax.tick_params(axis='y', labelsize=y_tick_label_fontsize)
     ax.set_ylabel(ylabel, fontsize=label_fontsize)
@@ -252,6 +267,12 @@ def plot_boxplot_with_significance(datadf, xname, yname,
     # Removing the top and right spines
     sns.despine(ax=ax)
     fig.tight_layout()
+
+    if do_capitalize_labels:
+        ylabel = ylabel.capitalize()
+        ax.set_ylabel(ylabel)
+        xtick_labels = [label.get_text().capitalize() for label in xtick_labels]
+        ax.set_xticklabels(xtick_labels)
     return fig, ax
 
 def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01, fontsize=24):
@@ -324,6 +345,7 @@ class PlotBoxplotMultiOdorCondParams:
     mean_marker_size: float = 1.5
     pvalue_marker_fontsize: float = 7
     pvalue_marker_xoffset: float = 0.02
+    do_capitalize_labels: bool = False
 
 def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    test_results=None,
@@ -348,7 +370,8 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    mean_dodge=0.4,
                                                    mean_marker_size=2,
                                                    pvalue_marker_fontsize=7,
-                                                   pvalue_marker_xoffset=0.01):
+                                                   pvalue_marker_xoffset=0.01,
+                                                   do_capitalize_labels=False):
     #### IMPORTANT ####
     # This function requires seaborn version from Bo's fork aloejhb
     ###################
@@ -421,7 +444,9 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                show_ns=show_ns,
                                                fontsize=pvalue_marker_fontsize,
                                                pvalue_marker_xoffset=pvalue_marker_xoffset)
-
+    if do_capitalize_labels:
+        ylabel = ylabel.capitalize()
+        ax.set_ylabel(ylabel)
     fig.tight_layout()
 
     return fig, ax
@@ -536,6 +561,7 @@ class PlotBoxplotByCondParams:
     figsize: tuple = (4, 4)
     label_fontsize: float = 7
     tick_label_fontsize: float = 7
+    ylim: tuple = None
     ylevel_scale: float = 1.02
     do_plot_strip: bool = True
     strip_size: float = 1
@@ -572,6 +598,7 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
                                            hline_y=None,
                                            hline_linewidth=1,
                                            show_ns=False,
+                                           do_capitalize_labels=True,
 ):
     datadf  = datadf.reset_index()
 
@@ -626,6 +653,10 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
                 marker, xoffset = pvalue_to_marker(p_value)
                 if marker != 'n.s.' or show_ns:
                     ax.text(position - xoffset * pvalue_marker_fontsize * pvalue_marker_xoffset, ymax, marker, fontsize=pvalue_marker_fontsize)
+
+    if do_capitalize_labels:
+        ylabel = ylabel.capitalize()
+        ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     fig.tight_layout()
     return fig, ax
@@ -636,6 +667,7 @@ def plot_measure_by_cond(mdff: pd.DataFrame,
                          measure_name: str,
                          y_label: str=None,
                          test_type: str='kruskal',
+                         ax=None,
                          params: PlotBoxplotByCondParams=PlotBoxplotByCondParams()):
     submadf_by_cond = mdff[[measure_name]]
     # naive_mean = submadf_by_cond.xs('naive', level=cond_name).mean()
@@ -650,7 +682,9 @@ def plot_measure_by_cond(mdff: pd.DataFrame,
     datadf = delta.reset_index()
     datadf.rename(columns={0: yname}, inplace=True)
 
-    fig, ax = plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, results, **params.to_dict())
+    params_dict = params.to_dict()
+    params_dict.update({'ax': ax})
+    fig, ax = plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, results, **params_dict)
     return fig, ax, results
 
 

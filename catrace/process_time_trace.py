@@ -330,11 +330,23 @@ def shift_timepoints(dff, offset):
     """
     dff.rename_axis(index={'time': 'orig_time'}, inplace=True)
     new_time = dff.index.get_level_values('orig_time') - offset
-    # Append the new 'time' level to the existing MultiIndex
+    # Get all the level names
+    levels = list(dff.index.names)
+    levels.remove('orig_time')
+    level_values_list = []
+    for level in levels:
+        level_values = dff.index.get_level_values(level)
+        level_values_list.append(level_values)
+
     dff.index = pd.MultiIndex.from_arrays(
-        [dff.index.get_level_values('odor'), dff.index.get_level_values('trial'), new_time],
-        names=['odor', 'trial', 'time']
+        level_values_list + [new_time],
+        names=levels + ['time']
     )
+    # # Append the new 'time' level to the existing MultiIndex
+    # dff.index = pd.MultiIndex.from_arrays(
+    #     [dff.index.get_level_values('odor'), dff.index.get_level_values('trial'), new_time],
+    #     names=['odor', 'trial', 'time']
+    # )
     # Remove the timepoints that are now negative
     dff = dff[dff.index.get_level_values('time') >= 0]
     return dff

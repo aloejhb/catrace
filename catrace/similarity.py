@@ -313,6 +313,7 @@ class PlotMeanDeltaMatParams:
     ylabel_fontsize: float = 7
     ylabels: list = None
     ylabel_colors: list = None
+    cmap: str = 'coolwarm'
 
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -328,7 +329,7 @@ def plot_mean_delta_mat(mean_delta_mat: pd.DataFrame,
     figsize = params_dict.pop('figsize')
     fig, ax = plt.subplots(figsize=figsize)
     colorbar_fontsize = params_dict.pop('colorbar_fontsize')
-    img = plot_similarity_mat(mean_delta_mat, ax=ax, cmap='coolwarm', clim=clim,
+    img = plot_similarity_mat(mean_delta_mat, ax=ax, clim=clim,
                               **params_dict)
     # Use make_axes_locatable to adjust the size of the colorbar
     divider = make_axes_locatable(ax)

@@ -22,8 +22,8 @@ def save_stats_json(results, stats_name, paper_fig_dir, tuple_key_to_str=True):
 
 
 def save_figure_for_paper(fig, fig_name, paper_fig_dir):
-    fig.savefig(pjoin(paper_fig_dir, f'{fig_name}.svg'), transparent=True)
-    fig.savefig(pjoin(paper_fig_dir, f'{fig_name}.pdf'), transparent=True)
+    fig.savefig(pjoin(paper_fig_dir, f'{fig_name}.svg'), transparent=True, format='svg')
+    fig.savefig(pjoin(paper_fig_dir, f'{fig_name}.pdf'), transparent=True, format='pdf')
     # Also save the current notebook path as a text file
     notebook_path = os.path.abspath('.')
     path_file = pjoin(paper_fig_dir, f'{fig_name}_notebook_path.txt')

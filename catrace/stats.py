@@ -194,8 +194,8 @@ def apply_test_each_odor_by_cond(df, yname):
 
 import pingouin as pg
 
-def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
-    cond_name = 'condition'
+def apply_test_by_cond(df, yname, naive_name='naive', cond_name = 'condition', test_type='kruskal'):
+    
     test_results = {}
 
     # If dataframe has a multiindex, reset it
@@ -262,10 +262,14 @@ def apply_test_by_cond(df, yname, naive_name='naive', test_type='kruskal'):
 
 
 
-def pool_training_conditions(df, cond_mapping):
+def pool_training_conditions(df, cond_mapping, keep_subconditions=False):
     df_pooled = df.copy()
 
     new_cond = df_pooled.index.get_level_values('condition').map(cond_mapping)
+
+    if keep_subconditions:
+        df_pooled['subcondition'] = df_pooled.index.get_level_values('condition')
+
 
     # Assigne new cond as a new column
     df_pooled['condition'] = new_cond
@@ -273,6 +277,8 @@ def pool_training_conditions(df, cond_mapping):
     df_pooled = df_pooled.reset_index(level='condition', drop=True)
     # Set the new 'condition' column as the condition level in the MultiIndex
     df_pooled = df_pooled.set_index('condition', append=True)
+    if keep_subconditions:
+        df_pooled = df_pooled.set_index('subcondition', append=True)
     df_pooled = sort_conditions(df_pooled, ['naive', 'trained'])
     return df_pooled
 

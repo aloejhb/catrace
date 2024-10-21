@@ -103,7 +103,8 @@ def plot_average_time_trace(dff):
     plt.plot(dff.groupby('time').mean().mean(axis=1))
 
 
-def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', label='Mean', err_type='std'):
+def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', label='Mean', err_type='std',
+                       linewidth=1):
     """
     Plots the mean trace with a shaded area representing the standard deviation.
 
@@ -134,13 +135,14 @@ def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', labe
     # Convert xvec to float
     xvec = np.array(xvec).astype(float)
     # Plot mean trace
-    sns.lineplot(x=xvec, y=mean_trace, label=label, ax=ax, color=color)
+    sns.lineplot(x=xvec, y=mean_trace, label=label, ax=ax, color=color, linewidth=linewidth)
     
-    # Plot standard deviation as shaded area
+    # Plot standard deviation as shaded area, line width = 0 to remove line
     ax.fill_between(xvec, 
                     mean_trace - err_trace, 
                     mean_trace + err_trace, 
-                    color=color, alpha=0.3)#, label=f'{label} ± std')
+                    color=color, alpha=0.3, linewidth=0)
+    #, label=f'{label} ± std')
     
     ax.set_xlabel('Time')
     ax.set_ylabel('Value')
