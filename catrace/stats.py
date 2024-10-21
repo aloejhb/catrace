@@ -548,7 +548,7 @@ def apply_tests_multi_odor_two_cond(sub_mean_madff, yname, odor_name, test_type=
 
 def format_test_results_multi_odor_two_cond(test_results, test_type='mannwhitneyu'):
     """
-    Formats the test results into a string suitable for a figure caption.
+    Formats the test results into a string suitable for a figure caption by calling format_test_results_pair.
     
     Parameters:
     - test_results (dict): Dictionary where keys are odors, and values are dictionaries of test results.
@@ -557,35 +557,18 @@ def format_test_results_multi_odor_two_cond(test_results, test_type='mannwhitney
     Returns:
     - str: Formatted string summarizing the test results.
     """
-    test_names = {
-        'ttest': 't-test',
-        'mannwhitneyu': 'Mann–Whitney U test',
-        'bootstrap': 'Bootstrap test'
-    }
-    test_stat_symbols = {
-        'ttest': 't',
-        'mannwhitneyu': 'U',
-        'bootstrap': 'difference'
-    }
-    
     sentences = []
     for odor in test_results:
         # Get the test result dictionary for this odor
         odor_results = test_results[odor]
-        # odor_results is a dictionary where key is (group_name1, group_name2), value is {'statistic': stat, 'p_value': p_value, 'n1': n1, 'n2': n2}
-        # Assuming only one key in odor_results
-        for group_pair, result in odor_results.items():
-            group_name1, group_name2 = group_pair
-            statistic = result['statistic']
-            p_value = result['p_value']
-            n1 = result['n1']
-            n2 = result['n2']
-            statistic_formatted = f"{statistic:.2f}"
-            p_value_formatted = format_p_value(p_value)
-            # Now, construct the sentence
-            sentence = (f"For {odor}, comparing {group_name1} (n={n1}) vs {group_name2} (n={n2}): "
-                        f"{test_names[test_type]}, {test_stat_symbols[test_type]} = {statistic_formatted}, {p_value_formatted}.")
-            sentences.append(sentence)
+        
+        # Use format_test_results_pair to format the results for this odor
+        sentence = format_test_results_pair(odor_results, test_type=test_type)
+        
+        # Prepend the odor information
+        sentence = f"For {odor}, {sentence}"
+        
+        sentences.append(sentence)
     
     # Combine all sentences into one string
     full_text = " ".join(sentences)
