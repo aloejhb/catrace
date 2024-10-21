@@ -575,6 +575,16 @@ def format_test_results_multi_odor_two_cond(test_results, test_type='mannwhitney
     return full_text
 
 
+def format_capacity_test_results_dict(test_results_dict):
+    for measure_name, test_results in test_results_dict.items():
+        print(measure_name)
+
+        print(format_test_results_pair(test_results['raw']))
+        if 'shuffled' in test_results:
+            print('shuffled')
+            print(format_test_results_pair(test_results['shuffled']))
+
+
 import statsmodels.api as sm
 import seaborn as sns
 import matplotlib.pyplot as plt
