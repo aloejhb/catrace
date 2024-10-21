@@ -194,8 +194,10 @@ def apply_test_each_odor_by_cond(df, yname):
 
 import pingouin as pg
 
-def apply_test_by_cond(df, yname, naive_name='naive', cond_name = 'condition', test_type='kruskal'):
-    
+def apply_test_by_cond(df, yname, naive_name='naive', cond_name='condition', test_type='kruskal', return_all_pairs=False):
+    from scipy.stats import kruskal
+    import pingouin as pg
+
     test_results = {}
 
     # If dataframe has a multiindex, reset it
@@ -208,7 +210,7 @@ def apply_test_by_cond(df, yname, naive_name='naive', cond_name = 'condition', t
 
     # Prepare data by condition
     data_by_condition = [group[yname].values for name, group in statdf.groupby(cond_name, sort=False, observed=True)]
-    
+
     # Perform Kruskal-Wallis test
     stat, p_value = kruskal(*data_by_condition)
 
@@ -216,50 +218,70 @@ def apply_test_by_cond(df, yname, naive_name='naive', cond_name = 'condition', t
     summary_stats = statdf.groupby(cond_name)[yname].agg(['mean', 'std', 'count']).to_dict()
 
     # Perform Dunn's posthoc test using pingouin
-    if naive_name in statdf[cond_name].unique():
-        # Perform Dunn's test and get the results
-        dunn_results = pg.pairwise_tests(data=statdf, dv=yname, between=cond_name, padjust='bonf')
+    dunn_results = pg.pairwise_tests(data=statdf, dv=yname, between=cond_name, padjust='bonf')
 
-        # Filter results to only include comparisons involving the naive group
-        naive_comparisons = dunn_results[(dunn_results['A'] == naive_name) | (dunn_results['B'] == naive_name)]
+    # Extract p-values, z-statistics, n-values, and key name
+    p_values, z_statistics, n_values, key_name = extract_dunn_statistics(
+        dunn_results, statdf, cond_name, naive_name, return_all_pairs)
 
-        # Create a dictionary to store p-values and Z statistics for comparisons with naive
-        p_values = {}
-        z_statistics = {}
-        n_values = {}
-        for _, row in naive_comparisons.iterrows():
-            # Identify the other group being compared to naive
-            if row['A'] == naive_name:
-                cond = row['B']
-                # If naive is in A, negate the Z statistic
-                z_statistics[cond] = -row['T']
-            else:
-                cond = row['A']
-                # If naive is in B, use the Z statistic as is
-                z_statistics[cond] = row['T']
-                
-            # Store the p-value
-            p_values[cond] = row['p-corr']
-            # Store the sample size for the comparison
-            n_values[cond] = (statdf[statdf[cond_name] == naive_name].shape[0], statdf[statdf[cond_name] == cond].shape[0])
-
-        # Store results in the same format as your original structure
-        test_results = {
-            'Kruskal': {'statistic': stat, 'p_value': p_value, 'n': {cond: summary_stats['count'][cond] for cond in summary_stats['count']}},
-            'mean': summary_stats['mean'],
-            'std': summary_stats['std'],
-            'Dunn_naive': {
-                'p_values': p_values,
-                'z_statistics': z_statistics,
-                'n': n_values
-            }
+    # Build test_results
+    test_results = {
+        'Kruskal': {
+            'statistic': stat,
+            'p_value': p_value,
+            'n': {cond: summary_stats['count'][cond] for cond in summary_stats['count']}
+        },
+        'mean': summary_stats['mean'],
+        'std': summary_stats['std'],
+        key_name: {
+            'p_values': p_values,
+            'z_statistics': z_statistics,
+            'n': n_values
         }
-    else:
-        raise ValueError("No naive condition present")
+    }
 
     return test_results
 
+def extract_dunn_statistics(dunn_results, statdf, cond_name, naive_name, return_all_pairs):
+    p_values = {}
+    z_statistics = {}
+    n_values = {}
 
+    if not return_all_pairs and naive_name not in statdf[cond_name].unique():
+        raise ValueError("No naive condition present")
+
+    for _, row in dunn_results.iterrows():
+        group_A = row['A']
+        group_B = row['B']
+        z_stat = row['T']  # Z statistic
+        p_val = row['p-corr']  # Corrected p-value
+
+        # Store sample sizes for both groups
+        n1 = statdf[statdf[cond_name] == group_A].shape[0]
+        n2 = statdf[statdf[cond_name] == group_B].shape[0]
+
+        # In 'Dunn_naive' mode, only include comparisons involving the naive group
+        if not return_all_pairs:
+            if group_A == naive_name:
+                cond = group_B
+                z_stat = -z_stat  # Negate if naive is A
+            elif group_B == naive_name:
+                cond = group_A
+                # z_stat remains the same
+            else:
+                continue  # Skip comparisons not involving naive
+            # Store results with condition as key
+            p_values[cond] = p_val
+            z_statistics[cond] = z_stat
+            n_values[cond] = (n1, n2)
+        else:
+            # In 'Dunn_all_pairs' mode, store all comparisons
+            p_values[(group_A, group_B)] = p_val
+            z_statistics[(group_A, group_B)] = z_stat
+            n_values[(group_A, group_B)] = (n1, n2)
+
+    key_name = 'Dunn_all_pairs' if return_all_pairs else 'Dunn_naive'
+    return p_values, z_statistics, n_values, key_name
 
 
 def pool_training_conditions(df, cond_mapping, keep_subconditions=False):
@@ -329,27 +351,133 @@ def format_test_results_by_cond(test_results, naive_name='naive'):
     H_formatted = f"{H:.2f}"
     P_value_formatted = format_p_value(P_value)
     kruskal_sentence = f"(Kruskal–Wallis test, n = {total_n}, d.f. = {degrees_of_freedom}, H = {H_formatted}, {P_value_formatted})."
-    
-    # Dunn's test results
-    n_naive = n_per_condition[naive_name]
+
+    # Detect whether we're dealing with 'Dunn_all_pairs' or 'Dunn_naive'
+    if 'Dunn_all_pairs' in test_results:
+        return_all_pairs = True
+        key_name = 'Dunn_all_pairs'
+    elif 'Dunn_naive' in test_results:
+        return_all_pairs = False
+        key_name = 'Dunn_naive'
+    else:
+        raise ValueError("Test results do not contain Dunn's test results.")
+
+    dunn_results = test_results[key_name]
+
+    p_values = dunn_results['p_values']
+    z_statistics = dunn_results['z_statistics']
+    n_values = dunn_results['n']
+
+    # Format comparisons
+    comparisons_text = format_comparisons(p_values, z_statistics, n_values, n_per_condition, naive_name, return_all_pairs)
+
+    if return_all_pairs:
+        dunn_sentence = f"Nonparametric multiple comparisons between all groups: {comparisons_text}."
+    else:
+        n_naive = n_per_condition[naive_name]
+        dunn_sentence = f"Nonparametric multiple comparisons against {naive_name} (n = {n_naive}): {comparisons_text}."
+
+    # Combine all sentences
+    full_text = f"{kruskal_sentence} {dunn_sentence}"
+
+    return full_text
+
+
+def format_test_results_by_cond(test_results, naive_name='naive'):
+    # Kruskal–Wallis test results
+    n_per_condition = test_results['Kruskal']['n']  # dict of n per condition
+    total_n = sum(n_per_condition.values())
+    degrees_of_freedom = len(n_per_condition) - 1
+    H = test_results['Kruskal']['statistic']
+    P_value = test_results['Kruskal']['p_value']
+
+    # Format Kruskal–Wallis test results
+    H_formatted = f"{H:.2f}"
+    P_value_formatted = format_p_value(P_value)
+    kruskal_sentence = f"(Kruskal–Wallis test, n = {total_n}, d.f. = {degrees_of_freedom}, H = {H_formatted}, {P_value_formatted})."
+
+    # Mean and Std for each condition
+    means = test_results['mean']
+    stds = test_results['std']
+
+    # Prepare the group statistics sentence
+    stats_sentences = []
+    for cond in n_per_condition.keys():
+        mean = means[cond]
+        std = stds[cond]
+        n = n_per_condition[cond]
+        stats_sentence = f"{cond}: mean = {mean:.2f} ± {std:.2f} (n = {n})"
+        stats_sentences.append(stats_sentence)
+
+    # Construct the group statistics text
+    if len(stats_sentences) == 1:
+        stats_text = stats_sentences[0]
+    elif len(stats_sentences) == 2:
+        stats_text = " and ".join(stats_sentences)
+    else:
+        stats_text = "; ".join(stats_sentences[:-1])
+        stats_text += "; and " + stats_sentences[-1]
+
+    stats_sentence = f"Group statistics: {stats_text}."
+
+    # Detect whether we're dealing with 'Dunn_all_pairs' or 'Dunn_naive'
+    if 'Dunn_all_pairs' in test_results:
+        return_all_pairs = True
+        key_name = 'Dunn_all_pairs'
+    elif 'Dunn_naive' in test_results:
+        return_all_pairs = False
+        key_name = 'Dunn_naive'
+    else:
+        raise ValueError("Test results do not contain Dunn's test results.")
+
+    dunn_results = test_results[key_name]
+
+    p_values = dunn_results['p_values']
+    z_statistics = dunn_results['z_statistics']
+    n_values = dunn_results['n']
+
+    # Format comparisons
+    comparisons_text = format_comparisons(
+        p_values, z_statistics, n_values, n_per_condition, naive_name, return_all_pairs
+    )
+
+    if return_all_pairs:
+        dunn_sentence = f"Nonparametric multiple comparisons between all groups: {comparisons_text}."
+    else:
+        n_naive = n_per_condition[naive_name]
+        dunn_sentence = f"Nonparametric multiple comparisons against {naive_name} (n = {n_naive}): {comparisons_text}."
+
+    # Combine all sentences
+    full_text = f"{kruskal_sentence} {stats_sentence} {dunn_sentence}"
+
+    return full_text
+
+def format_comparisons(p_values, z_statistics, n_values, n_per_condition, naive_name, return_all_pairs):
     comparisons = []
-    p_values = test_results['Dunn_naive']['p_values']
-    z_statistics = test_results['Dunn_naive']['z_statistics']
-    n_values = test_results['Dunn_naive']['n']
-    
-    # Get condition names excluding naive
-    condition_names = list(p_values.keys())
-    
-    for cond in condition_names:
-        Q_stat = z_statistics[cond]
-        Q_stat_formatted = f"{Q_stat:.2f}"
-        p_value = p_values[cond]
-        p_value_formatted = format_p_value(p_value)
-        n_cond = n_values[cond][1]  # n_values[cond] = (n_naive, n_cond)
-        comparison_text = f"{cond}, Q = {Q_stat_formatted}, {p_value_formatted}, n = {n_cond}"
-        comparisons.append(comparison_text)
-    
-    # Now, construct the comparisons text
+
+    if return_all_pairs:
+        # Handle all pairs comparisons
+        for (group_A, group_B) in p_values.keys():
+            Q_stat = z_statistics[(group_A, group_B)]
+            Q_stat_formatted = f"{Q_stat:.2f}"
+            p_value = p_values[(group_A, group_B)]
+            p_value_formatted = format_p_value(p_value)
+            n1, n2 = n_values[(group_A, group_B)]
+            comparison_text = f"{group_A} (n = {n1}) vs {group_B} (n = {n2}), Q = {Q_stat_formatted}, {p_value_formatted}"
+            comparisons.append(comparison_text)
+    else:
+        # Handle comparisons against naive
+        n_naive = n_per_condition[naive_name]
+        for cond in p_values.keys():
+            Q_stat = z_statistics[cond]
+            Q_stat_formatted = f"{Q_stat:.2f}"
+            p_value = p_values[cond]
+            p_value_formatted = format_p_value(p_value)
+            n_cond = n_values[cond][1]  # n_values[cond] = (n_naive, n_cond)
+            comparison_text = f"{cond}, Q = {Q_stat_formatted}, {p_value_formatted}, n = {n_cond}"
+            comparisons.append(comparison_text)
+
+    # Construct the comparisons text
     if len(comparisons) == 1:
         comparisons_text = comparisons[0]
     elif len(comparisons) == 2:
@@ -357,14 +485,8 @@ def format_test_results_by_cond(test_results, naive_name='naive'):
     else:
         comparisons_text = "; ".join(comparisons[:-1])
         comparisons_text += "; and " + comparisons[-1]
-    
-    # Now, construct the Dunn's test sentence
-    dunn_sentence = f"Nonparametric multiple comparisons against {naive_name} (n = {n_naive}): {comparisons_text}."
 
-    # Combine all sentences
-    full_text = f"{kruskal_sentence} {dunn_sentence}"
-    
-    return full_text
+    return comparisons_text
 
 
 def apply_tests_multi_odor_two_cond(sub_mean_madff, yname, odor_name, test_type='mannwhitneyu'):
