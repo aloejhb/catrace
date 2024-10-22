@@ -636,4 +636,4 @@ def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None
     ax.set_ylabel(y_measure, fontsize=20)
     ax.legend(title=hue, fontsize=14)
 
-    return fig
+    return fig, model, text_str

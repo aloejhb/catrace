@@ -37,3 +37,28 @@ def merge_with_behavior(subsimdf_per_fish, behavior_measure_df):
 
 # from catrace.stats import plot_regression
 # plot_regression(merged_behavior_df, 'auc_zeta_diff_per_day', 'mahal', hue='condition')
+
+
+from ..dataset import load_dataset_config
+from ..stats import plot_regression
+
+
+def regression_distance_with_behavior(config_file,
+                                      metric,
+                                      distance_dir,
+                                      odor_group1,
+                                      odor_group2,
+                                      behavior_measure_df, behavior_measure_name, figsize=(5, 5)):
+    dsconfig = load_dataset_config(config_file)
+    measure_name = metric
+    deduplicate = True
+
+    subsimdf_per_fish = load_distance_per_fish(config_file, distance_dir, odor_group1, odor_group2, measure_name, deduplicate)
+
+    merged_behavior_df = merge_with_behavior(subsimdf_per_fish, behavior_measure_df)
+    fig, model, text_str = plot_regression(merged_behavior_df, behavior_measure_name, metric, hue='condition', figsize=figsize)
+    if metric == 'mahal':
+        # remove legend
+        ax = fig.get_axes()[0]
+        ax.legend_.remove()
+    return fig, model, text_str
