@@ -84,7 +84,9 @@ def plot_matrix_per_cond(simdf_list, exp_cond_list, conditions, params: PlotPerC
     avg_mats = mean_mat_over_cond(simdf_list, exp_cond_list, conditions)
     cmin = min([mat.min().min() for mat in avg_mats.values()])
     cmax = max([mat.max().max() for mat in avg_mats.values()])
-    fig, axes = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, clim=(cmin, cmax), **params.to_dict())
+    if params.clim is None:
+        params.clim = (cmin, cmax)
+    fig, axes = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, **params.to_dict())
     return fig
 
 

@@ -151,8 +151,9 @@ def plot_same_odor_diff_trial(corrmat_df, **kwargs):
     # Plot the correlation timecourse using the calculated indices
     plot_correlation_timecourse(corrmat_df, row_col_indices, **kwargs)
 
+from matplotlib.colors import Normalize
 
-def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8, ylabel_colors=None, ylabels=None, title=''):
+def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8, ylabel_colors=None, ylabels=None, title='', color_norm: Normalize = None):
     """
     Plot similarity matrix heatmap
 
@@ -166,7 +167,7 @@ def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8
     Returns:
         Image object.
     """
-    im = ax.imshow(df.to_numpy(), cmap=cmap)
+    im = ax.imshow(df.to_numpy(), cmap=cmap, norm=color_norm)
 
     if ylabel_colors is None:
         ylabel_colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']

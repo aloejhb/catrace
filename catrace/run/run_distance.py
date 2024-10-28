@@ -165,7 +165,6 @@ def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=
     # Conditionally deduplicate the odor_tuples by sorting and removing duplicates
     if deduplicate:
         odor_tuples = list({tuple(sorted(odor_tuple)) for odor_tuple in odor_tuples})
-    
     # Stack the DataFrame so that 'ref_odor' becomes part of the MultiIndex
     dff_stacked = dff.stack()  # This moves the columns (ref_odor) into the index
     
@@ -185,10 +184,10 @@ def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=
             sliced_df = dff_stacked.loc[idx[:, :, odor1, odor2]]
         
         filtered_dfs.append(sliced_df)
-    
+
     # Concatenate all the filtered DataFrames
     gvg = pd.concat(filtered_dfs, keys=odor_tuples)
-    
+
     # Rename the first two levels of the index to 'odor' and 'ref_odor'
     new_index_names = list(gvg.index.names)
     

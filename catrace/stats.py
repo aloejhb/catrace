@@ -89,16 +89,12 @@ def apply_mann_whitney(df, naive_name='naive', trained_name='trained'):
     
     return results
 
-def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', test_type='mannwhitneyu'):
+def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', test_type='mannwhitneyu', condition_name='condition'):
     import numpy as np
     from scipy.stats import ttest_ind, mannwhitneyu
     from scipy.stats import bootstrap
 
-    # Determine the level (either 'cond' or 'condition')
-    if 'cond' in df.index.names or 'cond' in df.columns.names:
-        level = 'cond'
-    else:
-        level = 'condition'
+    level = condition_name
     
     # Extract data for each group
     if yname is None:
@@ -181,6 +177,35 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
     return results
 
 
+def format_number(num):
+    """
+    Formats a number to display in fixed-point notation with enough decimal places to show
+    three non-zero digits for small numbers between 0.0001 and 0.01. Uses scientific notation
+    for very small or very large numbers.
+
+    Parameters:
+    - num (float): The number to format.
+
+    Returns:
+    - str: The formatted number as a string.
+    """
+    if num == 'N/A' or num is None:
+        return 'N/A'
+    
+    num_abs = abs(num)
+    if num_abs >= 0.3 and num_abs < 1000:
+        # Use fixed-point notation with two decimal places
+        return f"{num:.2f}"
+    elif num_abs >= 0.0001 and num_abs < 0.3:
+        # Calculate the number of decimal places needed to show three significant digits
+        decimal_places = int(-math.floor(math.log10(num_abs))) + (3 - 1)
+        format_string = f"{{num:.{decimal_places}f}}"
+        return format_string.format(num=num)
+    else:
+        # Use scientific notation for very small or large numbers
+        return f"{num:.2e}"
+
+
 def format_test_results_pair(test_results, test_type='mannwhitneyu'):
     """
     Formats the test results from apply_test_pair into a string suitable for a figure caption.
@@ -222,8 +247,8 @@ def format_test_results_pair(test_results, test_type='mannwhitneyu'):
         # Format the statistics
         statistic_formatted = f"{statistic:.2f}"
         p_value_formatted = format_p_value(p_value)
-        mean1_formatted = f"{mean1:.2f} ± {std1:.2f}"
-        mean2_formatted = f"{mean2:.2f} ± {std2:.2f}"
+        mean1_formatted = f"{format_number(mean1)} ± {format_number(std1)}"
+        mean2_formatted = f"{format_number(mean2)} ± {format_number(std2)}"
 
         # Construct the sentence
         sentence = (
@@ -445,7 +470,7 @@ def format_test_results_by_cond(test_results, naive_name='naive'):
         mean = means[cond]
         std = stds[cond]
         n = n_per_condition[cond]
-        stats_sentence = f"{cond}: mean = {mean:.2f} ± {std:.2f} (n = {n})"
+        stats_sentence = f"{cond}: mean = {format_number(mean)} ± {format_number(std)} (n = {n})"
         stats_sentences.append(stats_sentence)
 
     # Construct the group statistics text

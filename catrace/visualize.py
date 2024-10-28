@@ -32,6 +32,8 @@ def plot_pattern_heatmap(pattern, climit=None, ax=None):
         im = ax.imshow(pattern.T, aspect='auto', interpolation='none')
     return im
 
+from matplotlib.colors import Normalize
+
 @dataclass_json
 @dataclass
 class PlotPerCondMatParams:
@@ -44,6 +46,8 @@ class PlotPerCondMatParams:
     ylabels: list = None
     ylabel_colors: list = None
     cmap: str = 'turbo'
+    clim: tuple = None
+    color_norm: Normalize = None
 
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -518,11 +522,13 @@ def plot_measure_multi_odor_cond(mdff, measure_name, odor_name='odor',
 def plot_measure(mdff, measure_name,
                  name_to_label=None,
                  test_type='mannwhitneyu',
+                 group_name1='naive',
+                 group_name2='trained',
                  condition_name='condition',
                  ax=None, params=PlotBoxplotParams()):
     sub_mean_madff = mdff[[measure_name]]
 
-    test_results = apply_test_pair(sub_mean_madff, test_type=test_type)
+    test_results = apply_test_pair(sub_mean_madff, test_type=test_type, group_name1=group_name1, group_name2=group_name2, condition_name=condition_name)
     xname = condition_name
     yname = measure_name
     if name_to_label is not None:
@@ -532,7 +538,7 @@ def plot_measure(mdff, measure_name,
     datadf = sub_mean_madff.reset_index()
     fig, ax = plot_boxplot_with_significance(datadf, xname, yname, ylabel,
                                     test_results, test_type='pairwise',
-                                    ref_key='naive',
+                                    ref_key=group_name1,
                                     ax=ax,
                                     **params.to_dict())
 
