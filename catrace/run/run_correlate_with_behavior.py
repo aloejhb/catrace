@@ -94,7 +94,7 @@ def regression_distance_with_behavior(config_file,
 
     subsimdf_per_fish = load_distance_per_fish(**load_distance_per_fish_params)
     merged_behavior_df = merge_with_behavior(subsimdf_per_fish, behavior_measure_df)
-    fig, model, text_str = plot_regression(merged_behavior_df, behavior_measure_name, metric, hue='condition', figsize=figsize)
+    fig, model, text_str = plot_regression(merged_behavior_df, metric, behavior_measure_name, hue='condition', figsize=figsize)
     if metric == 'mahal':
         # remove legend
         ax = fig.get_axes()[0]
