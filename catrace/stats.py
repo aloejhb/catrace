@@ -648,7 +648,7 @@ def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None
     p_value_srt = format_p_value(p_value)
     print(p_value_srt)
     # Annotate the plot with slope, R², and p-value
-    text_str = f'Slope: {slope:.2f}\nR²: {r_squared:.2f}\np-value: {p_value_srt}'
+    text_str = f'Slope: {slope:.6f}\nR²: {r_squared:.2f}\np-value: {p_value_srt}'
     if slope < 0:
         text_pos = (0.05, 0.25)
     else:

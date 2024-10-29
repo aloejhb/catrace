@@ -157,6 +157,18 @@ def plot_matrix_per_condition(avg_simdf, conditions, clim=None, params=PlotPerCo
 
 
 def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=True):
+    """
+    Get the DataFrame containing the group vs. group data for the given DataFrame.
+
+    Args:
+        dff (pd.DataFrame): The DataFrame containing the data.
+        The shape of dff is (n_samples, n_conditions, n_odors, n_odors).
+        odor1_group (list): The list of odors in the first group.
+        odor2_group (list): The list of odors in the second group.
+        measure_name (str): The name of the measure column.
+        deduplicate (bool): Whether to deduplicate the odor pairs.
+
+    """
     # Get tuples of (odor1, odor2) that are in the group
     odor_tuples = [(odor1, odor2) for odor1 in odor1_group for odor2 in odor2_group]
     # Remove the tuples that have the same odor1 and odor2
