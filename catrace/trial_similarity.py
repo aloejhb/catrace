@@ -1,4 +1,7 @@
+from .similarity import cosine_distance, pattern_correlation, cosine_distance_to_template, pattern_correlation_to_template
+from .exp_collection import read_df
 
+from matplotlib.colors import Normalize
 
 def plot_trial_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=7, color_norm: Normalize = None, frame_rate=None):
     if ax is None:
@@ -9,8 +12,7 @@ def plot_trial_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_font
     im = ax.imshow(df.to_numpy(), cmap=cmap, norm=color_norm, interpolation='none')
 
     if frame_rate is not None:
-        # Convert frame to time in seconds
-        # Convert x axis from frame to time
+        # Convert frame to time in seconds# Convert x axis from frame to time
         xticks = np.arange(0, df.shape[1], 1 * frame_rate)
         ax.set_xticks(xticks)
         ax.set_yticks(xticks)
@@ -18,48 +20,6 @@ def plot_trial_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_font
         ax.set_xticklabels(xticklabels)
         ax.set_yticklabels(xticklabels)
     return im
-
-
-# def compute_similarity_over_time(trial_traces, bin_size=None, frame_range=None, similarity_method='pattern_correlation'):
-#     """
-#     Computes the similarity matrix and mean spike probability over time for the given trial traces.
-
-#     Parameters:
-#     - trial_traces: DataFrame, the trial traces data
-#     - bin_size: int, the size of the bins for averaging (default is None)
-#     - frame_range: tuple, the range of frames to consider (default is (18, 110))
-#     - similarity_method: str, the similarity method to use, either 'cosine' or 'pattern_correlation'
-
-#     Returns:
-#     - xvec: The x-axis vector
-#     - trial_traces_mean: Series, the mean spike probability over time
-#     - mat: array, the computed similarity matrix
-#     """
-#     if frame_range is None:
-#         frame_range = (0, len(trial_traces))
-#     # Bin the trial traces if bin_size is specified
-#     if bin_size is not None:
-#         trial_traces = trial_traces.groupby(trial_traces.index // bin_size).mean()
-#         frame_range = np.array(frame_range) // bin_size
-
-#     # Adjust the frame range according to the bin size
-#     trial_traces = trial_traces.iloc[frame_range[0]:frame_range[1], :]
-
-#     # Define x-axis vector
-#     xvec = np.arange(frame_range[0], frame_range[1]) - frame_range[0]
-
-#     # Compute mean spike probability over cells (for plotting)
-#     trial_traces_mean = trial_traces.mean(axis=1)
-
-#     # Compute the similarity matrix based on the chosen method
-#     if similarity_method == 'cosine':
-#         mat = cosine_distance(trial_traces.to_numpy())
-#     elif similarity_method == 'pattern_correlation':
-#         mat = pattern_correlation(trial_traces.to_numpy())
-#     else:
-#         raise ValueError("Invalid similarity_method. Choose 'cosine' or 'pattern_correlation'.")
-
-#     return xvec, trial_traces_mean, mat
 
 
 def compute_trial_similarity_over_time(trial_traces, bin_size=None, similarity_method='pattern_correlation'):
@@ -158,3 +118,151 @@ def compute_trial_similarity_over_time_to_template(trial_traces, bin_size=None, 
     # Convert trial_similarity to a DataFrame with the row and column index to be the time index
     trial_similarity = pd.DataFrame(trial_similarity, index=time_idx)
     return trial_similarity
+
+
+import pandas as pd
+import numpy as np
+
+def compute_fish_similarity_over_time(dsconfig, fish_id, odor_trial, bin_size, similarity_method):
+    dff = read_df(dsconfig.processed_trace_dir, fish_id)
+    trial_traces = dff.xs(odor_trial, level=('odor', 'trial'))
+    trial_similarity = compute_trial_similarity_over_time(trial_traces, bin_size=bin_size, similarity_method=similarity_method)
+    time_idx = trial_traces.index
+    # Convert trial_similarity to a DataFrame with the row and column index to be the time index
+    trial_similarity = pd.DataFrame(trial_similarity, index=time_idx, columns=time_idx)
+    return trial_similarity
+
+
+def get_slicing_from_trial_similarity(trial_similarity, slicing_frame):
+    return trial_similarity[slicing_frame, :]
+
+
+def compute_population_trial_similarity_over_time(dsconfig, odor_trial, exp_list, bin_size, similarity_method):
+    trial_similarities = []
+    for exp_name, condition in exp_list:
+        trial_similarity = compute_fish_similarity_over_time(dsconfig, exp_name, odor_trial, bin_size, similarity_method)
+        trial_similarities.append(trial_similarity)
+
+    simdf = pd.concat(trial_similarities, keys=exp_list, names=['fish_id', 'condition'])
+    return simdf
+
+def compute_population_multitrial_similarity_over_time(dsconfig, odor_trials, exp_list, bin_size, similarity_method):
+    simdfs = []
+    for odor_trial in odor_trials:
+        simdf = compute_population_trial_similarity_over_time(dsconfig, odor_trial, exp_list, bin_size, similarity_method)
+        simdfs.append(simdf)
+    multi_trial_simdf = pd.concat(simdfs, keys=odor_trials, names=['odor', 'trial'])
+    return multi_trial_simdf
+
+
+
+# Plot the average trial_similarity for each condition
+# Plot matrix per condition
+from catrace.run.run_distance import get_mat_lists
+from catrace.exp_collection import mean_mat_over_cond
+from catrace.visualize import plot_conds_mat
+
+from matplotlib.colors import PowerNorm
+
+def select_frame_range_mat(avg_simdf, frame_range):
+    times = avg_simdf.index.get_level_values('time')
+    idx = (times >= frame_range[0]) & (times <= frame_range[1])
+    avg_simdf = avg_simdf.loc[idx]
+    times_column = avg_simdf.columns.get_level_values('time')
+    idx = (times_column >= frame_range[0]) & (times_column <= frame_range[1])
+    avg_simdf = avg_simdf.loc[:, idx]
+    return avg_simdf
+
+
+def plot_matrix_per_condition(avg_simdf, conditions, frame_range=None, frame_rate=None):
+    if frame_range is not None:
+        avg_simdf = select_frame_range_mat(avg_simdf, frame_range)
+
+    simdf_list, exp_cond_list = get_mat_lists(avg_simdf)
+    avg_mats = mean_mat_over_cond(simdf_list, exp_cond_list, conditions)
+    # Average each avg_mats so that only time is left for index
+    avg_mats = {cond: mat.groupby('time').mean() for cond, mat in avg_mats.items()}
+
+    # if params.clim is None:
+    #     cmin = min([mat.min().min() for mat in avg_mats.values()])
+    #     cmax = max([mat.max().max() for mat in avg_mats.values()])
+    #     clim = (cmin, cmax)
+    #     params.clim = clim
+    # params.ncol = 2
+    times = avg_simdf.index.get_level_values('time').unique
+    fig, axs = plot_conds_mat(avg_mats, conditions, plot_trial_similarity_mat, cmap='magma', clim=(0, 0.8), color_norm=PowerNorm(gamma=1), frame_rate=frame_rate)
+
+
+    return fig, axs
+
+
+import pandas as pd
+import numpy as np
+
+def compute_fish_similarity_over_time_to_template(dsconfig, fish_id, odor_trial, sim_params: SimToTemplateParams):
+    dff = read_df(dsconfig.processed_trace_dir, fish_id)
+    trial_traces = dff.xs(odor_trial, level=('odor', 'trial'))
+    sim_to_template = compute_trial_similarity_over_time_to_template(trial_traces, **sim_params.to_dict())
+    #time_idx = trial_traces.index
+    # Convert trial_similarity to a DataFrame with the row and column index to be the time index
+    #trial_similarity = pd.DataFrame(trial_similarity, index=time_idx, columns=time_idx)
+    return sim_to_template
+
+
+def compute_population_trial_similarity_over_time_to_template(dsconfig, odor_trial, exp_list, sim_params):
+    sim_to_templates = []
+    for exp_name, condition in exp_list:
+        sim_to_template = compute_fish_similarity_over_time_to_template(dsconfig, exp_name, odor_trial, sim_params)
+        sim_to_templates.append(sim_to_template.T)
+
+    simtempdf = pd.concat(sim_to_templates, keys=exp_list, names=['fish_id', 'condition'])
+    return simtempdf
+
+
+def compute_population_multitrial_similarity_over_time_to_template(dsconfig, odor_trials, exp_list, sim_params):
+    simtempdfs = []
+    for odor_trial in odor_trials:
+        simtempdf = compute_population_trial_similarity_over_time_to_template(dsconfig, odor_trial, exp_list, sim_params)
+        simtempdfs.append(simtempdf)
+    multiodor_simtempdfs = pd.concat(simtempdfs, keys=odor_trials, names=['odor', 'trial'])
+    return multiodor_simtempdfs
+
+
+# Plot slicing per condition
+from catrace.visualize import plot_conds
+from catrace.plot_trace import plot_mean_with_std
+
+def select_frame_range(simdf_slicing, frame_range):
+    times = simdf_slicing.index.get_level_values('time')
+    idx = (times >= frame_range[0]) & (times <= frame_range[1])
+    simdf_slicing = simdf_slicing.loc[idx]
+    return simdf_slicing
+
+
+def plot_trial_similarity_slicing(simdf_slicing, metric, ax=None, color='blue', line_label=None, frame_range=None, frame_rate=None):
+    if line_label is None:
+        line_label = metric
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+
+    if frame_range is not None:
+        simdf_slicing = select_frame_range(simdf_slicing, frame_range)
+
+
+    if frame_rate is not None:
+        start_time_with_zero = True
+    else:
+        start_time_with_zero = False
+    plot_mean_with_std(simdf_slicing, ax=ax, label=line_label, color=color, frame_rate=frame_rate, start_time_with_zero=start_time_with_zero)
+
+import matplotlib.pyplot as plt
+def plot_slicing_per_condition(simtempdf, metric, colors, frame_range=None, frame_rate=None):
+    fig, ax = plt.subplots()
+    #'tab:blue', 'tab:brown', 'tab:green', 'tab:pink'
+    for condition, group in simtempdf.groupby('condition'):
+        plot_trial_similarity_slicing(group.T, metric, ax=ax, color=colors[condition], line_label=condition, frame_range=frame_range, frame_rate=frame_rate)
+        ax.legend()
+    ax.set_ylabel(metric)
+    return fig
