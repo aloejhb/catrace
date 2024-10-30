@@ -55,28 +55,25 @@ def cosine_distance_to_template(mat, template):
 
 def pattern_correlation_to_template(mat, template):
     """
-    Compute the Pearson correlation between each row in `mat` and the `template` vector.
+    Compute the Pearson correlation between each row in `mat` and the `template` vector using np.corrcoef.
 
     Parameters:
     mat (numpy.ndarray): A 2D array of shape (n_trials, n_features), where each row is a trial.
+        Each row represents an observation.
     template (numpy.ndarray): A 1D array of shape (n_features,), representing the template vector.
 
     Returns:
     numpy.ndarray: A 1D array of shape (n_trials,) containing the correlation coefficients.
     """
-    # Standardize the rows of mat
-    mat_mean = mat.mean(axis=1, keepdims=True)
-    mat_std = mat.std(axis=1, ddof=0, keepdims=True)
-    mat_standardized = (mat - mat_mean) / mat_std
-
-    # Standardize the template vector
-    template_mean = template.mean()
-    template_std = template.std(ddof=0)
-    template_standardized = (template - template_mean) / template_std
-
-    # Compute the correlation coefficients
-    # Each element is the mean of the product of standardized values
-    correlations = np.mean(mat_standardized * template_standardized, axis=1)
+    # Check shapes of mat and template
+    assert mat.shape[1] == template.shape[0], "The number of features in mat and template must match."
+    n_trials = mat.shape[0]
+    correlations = np.empty(n_trials)
+    for i in range(n_trials):
+        # Compute the correlation matrix between the ith row and the template
+        corr_matrix = np.corrcoef(mat[i], template)
+        # Extract the correlation coefficient
+        correlations[i] = corr_matrix[0, 1]
     return correlations
 
 
@@ -242,13 +239,23 @@ def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8
     return im
 
 
-def plot_trial_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=7, color_norm: Normalize = None):
+def plot_trial_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=7, color_norm: Normalize = None, frame_rate=None):
     if ax is None:
         fig, ax = plt.subplots(figsize=(5, 5))
     else:
         fig = ax.get_figure()
 
-    im = ax.imshow(df.to_numpy(), cmap=cmap, norm=color_norm)
+    im = ax.imshow(df.to_numpy(), cmap=cmap, norm=color_norm, interpolation='none')
+
+    if frame_rate is not None:
+        # Convert frame to time in seconds
+        # Convert x axis from frame to time
+        xticks = np.arange(0, df.shape[1], 1 * frame_rate)
+        ax.set_xticks(xticks)
+        ax.set_yticks(xticks)
+        xticklabels = xticks / frame_rate
+        ax.set_xticklabels(xticklabels)
+        ax.set_yticklabels(xticklabels)
     return im
 
 
@@ -518,43 +525,36 @@ def plot_correlation_over_time_subplots(xvec, trial_traces_mean, mat, similarity
 
     return fig, (ax_line, ax_mat)
 
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 
-def plot_trial_correlation_over_time(trial_traces, bin_size=None, frame_range=None, similarity_method='pattern_correlation', clim=(0, 1),
-                                     cmap='magma', power_norm=1.2, figsize=(5, 5)):
-    """
-    Computes and plots the correlation over time for the given trial traces.
+@dataclass_json
+@dataclass
+class SimToTemplateParams:
+    bin_size: int = None
+    similarity_method: str = 'pattern_correlation'
+    template_frame_range: tuple = None
 
-    Parameters:
-    - trial_traces: DataFrame, the trial traces data
-    - bin_size: int, the size of the bins for averaging (default is None)
-    - frame_range: tuple, the range of frames to consider (default is (18, 110))
-    - similarity_method: str, the similarity method to use, either 'cosine' or 'pattern_correlation'
-    - clim: tuple, the color limits for the similarity matrix (default is (0, 1))
-    - cmap: str, the colormap for the similarity matrix (default is 'magma')
-    - power_norm: float, the power normalization factor for the similarity matrix (default is 1.2)
-    - figsize: tuple, the figure size (default is (5, 5))
 
-    Returns:
-    - fig, (ax_line, ax_mat): The figure and axes objects of the plot
-    """
-    # Compute the data for plotting
-    xvec, trial_traces_mean, mat = compute_similarity_over_time(
-        trial_traces,
-        bin_size=bin_size,
-        frame_range=frame_range,
-        similarity_method=similarity_method
-    )
+def compute_trial_similarity_over_time_to_template(trial_traces, bin_size=None, similarity_method='pattern_correlation',
+                                                   template=None, template_frame_range=None):
+    # Bin the trial traces if bin_size is specified
+    if bin_size is not None:
+        trial_traces = trial_traces.groupby(trial_traces.index // bin_size).mean()
 
-    # Plot the data
-    fig, (ax_line, ax_mat) = plot_correlation_over_time_subplots(
-        xvec,
-        trial_traces_mean,
-        mat,
-        similarity_method=similarity_method,
-        clim=clim,
-        cmap=cmap,
-        power_norm=power_norm,
-        figsize=figsize
-    )
+    times = trial_traces.index.get_level_values('time')
+    idx = (times >= template_frame_range[0]) & (times <= template_frame_range[1])
+    template = trial_traces.loc[idx, :].mean()
 
-    return fig, (ax_line, ax_mat)
+    # Compute the similarity matrix based on the chosen method
+    if similarity_method == 'cosine':
+        trial_similarity = cosine_distance_to_template(trial_traces.to_numpy(), template)
+    elif similarity_method == 'pattern_correlation':
+        trial_similarity = pattern_correlation_to_template(trial_traces.to_numpy(), template)
+    else:
+        raise ValueError("Invalid similarity_method. Choose 'cosine' or 'pattern_correlation'.")
+
+    time_idx = trial_traces.index
+    # Convert trial_similarity to a DataFrame with the row and column index to be the time index
+    trial_similarity = pd.DataFrame(trial_similarity, index=time_idx)
+    return trial_similarity

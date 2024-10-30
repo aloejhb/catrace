@@ -104,7 +104,7 @@ def plot_average_time_trace(dff):
 
 
 def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', label='Mean', err_type='std',
-                       linewidth=1):
+                       linewidth=1, start_time_with_zero=False):
     """
     Plots the mean trace with a shaded area representing the standard deviation.
 
@@ -131,6 +131,8 @@ def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', labe
     
     tvec = mean_trace.index.get_level_values('time')
     xvec = tvec / frame_rate
+    if start_time_with_zero:
+        xvec = xvec - xvec[0]
 
     # Convert xvec to float
     xvec = np.array(xvec).astype(float)
