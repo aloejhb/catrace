@@ -14,8 +14,9 @@ def load_distance_per_fish(config_file,
                            odor_group2=None,
                            deduplicate=False,
                            average_per_fish=False,
+                           cs_plus_vs_rest=False,
+                           odors_pool=None):
 
-):
     dsconfig= load_dataset_config(config_file)
 
     dist_dir = pjoin(dsconfig.processed_trace_dir, distance_dir)
@@ -52,6 +53,24 @@ def load_distance_per_fish(config_file,
                                                deduplicate=deduplicate)
             cond_subsimdfs.append(cond_subsimdf)
         subsimdf = pd.concat(cond_subsimdfs)
+    elif cs_plus_vs_rest:
+        cond_subsimdfs = []
+        for condition, group in avg_simdf.groupby('condition'):
+            odors = condition.split('-')
+            # capitialize the first letter of each odor
+            odors = [odor.capitalize() for odor in odors]
+
+            odor_group1 = [odors[0]] # cs_plus
+            # the other odor
+            odor_group2 = [odor for odor in odors_pool if odor not in odor_group1]
+            cond_subsimdf = get_group_vs_group(group,
+                                    odor_group1,
+                                    odor_group2,
+                                    measure_name=measure_name, 
+                                    deduplicate=deduplicate)
+        cond_subsimdfs.append(cond_subsimdf)
+        subsimdf = pd.concat(cond_subsimdfs)
+
     else:
         subsimdf = get_group_vs_group(avg_simdf, odor_group1, odor_group2, measure_name=measure_name, deduplicate=deduplicate)
 
@@ -89,7 +108,9 @@ from ..stats import plot_regression
 def regression_distance_with_behavior(config_file,
                                       metric,
                                       load_distance_per_fish_params,
-                                      behavior_measure_df, behavior_measure_name, figsize=(5, 5)):
+                                      behavior_measure_df, behavior_measure_name,
+                                      num_baseline_days=None,
+                                      figsize=(5, 5)):
     dsconfig = load_dataset_config(config_file)
 
     subsimdf_per_fish = load_distance_per_fish(**load_distance_per_fish_params)
@@ -99,4 +120,7 @@ def regression_distance_with_behavior(config_file,
         # remove legend
         ax = fig.get_axes()[0]
         ax.legend_.remove()
+    if num_baseline_days is not None:
+        title = f'Baseline days: {num_baseline_days}'
+        fig.suptitle(title)
     return fig, model, text_str

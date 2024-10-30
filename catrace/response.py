@@ -133,6 +133,11 @@ def run_response(params: RunResponseParams):
     if params.histplot_params is None:
         params.histplot_params = {}
     fig_hist, ax = plot_hist_by_cond(resp, 'response', **params.histplot_params)
+    # Capitalize x and y labels
+    xlabel = ax.get_xlabel()
+    ax.set_xlabel(xlabel.capitalize())
+    ylabel = ax.get_ylabel()
+    ax.set_ylabel(ylabel.capitalize())
     return resp, test_results, fig_box, fig_hist
 
 
@@ -172,6 +177,12 @@ def run_response_multi_category(params):
         sub_resp = resp_dict[odor_key]
         fig_hist, ax = plot_hist_by_cond(sub_resp, 'response', **params.histplot_params)
         hist_figs[odor_key] = fig_hist
+        # Capitalize x and y labels
+        xlabel = ax.get_xlabel()
+        ax.set_xlabel(xlabel.capitalize())
+        ylabel = ax.get_ylabel()
+        ax.set_ylabel(ylabel.capitalize())
+
     output_figs['hist_figs'] = hist_figs
     return resp, test_results, output_figs
 

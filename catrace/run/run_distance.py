@@ -144,15 +144,18 @@ def plot_matrix_per_fish(avg_simdf, cmap='turbo'):
 
 
 # Plot matrix per condition
-def plot_matrix_per_condition(avg_simdf, conditions, clim=None, params=PlotPerCondMatParams()):
+def plot_matrix_per_condition(avg_simdf, conditions,
+                              params=PlotPerCondMatParams()):
     simdf_list, exp_cond_list = get_mat_lists(avg_simdf)
     avg_mats = ecl.mean_mat_over_cond(simdf_list, exp_cond_list, conditions)
-    if clim is None:
+    if params.clim is None:
         cmin = min([mat.min().min() for mat in avg_mats.values()])
         cmax = max([mat.max().max() for mat in avg_mats.values()])
         clim = (cmin, cmax)
+        params.clim = clim
     params.ncol = 2
-    fig, axs = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, clim=clim, **params.to_dict())
+    
+    fig, axs = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, **params.to_dict())
     return fig, axs
 
 
@@ -359,7 +362,6 @@ class RunDistanceParams:
     summary_name: str = None
     save_output: bool = False
     vs_same_ylim: list = None
-    clim: list = None
     do_compare_cs: bool = False
     reg: float = 1e-5
     do_plot_per_fish: bool = False
@@ -412,7 +414,7 @@ def run_distance(params: RunDistanceParams):
     print('Plotting per condition...')
     per_cond_params = params.plot_params.per_cond
     print(per_cond_params.to_dict())
-    fig_per_cond, axs = plot_matrix_per_condition(avg_simdf, dsconfig.conditions, clim=params.clim, params=per_cond_params)
+    fig_per_cond, axs = plot_matrix_per_condition(avg_simdf, dsconfig.conditions, params=per_cond_params)
 
     print('Plotting delta matrix...')
     if params.do_reorder_cs:

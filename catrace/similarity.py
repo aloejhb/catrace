@@ -31,6 +31,55 @@ def pattern_correlation(mat):
     return corr_mat
 
 
+import numpy as np
+from scipy.spatial.distance import cdist
+
+def cosine_distance_to_template(mat, template):
+    """
+    Compute the cosine distances between each row in `mat` and the `template` vector.
+
+    Parameters:
+    mat (numpy.ndarray): A 2D array of shape (n_trials, n_features), where each row is a trial.
+    template (numpy.ndarray): A 1D array of shape (n_features,), representing the template vector.
+
+    Returns:
+    numpy.ndarray: A 1D array of shape (n_trials,) containing the cosine distances.
+    """
+    # Ensure the template is a 2D array with shape (1, n_features)
+    template_2d = template.reshape(1, -1)
+    # Compute cosine distances between each row of mat and the template
+    distances = cdist(mat, template_2d, metric='cosine')
+    # Flatten the distances to a 1D array
+    return distances.flatten()
+
+
+def pattern_correlation_to_template(mat, template):
+    """
+    Compute the Pearson correlation between each row in `mat` and the `template` vector.
+
+    Parameters:
+    mat (numpy.ndarray): A 2D array of shape (n_trials, n_features), where each row is a trial.
+    template (numpy.ndarray): A 1D array of shape (n_features,), representing the template vector.
+
+    Returns:
+    numpy.ndarray: A 1D array of shape (n_trials,) containing the correlation coefficients.
+    """
+    # Standardize the rows of mat
+    mat_mean = mat.mean(axis=1, keepdims=True)
+    mat_std = mat.std(axis=1, ddof=0, keepdims=True)
+    mat_standardized = (mat - mat_mean) / mat_std
+
+    # Standardize the template vector
+    template_mean = template.mean()
+    template_std = template.std(ddof=0)
+    template_standardized = (template - template_mean) / template_std
+
+    # Compute the correlation coefficients
+    # Each element is the mean of the product of standardized values
+    correlations = np.mean(mat_standardized * template_standardized, axis=1)
+    return correlations
+
+
 def compute_similarity_mat(dfovf, time_window, frame_rate, similarity_func):
     """
     Compute of similarity matrix from response patterns of neurons
@@ -193,6 +242,16 @@ def plot_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=8
     return im
 
 
+def plot_trial_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=7, color_norm: Normalize = None):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(5, 5))
+    else:
+        fig = ax.get_figure()
+
+    im = ax.imshow(df.to_numpy(), cmap=cmap, norm=color_norm)
+    return im
+
+
 def select_odors_mat(matdf, odors):
     if matdf.index.names == ['odor', 'trial']:
         smat = matdf.loc[(odors, slice(None)), (odors, slice(None))]
@@ -351,3 +410,151 @@ def average_mat_over_trials(simdf):
     # take average over trials
     avg_mat = simdf.groupby(level='odor', observed=True).mean().T.groupby(level='odor', observed=True).mean().T
     return avg_mat
+
+
+
+# def compute_similarity_over_time(trial_traces, bin_size=None, frame_range=None, similarity_method='pattern_correlation'):
+#     """
+#     Computes the similarity matrix and mean spike probability over time for the given trial traces.
+
+#     Parameters:
+#     - trial_traces: DataFrame, the trial traces data
+#     - bin_size: int, the size of the bins for averaging (default is None)
+#     - frame_range: tuple, the range of frames to consider (default is (18, 110))
+#     - similarity_method: str, the similarity method to use, either 'cosine' or 'pattern_correlation'
+
+#     Returns:
+#     - xvec: The x-axis vector
+#     - trial_traces_mean: Series, the mean spike probability over time
+#     - mat: array, the computed similarity matrix
+#     """
+#     if frame_range is None:
+#         frame_range = (0, len(trial_traces))
+#     # Bin the trial traces if bin_size is specified
+#     if bin_size is not None:
+#         trial_traces = trial_traces.groupby(trial_traces.index // bin_size).mean()
+#         frame_range = np.array(frame_range) // bin_size
+
+#     # Adjust the frame range according to the bin size
+#     trial_traces = trial_traces.iloc[frame_range[0]:frame_range[1], :]
+
+#     # Define x-axis vector
+#     xvec = np.arange(frame_range[0], frame_range[1]) - frame_range[0]
+
+#     # Compute mean spike probability over cells (for plotting)
+#     trial_traces_mean = trial_traces.mean(axis=1)
+
+#     # Compute the similarity matrix based on the chosen method
+#     if similarity_method == 'cosine':
+#         mat = cosine_distance(trial_traces.to_numpy())
+#     elif similarity_method == 'pattern_correlation':
+#         mat = pattern_correlation(trial_traces.to_numpy())
+#     else:
+#         raise ValueError("Invalid similarity_method. Choose 'cosine' or 'pattern_correlation'.")
+
+#     return xvec, trial_traces_mean, mat
+
+
+def compute_trial_similarity_over_time(trial_traces, bin_size=None, similarity_method='pattern_correlation'):
+    # Bin the trial traces if bin_size is specified
+    if bin_size is not None:
+        trial_traces = trial_traces.groupby(trial_traces.index // bin_size).mean()
+        frame_range = np.array(frame_range) // bin_size
+
+    # Compute the similarity matrix based on the chosen method
+    if similarity_method == 'cosine':
+        trial_similarity = cosine_distance(trial_traces.to_numpy())
+    elif similarity_method == 'pattern_correlation':
+        trial_similarity = pattern_correlation(trial_traces.to_numpy())
+    else:
+        raise ValueError("Invalid similarity_method. Choose 'cosine' or 'pattern_correlation'.")
+
+    return trial_similarity
+
+
+from matplotlib.colors import PowerNorm
+
+
+def plot_correlation_over_time_subplots(xvec, trial_traces_mean, mat, similarity_method='pattern_correlation', clim=(0, 1),
+                                        cmap='magma', power_norm=1.2, figsize=(5, 5)):
+    """
+    Plots the correlation over time with a line plot above a similarity matrix plot.
+    Both plots share the same x-axis and have the same widths.
+
+    Parameters:
+    - xvec: array, the x-axis vector
+    - trial_traces_mean: Series, the mean spike probability over time
+    - mat: array, the similarity matrix
+    - similarity_method: str, the similarity method used, either 'cosine' or 'pattern_correlation' (for labeling)
+    - clim: tuple, the color limits for the similarity matrix (default is (0, 1))
+    - cmap: str, the colormap for the similarity matrix (default is 'magma')
+    - power_norm: float, the power normalization factor for the similarity matrix (default is 1.2)
+    - figsize: tuple, the figure size (default is (5, 5))
+
+    Returns:
+    - fig, (ax_line, ax_mat): The figure and axes objects of the plot
+    """
+    # Create subplots with shared x-axis
+    fig, (ax_line, ax_mat) = plt.subplots(2, 1, figsize=figsize, sharex=True,
+                                          gridspec_kw={'height_ratios': [1, 4]}, constrained_layout=True)
+
+    # Line plot on the top
+    ax_line.plot(xvec, trial_traces_mean)
+    ax_line.set_ylabel('Mean spike probability', fontsize=7)
+    ax_line.tick_params(labelbottom=False)
+
+    # Matshow plot below
+    img = ax_mat.imshow(mat, interpolation='none', cmap=cmap, norm=PowerNorm(power_norm),
+                        clim=clim, aspect='auto')
+
+    # Set labels
+    ax_mat.set_xlabel('Frames')
+    ax_mat.set_ylabel('Frames')
+
+    # Add colorbar without affecting the width
+    cbar = fig.colorbar(img, ax=ax_mat, pad=0.02, fraction=0.046)
+    clabel = 'Cosine Distance' if similarity_method == 'cosine' else 'Pattern Correlation'
+    cbar.set_label(clabel, fontsize=7)
+
+    return fig, (ax_line, ax_mat)
+
+
+def plot_trial_correlation_over_time(trial_traces, bin_size=None, frame_range=None, similarity_method='pattern_correlation', clim=(0, 1),
+                                     cmap='magma', power_norm=1.2, figsize=(5, 5)):
+    """
+    Computes and plots the correlation over time for the given trial traces.
+
+    Parameters:
+    - trial_traces: DataFrame, the trial traces data
+    - bin_size: int, the size of the bins for averaging (default is None)
+    - frame_range: tuple, the range of frames to consider (default is (18, 110))
+    - similarity_method: str, the similarity method to use, either 'cosine' or 'pattern_correlation'
+    - clim: tuple, the color limits for the similarity matrix (default is (0, 1))
+    - cmap: str, the colormap for the similarity matrix (default is 'magma')
+    - power_norm: float, the power normalization factor for the similarity matrix (default is 1.2)
+    - figsize: tuple, the figure size (default is (5, 5))
+
+    Returns:
+    - fig, (ax_line, ax_mat): The figure and axes objects of the plot
+    """
+    # Compute the data for plotting
+    xvec, trial_traces_mean, mat = compute_similarity_over_time(
+        trial_traces,
+        bin_size=bin_size,
+        frame_range=frame_range,
+        similarity_method=similarity_method
+    )
+
+    # Plot the data
+    fig, (ax_line, ax_mat) = plot_correlation_over_time_subplots(
+        xvec,
+        trial_traces_mean,
+        mat,
+        similarity_method=similarity_method,
+        clim=clim,
+        cmap=cmap,
+        power_norm=power_norm,
+        figsize=figsize
+    )
+
+    return fig, (ax_line, ax_mat)

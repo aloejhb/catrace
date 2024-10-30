@@ -41,13 +41,14 @@ class PlotPerCondMatParams:
     row_height: float = 1.2
     col_width: float = 2
     title_fontsize: float = 7
-    colorbar_fontsize: float = 7
+    colorbar_fontsize: float = 6
     ylabel_fontsize: float = 7
     ylabels: list = None
     ylabel_colors: list = None
     cmap: str = 'turbo'
     clim: tuple = None
     color_norm: Normalize = None
+    cbar_interval: float = None
 
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -55,7 +56,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
                    sharey=False, ncol=2, row_height=3.5, col_width=4,
                    title_fontsize=16, colorbar_fontsize=12,
-                   **kwargs):
+                   cbar_interval=None, **kwargs):
     """
     Plot matrices for each training condtion.
     """
@@ -75,6 +76,11 @@ def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
         cax = divider.append_axes("right", size="5%", pad=0.05)  # 'size' controls width, 'pad' controls spacing
         cbar = fig.colorbar(img, cax=cax)
         cbar.ax.tick_params(labelsize=colorbar_fontsize)
+        # Get current clim
+        if cbar_interval is not None:
+            clim = cbar.mappable.get_clim()
+            # Set tick intervals for cbar to cbar_interval
+            cbar.set_ticks(np.arange(clim[0], clim[1], cbar_interval))
         # cbar = fig.colorbar(img, ax=ax)
         # cbar.ax.tick_params(labelsize=colorbar_fontsize)
 

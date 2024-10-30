@@ -3,13 +3,48 @@ import pandas as pd
 import numpy as np
 from os.path import join as pjoin
 
-def compute_area_under_the_curve(params, param_idx, training_day, num_trials_per_day):
+def adjust_data_with_baseline(data, num_trials_per_day, num_baseline_days):
+    """
+    Adjusts the data by subtracting the median of the baseline trials.
+
+    Parameters:
+    - data: numpy array of data to adjust
+    - num_trials_per_day: int, number of trials per day
+    - num_baseline_days: int, number of days to use for baseline
+
+    Returns:
+    - adjusted_data: numpy array of data after baseline adjustment
+    """
+    baseline_trials = int(num_baseline_days * num_trials_per_day)
+
+    # Extract baseline data
+    baseline_data = data[:baseline_trials]
+
+    # Compute median of baseline data
+    baseline_value = np.median(baseline_data)
+
+    # Extract the rest of the data
+    rest_data = data[baseline_trials:]
+
+    # Subtract baseline value from the rest of the data
+    adjusted_data = rest_data - baseline_value
+
+    return adjusted_data
+
+def compute_area_under_the_curve(params, param_idx, training_day, num_trials_per_day, num_baseline_days=None):
     """
     Computes the area under the curve for cs_minus and cs_plus for a given parameter.
-    
-    params: numpy array of shape (num_cs, num_params, num_trials)
-    num_trials_per_day: int, number of trials per day
-    param_idx: index of the parameter to compute AUC for
+
+    Parameters:
+    - params: numpy array of shape (num_cs, num_params, num_trials)
+    - param_idx: index of the parameter to compute AUC for
+    - training_day: int, total number of training days
+    - num_trials_per_day: int, number of trials per day
+    - num_baseline_days: int or None, number of days to use for baseline (default None)
+
+    Returns:
+    - auc_cs_minus: float, area under the curve for cs_minus
+    - auc_cs_plus: float, area under the curve for cs_plus
     """
     # Extract data for the given parameter index (for both cs_minus and cs_plus)
     cs_minus_data = params[0, param_idx, :]  # First index (0) corresponds to cs_minus
@@ -19,14 +54,28 @@ def compute_area_under_the_curve(params, param_idx, training_day, num_trials_per
     cs_minus_data = cs_minus_data[:num_valid_trials]
     cs_plus_data = cs_plus_data[:num_valid_trials]
 
-    # Compute AUC using np.trapz (or replace with actual logic if different)
-    auc_cs_minus = np.trapz(cs_minus_data)
-    auc_cs_plus = np.trapz(cs_plus_data)
+    if num_baseline_days is not None and num_baseline_days > 0:
+        # Adjust data by subtracting the baseline
+        cs_minus_adjusted = adjust_data_with_baseline(cs_minus_data, num_trials_per_day, num_baseline_days)
+        cs_plus_adjusted = adjust_data_with_baseline(cs_plus_data, num_trials_per_day, num_baseline_days)
+
+        # Check if there are data points to compute AUC
+        if cs_minus_adjusted.size == 0 or cs_plus_adjusted.size == 0:
+            raise ValueError("No data points available after baseline adjustment for AUC computation.")
+    else:
+        # No baseline adjustment
+        cs_minus_adjusted = cs_minus_data
+        cs_plus_adjusted = cs_plus_data
+
+    # Compute AUC using np.trapz
+    auc_cs_minus = np.trapz(cs_minus_adjusted)
+    auc_cs_plus = np.trapz(cs_plus_adjusted)
 
     return auc_cs_minus, auc_cs_plus
 
 
-def compute_auc_for_all_parameters(params, training_day, num_trials_per_day):
+
+def compute_auc_for_all_parameters(params, training_day, num_trials_per_day, num_baseline_days=None):
     """
     Computes the AUC for all parameters for a given fish.
     
@@ -37,11 +86,11 @@ def compute_auc_for_all_parameters(params, training_day, num_trials_per_day):
     num_params = params.shape[1]  # Get the number of parameters
     aucs = []
     for param_idx in range(num_params):
-        auc = compute_area_under_the_curve(params, param_idx, training_day, num_trials_per_day)
+        auc = compute_area_under_the_curve(params, param_idx, training_day, num_trials_per_day, num_baseline_days=num_baseline_days)
         aucs.append(auc)
     return aucs
 
-def prepare_juvenile_behavior_df():
+def prepare_juvenile_behavior_df(num_baseline_days=None):
     behavior_dir = '/tungstenfs/scratch/gfriedri/hubo/behavior/data'
     mat_file = pjoin(behavior_dir, 'juvenile_behavior_params.mat')
     num_trials_per_day = 9
@@ -71,7 +120,7 @@ def prepare_juvenile_behavior_df():
         training_day = training_days[fish_idx]
         
         # Compute AUC for all parameters for this fish
-        aucs = compute_auc_for_all_parameters(params, training_day, num_trials_per_day)
+        aucs = compute_auc_for_all_parameters(params, training_day, num_trials_per_day, num_baseline_days)
         aucs_list.append((fish_id, training_day, aucs))
 
     # Create a DataFrame with fish_id, training_day, and aucs
@@ -99,7 +148,7 @@ def prepare_juvenile_behavior_df():
     return behavior_df, param_names
 
 
-def compute_behavior_measures_per_day(behavior_df, param_names):
+def compute_behavior_measures_per_day(behavior_df, param_names, num_baseline_days=None):
     """
     Computes the diff_per_day, cs_minus_per_day, and cs_plus_per_day for all parameters in the behavior DataFrame.
     
@@ -119,6 +168,8 @@ def compute_behavior_measures_per_day(behavior_df, param_names):
         
         # Get the training day to compute the per-day measures
         training_day = behavior_measure_df['training_day']
+        if num_baseline_days is not None:
+            training_day -= num_baseline_days
         
         # Compute diff_per_day
         behavior_measure_df[f'auc_{param_name}_diff_per_day'] = (
