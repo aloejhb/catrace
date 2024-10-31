@@ -48,6 +48,7 @@ def plot_trace_avg(trace, frame_rate=None, cut_time=0, ax=None, show_legend=Fals
                    figsize=(10, 4),
                    legend_fontsize=6,
                    label_fontsize=7,
+                   tick_label_fontsize=6,
                    odor_colors=None,
                    alpha=1):
     """
@@ -89,7 +90,7 @@ def plot_trace_avg(trace, frame_rate=None, cut_time=0, ax=None, show_legend=Fals
         # Put legend outside the plot
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), prop={'size': legend_fontsize})
 
-    ax.tick_params(axis='both', labelsize=label_fontsize)
+    ax.tick_params(axis='both', labelsize=tick_label_fontsize)
     xlabel = 'Time (s)' if frame_rate is not None else 'Frame'
     ax.set_xlabel(xlabel, fontsize=label_fontsize)
     ax.set_ylabel(r'Deconvolved $\Delta F/F$', fontsize=label_fontsize)
@@ -104,7 +105,7 @@ def plot_average_time_trace(dff):
 
 
 def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', label='Mean', err_type='std',
-                       linewidth=1, start_time_with_zero=False):
+                       linewidth=1, start_time_with_zero=False, std_alpha=0.3):
     """
     Plots the mean trace with a shaded area representing the standard deviation.
 
@@ -143,7 +144,7 @@ def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', labe
     ax.fill_between(xvec, 
                     mean_trace - err_trace, 
                     mean_trace + err_trace, 
-                    color=color, alpha=0.3, linewidth=0)
+                    color=color, alpha=std_alpha, linewidth=0)
     #, label=f'{label} ± std')
     
     ax.set_xlabel('Time')

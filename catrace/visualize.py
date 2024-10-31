@@ -56,7 +56,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
                    sharey=False, ncol=2, row_height=3.5, col_width=4,
                    title_fontsize=16, colorbar_fontsize=12,
-                   cbar_interval=None, **kwargs):
+                   cbar_interval=None, 
+                   **kwargs):
     """
     Plot matrices for each training condtion.
     """
@@ -355,6 +356,7 @@ class PlotBoxplotMultiOdorCondParams:
     mean_marker_size: float = 1.5
     pvalue_marker_fontsize: float = 7
     pvalue_marker_xoffset: float = 0.02
+    pvalue_bar_linewidth: float = 1
     do_capitalize_labels: bool = False
 
 def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
@@ -381,6 +383,7 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    mean_marker_size=2,
                                                    pvalue_marker_fontsize=7,
                                                    pvalue_marker_xoffset=0.01,
+                                                   pvalue_bar_linewidth=1,
                                                    do_capitalize_labels=False):
     #### IMPORTANT ####
     # This function requires seaborn version from Bo's fork aloejhb
@@ -453,7 +456,8 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                hue_separation_scaler=strip_hue_separation_scaler,
                                                show_ns=show_ns,
                                                fontsize=pvalue_marker_fontsize,
-                                               pvalue_marker_xoffset=pvalue_marker_xoffset)
+                                               pvalue_marker_xoffset=pvalue_marker_xoffset,
+                                               linewidth=pvalue_bar_linewidth)
     if do_capitalize_labels:
         ylabel = ylabel.capitalize()
         ax.set_ylabel(ylabel)
@@ -462,7 +466,7 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
     return fig, ax
 
 def plot_pvalue_marker_multi_odor_two_cond(ax, test_results, datadf, condition_name='condition', hue_separation_scaler=1.0, show_ns=False,
-                                           fontsize=7, pvalue_marker_xoffset=0.02):
+                                           fontsize=7, pvalue_marker_xoffset=0.02, linewidth=1):
     current_ylim = ax.get_ylim()
     ymax = 1.02 * current_ylim[1]
     # Getting the positions and labels
@@ -487,7 +491,7 @@ def plot_pvalue_marker_multi_odor_two_cond(ax, test_results, datadf, condition_n
         hue_offsets = [_get_hue_offset(cond_idx, len(conditions), hue_separation_scaler) for cond_idx in cond_idxs]
         hue_poses = [odor_pos + hue_offset for hue_offset in hue_offsets]
         # Draw a horizontal line between the two conditions
-        ax.hlines(y=ymax*0.97, xmin=hue_poses[0], xmax=hue_poses[1], color='black')
+        ax.hlines(y=ymax*0.97, xmin=hue_poses[0], xmax=hue_poses[1], color='black', linewidth=linewidth)
         pvalue = result['p_value']
         marker, xoffset = pvalue_to_marker(pvalue, pvalue_marker_xoffset=pvalue_marker_xoffset, fontsize=fontsize)
         if marker != 'n.s.' or show_ns:

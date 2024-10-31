@@ -3,23 +3,7 @@ from .exp_collection import read_df
 
 from matplotlib.colors import Normalize
 
-def plot_trial_similarity_mat(df, ax=None, clim=None, cmap='RdBu_r', ylabel_fontsize=7, color_norm: Normalize = None, frame_rate=None):
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(5, 5))
-    else:
-        fig = ax.get_figure()
 
-    im = ax.imshow(df.to_numpy(), cmap=cmap, norm=color_norm, interpolation='none')
-
-    if frame_rate is not None:
-        # Convert frame to time in seconds# Convert x axis from frame to time
-        xticks = np.arange(0, df.shape[1], 1 * frame_rate)
-        ax.set_xticks(xticks)
-        ax.set_yticks(xticks)
-        xticklabels = xticks / frame_rate
-        ax.set_xticklabels(xticklabels)
-        ax.set_yticklabels(xticklabels)
-    return im
 
 
 def compute_trial_similarity_over_time(trial_traces, bin_size=None, similarity_method='pattern_correlation'):
@@ -174,7 +158,63 @@ def select_frame_range_mat(avg_simdf, frame_range):
     return avg_simdf
 
 
-def plot_matrix_per_condition(avg_simdf, conditions, frame_range=None, frame_rate=None):
+@dataclass_json
+@dataclass
+class PlotTrialSimilarityParams:
+    cmap: str = 'magma'
+    clim: tuple = None
+    color_norm: Normalize = None
+    frame_rate: float = None
+    figsize: tuple = (5, 5)
+    label_fontsize: int = 7
+    tick_fontsize: int = 6
+
+
+def plot_trial_similarity_mat(df,
+                              ax=None,
+                              cmap='magma',
+                              clim=None,
+                              color_norm: Normalize = None,
+                              frame_rate: float = None,
+                              figsize=(5, 5),
+                              label_fontsize=7,
+                              tick_fontsize=6,
+                              ):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+
+    im = ax.imshow(df.to_numpy(), cmap=cmap, norm=color_norm, interpolation='none', clim=clim)
+
+    if frame_rate is not None:
+        # Convert frame to time in seconds# Convert x axis from frame to time
+        interval_in_sec = 1
+        xticks = np.arange(0, df.shape[1], interval_in_sec * frame_rate)
+        ax.set_xticks(xticks)
+        ax.set_yticks(xticks)
+        xticklabels = xticks / frame_rate
+        ax.set_xticklabels(xticklabels, fontsize=tick_fontsize)
+        ax.set_yticklabels(xticklabels, fontsize=tick_fontsize)
+
+    if frame_rate is None:
+        xlabel = 'Frames'
+    else:
+        xlabel = 'Time (s)'
+    ax.set_xlabel(xlabel, fontsize=label_fontsize)
+    return fig
+
+@dataclass_json
+@dataclass
+class PlotTrialSimilarityPerCondParams:
+    ncol: int = 2
+    row_height: float = 2
+    col_width: float = 2
+    colorbar_fontsize: int = 6
+    plot_params: PlotTrialSimilarityParams = PlotTrialSimilarityParams()
+
+
+def plot_matrix_per_condition(avg_simdf, conditions, frame_range=None, params: PlotTrialSimilarityPerCondParams = PlotTrialSimilarityPerCondParams()):
     if frame_range is not None:
         avg_simdf = select_frame_range_mat(avg_simdf, frame_range)
 
@@ -183,16 +223,16 @@ def plot_matrix_per_condition(avg_simdf, conditions, frame_range=None, frame_rat
     # Average each avg_mats so that only time is left for index
     avg_mats = {cond: mat.groupby('time').mean() for cond, mat in avg_mats.items()}
 
-    # if params.clim is None:
-    #     cmin = min([mat.min().min() for mat in avg_mats.values()])
-    #     cmax = max([mat.max().max() for mat in avg_mats.values()])
-    #     clim = (cmin, cmax)
-    #     params.clim = clim
-    # params.ncol = 2
-    times = avg_simdf.index.get_level_values('time').unique
-    fig, axs = plot_conds_mat(avg_mats, conditions, plot_trial_similarity_mat, cmap='magma', clim=(0, 0.8), color_norm=PowerNorm(gamma=1), frame_rate=frame_rate)
+    if params.plot_params.clim is None:
+        cmin = min([mat.min().min() for mat in avg_mats.values()])
+        cmax = max([mat.max().max() for mat in avg_mats.values()])
+        clim = (cmin, cmax)
+        params.plot_params.clim = clim
+    # Pop the plot_params from params
 
-
+    params_dict = params.to_dict()
+    plot_params = params_dict.pop('plot_params')
+    fig, axs = plot_conds_mat(avg_mats, conditions, plot_trial_similarity_mat, **params_dict, **plot_params)
     return fig, axs
 
 
@@ -239,7 +279,7 @@ def select_frame_range(simdf_slicing, frame_range):
     return simdf_slicing
 
 
-def plot_trial_similarity_slicing(simdf_slicing, metric, ax=None, color='blue', line_label=None, frame_range=None, frame_rate=None):
+def plot_trial_similarity_slicing(simdf_slicing, metric, ax=None, color='blue', line_label=None, frame_range=None, frame_rate=None, **kwargs):
     if line_label is None:
         line_label = metric
     if ax is None:
@@ -255,14 +295,16 @@ def plot_trial_similarity_slicing(simdf_slicing, metric, ax=None, color='blue', 
         start_time_with_zero = True
     else:
         start_time_with_zero = False
-    plot_mean_with_std(simdf_slicing, ax=ax, label=line_label, color=color, frame_rate=frame_rate, start_time_with_zero=start_time_with_zero)
+    plot_mean_with_std(simdf_slicing, ax=ax, label=line_label, color=color, frame_rate=frame_rate, start_time_with_zero=start_time_with_zero, **kwargs)
 
 import matplotlib.pyplot as plt
-def plot_slicing_per_condition(simtempdf, metric, colors, frame_range=None, frame_rate=None):
-    fig, ax = plt.subplots()
-    #'tab:blue', 'tab:brown', 'tab:green', 'tab:pink'
+def plot_slicing_per_condition(simtempdf, metric, colors, frame_range=None, frame_rate=None, ax=None, **kwargs):
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
     for condition, group in simtempdf.groupby('condition'):
-        plot_trial_similarity_slicing(group.T, metric, ax=ax, color=colors[condition], line_label=condition, frame_range=frame_range, frame_rate=frame_rate)
+        plot_trial_similarity_slicing(group.T, metric, ax=ax, color=colors[condition], line_label=condition, frame_range=frame_range, frame_rate=frame_rate, **kwargs)
         ax.legend()
     ax.set_ylabel(metric)
     return fig

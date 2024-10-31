@@ -46,7 +46,7 @@ def cosine_distance_to_template(mat, template):
     numpy.ndarray: A 1D array of shape (n_trials,) containing the cosine distances.
     """
     # Ensure the template is a 2D array with shape (1, n_features)
-    template_2d = template.reshape(1, -1)
+    template_2d = template.to_numpy().reshape(1, -1)
     # Compute cosine distances between each row of mat and the template
     distances = cdist(mat, template_2d, metric='cosine')
     # Flatten the distances to a 1D array

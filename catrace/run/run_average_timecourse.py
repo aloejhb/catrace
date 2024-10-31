@@ -21,6 +21,7 @@ class RunAverageTimecourseParams:
     do_plot_per_fish: bool = False
     figsize: tuple = (2, 3)
     label_fontsize: int = 7
+    tick_label_fontsize: int = 6
     legend_fontsize: int = 6
     linewidth: int = 1
     cut_time: float = 5
