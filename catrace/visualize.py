@@ -191,6 +191,7 @@ class PlotBoxplotParams:
     pvalue_bar_linewidth: float = 1
     rotate_xlabels: bool = False
     do_capitalize_labels: bool = False
+    pvalue_line_ylevel_scale: float = 0.97
 
 
 def plot_boxplot_with_significance(datadf, xname, yname,
@@ -219,7 +220,8 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                                    pvalue_marker_fontsize=24,
                                    pvalue_bar_linewidth=1,
                                    rotate_xlabels=False,
-                                   do_capitalize_labels=False):
+                                   do_capitalize_labels=False,
+                                   pvalue_line_ylevel_scale=0.97):
     """
     Plot boxplot with significance annotations
     """
@@ -273,7 +275,8 @@ def plot_boxplot_with_significance(datadf, xname, yname,
                        show_ns=show_ns,
                        linewidth=pvalue_bar_linewidth,
                        pvalue_marker_xoffset=pvalue_marker_xoffset,
-                       fontsize=pvalue_marker_fontsize)
+                       fontsize=pvalue_marker_fontsize,
+                       line_ylevel_scale=pvalue_line_ylevel_scale)
 
     # Removing the top and right spines
     sns.despine(ax=ax)
@@ -295,7 +298,7 @@ def pvalue_to_marker(p_value, pvalue_marker_xoffset=0.01, fontsize=24):
     return 'n.s.', 4*pvalue_marker_xoffset*fontsize/14
 
 
-def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_ns=True, fontsize=24, linewidth=1, **kwargs):
+def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_ns=True, fontsize=24, linewidth=1, line_ylevel_scale=0.97, **kwargs):
     # Getting the positions and labels
     xticks = ax.get_xticks()
     xlabels = [label.get_text() for label in ax.get_xticklabels()]
@@ -326,7 +329,7 @@ def plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=None, show_n
                 xmid = (xstart + xend) / 2
                 text = ax.text(xmid-xoffset, ylevel, marker, fontsize=fontsize)
                 text.set_gid('pvalue_text')
-                line = ax.hlines(y=ylevel*0.97, xmin=xstart, xmax=xend, color='black', linewidth=linewidth)
+                line = ax.hlines(y=ylevel*line_ylevel_scale, xmin=xstart, xmax=xend, color='black', linewidth=linewidth)
                 line.set_gid('pvalue_line')
     else:
         raise ValueError('test_type must be one of "single" or "one_reference"')
@@ -342,7 +345,6 @@ class PlotBoxplotMultiOdorCondParams:
     ylim: tuple = None
     label_fontsize: float = 7
     legend_fontsize: float = 6
-    show_ns: bool = False
     hline_y: float = None
     box_width: float = 0.45
     box_linewidth: float = 1.5
@@ -358,6 +360,7 @@ class PlotBoxplotMultiOdorCondParams:
     pvalue_marker_xoffset: float = 0.02
     pvalue_bar_linewidth: float = 1
     do_capitalize_labels: bool = False
+    show_ns: bool = True
 
 def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    test_results=None,
@@ -369,7 +372,6 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    ylim=None,
                                                    label_fontsize = 24,
                                                    legend_fontsize=16,
-                                                   show_ns=False,
                                                    hline_y=None,
                                                    box_width=0.45,
                                                    box_linewidth=1,
@@ -384,7 +386,8 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    pvalue_marker_fontsize=7,
                                                    pvalue_marker_xoffset=0.01,
                                                    pvalue_bar_linewidth=1,
-                                                   do_capitalize_labels=False):
+                                                   do_capitalize_labels=False,
+                                                   show_ns=True):
     #### IMPORTANT ####
     # This function requires seaborn version from Bo's fork aloejhb
     ###################
@@ -491,11 +494,11 @@ def plot_pvalue_marker_multi_odor_two_cond(ax, test_results, datadf, condition_n
         hue_offsets = [_get_hue_offset(cond_idx, len(conditions), hue_separation_scaler) for cond_idx in cond_idxs]
         hue_poses = [odor_pos + hue_offset for hue_offset in hue_offsets]
         # Draw a horizontal line between the two conditions
-        ax.hlines(y=ymax*0.97, xmin=hue_poses[0], xmax=hue_poses[1], color='black', linewidth=linewidth)
         pvalue = result['p_value']
         marker, xoffset = pvalue_to_marker(pvalue, pvalue_marker_xoffset=pvalue_marker_xoffset, fontsize=fontsize)
         if marker != 'n.s.' or show_ns:
             xmid = (hue_poses[0] + hue_poses[1]) / 2
+            ax.hlines(y=ymax*0.97, xmin=hue_poses[0], xmax=hue_poses[1], color='black', linewidth=linewidth)
             ax.text(xmid-xoffset, ymax, marker, fontsize=fontsize)
 
 

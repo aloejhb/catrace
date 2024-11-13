@@ -104,7 +104,7 @@ def apply_test_pair(df, yname=None, group_name1='naive', group_name2='trained', 
         if level in df.index.names:
             data1 = df[df.index.get_level_values(level) == group_name1][yname]
             data2 = df[df.index.get_level_values(level) == group_name2][yname]
-        elif level in df.columns.names:
+        elif level in df.columns or level in df.columns.names:
             data1 = df[df[level] == group_name1][yname]
             data2 = df[df[level] == group_name2][yname]
         else:
@@ -613,7 +613,28 @@ def format_capacity_test_results_dict(test_results_dict):
 import statsmodels.api as sm
 import seaborn as sns
 import matplotlib.pyplot as plt
-def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None, figsize=(5, 5)):
+
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+from .utils import format_number
+
+@dataclass_json
+@dataclass
+class PlotRegressionParams:
+    figsize: tuple = (2, 2)
+    marker_size: int = 1
+    label_fontsize: int = 7
+    tick_label_fontsize: int = 6
+    fit_line_width: int = 0.5
+    reg_tex_fontsize: int = 5
+    color_dict: dict = None
+
+
+def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None,
+                    figsize=(5, 5), marker_size=1,
+                    label_fontsize=7, tick_label_fontsize=6,
+                    fit_line_width=1, reg_tex_fontsize=5,
+                    color_dict=None):
     """
     Plots a scatter plot with a regression line on the provided axes, including statistical annotations.
 
@@ -630,7 +651,7 @@ def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None
     else:
         fig = ax.get_figure()
     # Create scatter plot
-    sns.scatterplot(data=dff, x=x_measure, y=y_measure, hue=hue, hue_order=hue_order, ax=ax)
+    sns.scatterplot(data=dff, x=x_measure, y=y_measure, hue=hue, hue_order=hue_order, ax=ax, s=marker_size, palette=color_dict)
 
     # Fit linear model using statsmodels to extract R-squared and p-value
     X = sm.add_constant(dff[x_measure])  # Add a constant to the model for the intercept
@@ -643,22 +664,27 @@ def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None
     slope = model.params[x_measure]
 
     # Plot the regression line
-    ax.plot(dff[x_measure], predictions, color='black', lw=2)
+    ax.plot(dff[x_measure], predictions, color='black', lw=fit_line_width)
 
     p_value_srt = format_p_value(p_value)
     print(p_value_srt)
     # Annotate the plot with slope, R², and p-value
-    text_str = f'Slope: {slope:.6f}\nR²: {r_squared:.2f}\np-value: {p_value_srt}'
+    text_str = f'Slope: {format_number(slope, sig=3)}\nR²: {r_squared:.2f}\np-value: {p_value_srt}'
     if slope < 0:
         text_pos = (0.05, 0.25)
     else:
         text_pos = (0.5, 0.25)
-    ax.text(text_pos[0], text_pos[1], text_str, transform=ax.transAxes, verticalalignment='top', bbox=dict(boxstyle="round", facecolor='white', alpha=0.5),
-            fontsize=14)
+    ax.text(text_pos[0], text_pos[1], text_str, transform=ax.transAxes, verticalalignment='top', bbox=dict(boxstyle="round", facecolor='white', alpha=0.5, linewidth=0.5),
+            fontsize=reg_tex_fontsize)
 
     # Enhancing the plot
-    ax.set_xlabel(x_measure, fontsize=20)
-    ax.set_ylabel(y_measure, fontsize=20)
-    ax.legend(title=hue, fontsize=14)
+    ax.set_xlabel(x_measure, fontsize=label_fontsize)
+    ax.set_ylabel(y_measure, fontsize=label_fontsize)
+    ax.legend(title=hue, fontsize=tick_label_fontsize)
+    # Set legend title font size
+    legend = ax.get_legend()
+    legend.set_title(legend.get_title().get_text(), prop={'size': tick_label_fontsize})
 
+    # Set tick label font size
+    ax.tick_params(axis='both', which='major', labelsize=tick_label_fontsize)
     return fig, model, text_str

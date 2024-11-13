@@ -104,18 +104,21 @@ def merge_with_behavior(subsimdf_per_fish, behavior_measure_df):
 from ..dataset import load_dataset_config
 from ..stats import plot_regression
 
-
 def regression_distance_with_behavior(config_file,
                                       metric,
                                       load_distance_per_fish_params,
                                       behavior_measure_df, behavior_measure_name,
                                       num_baseline_days=None,
-                                      figsize=(5, 5)):
+                                      selected_conditions=None,
+                                      plot_regression_params=None):
     dsconfig = load_dataset_config(config_file)
 
     subsimdf_per_fish = load_distance_per_fish(**load_distance_per_fish_params)
+    if selected_conditions is not None:
+        subsimdf_per_fish = subsimdf_per_fish[subsimdf_per_fish['condition'].isin(selected_conditions)] 
     merged_behavior_df = merge_with_behavior(subsimdf_per_fish, behavior_measure_df)
-    fig, model, text_str = plot_regression(merged_behavior_df, metric, behavior_measure_name, hue='condition', figsize=figsize)
+    plot_regression_params = plot_regression_params.to_dict() or {}
+    fig, model, text_str = plot_regression(merged_behavior_df, metric, behavior_measure_name, hue='condition', **plot_regression_params)
     if metric == 'mahal':
         # remove legend
         ax = fig.get_axes()[0]
@@ -123,4 +126,6 @@ def regression_distance_with_behavior(config_file,
     if num_baseline_days is not None:
         title = f'Baseline days: {num_baseline_days}'
         fig.suptitle(title)
+    
+    fig.tight_layout()
     return fig, model, text_str

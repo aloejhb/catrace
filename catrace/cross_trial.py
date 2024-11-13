@@ -64,7 +64,7 @@ def process_cross_trial_similarity(cross_trial_dff, odors, region=None):
 
 from catrace.visualize import plot_measure_multi_odor_cond, PlotBoxplotMultiOdorCondParams
 
-def process_and_plot_cross_trial_similarity(cross_trial_dff, dsconfig, odor_keys, params: PlotBoxplotMultiOdorCondParams):
+def process_and_plot_cross_trial_similarity(cross_trial_dff, dsconfig, odor_keys, region=None, params: PlotBoxplotMultiOdorCondParams=PlotBoxplotMultiOdorCondParams()):
     """
     Process and plot the cross-trial similarity data by selecting and concatenating specific conditions and regions.
 
@@ -78,7 +78,7 @@ def process_and_plot_cross_trial_similarity(cross_trial_dff, dsconfig, odor_keys
     dfs = []
     for odor_key in odor_keys:
         odors = get_odors_by_key(dsconfig, odor_key)
-        concatenated_df = process_cross_trial_similarity(cross_trial_dff, odors)
+        concatenated_df = process_cross_trial_similarity(cross_trial_dff, odors, region=region)
         dfs.append(concatenated_df)
 
     multi_df = pd.concat(dfs, keys=odor_keys, names=['odor_key'])
@@ -88,4 +88,4 @@ def process_and_plot_cross_trial_similarity(cross_trial_dff, dsconfig, odor_keys
                                                          odor_name='odor_key',
                                                          condition_name='condition',
                                                          params=params)
-    return fig, test_results
+    return fig, test_results, multi_df

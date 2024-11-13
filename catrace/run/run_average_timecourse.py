@@ -29,6 +29,7 @@ class RunAverageTimecourseParams:
     odor_colors: dict = None
     alpha: float = 1
     ylim: tuple = None
+    convert_to_rate: bool = False
 
 def run_average_timecourse(params: RunAverageTimecourseParams):
     dsconfig= load_dataset_config(params.config_file)
@@ -50,6 +51,10 @@ def run_average_timecourse(params: RunAverageTimecourseParams):
         dff = select_odors_and_sort(dff, dsconfig.odors_stimuli)
     else:
         dff = params.dff
+
+    if params.convert_to_rate:
+        # Convert spike probability to spike rate
+        dff = dff * dsconfig.frame_rate
     # Get figsize, label_fontsize, legend_fontsize, linewidth from params into a dictionary
     params_dict = params.to_dict()
     sub_params = {k: params_dict[k] for k in ['figsize', 'label_fontsize', 'legend_fontsize', 'linewidth', 'odor_colors']}

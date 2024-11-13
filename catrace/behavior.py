@@ -189,3 +189,23 @@ def compute_behavior_measures_per_day(behavior_df, param_names, num_baseline_day
     return behavior_measure_df
 
 
+def prepare_juvenile_behavior_timecourse_df():
+    behavior_dir = '/tungstenfs/scratch/gfriedri/hubo/behavior/data'
+    mat_file = pjoin(behavior_dir, 'juvenile_behavior_params.mat')
+    num_trials_per_day = 9
+
+    # Load the .mat file
+    mat = scipy.io.loadmat(mat_file)
+
+    # Extract fish_ids, training days, and param names
+    fish_ids = [str(fish_id[0][0]) for fish_id in mat['fishIds']]
+    training_days = [int(day[0]) for day in mat['days']]
+    param_names = [str(param_name[0]) for param_name in mat['paramNames'][0]]  # Get the parameter names
+    
+    # Handle exceptions in training days
+    for idx in [27, 28, 29]:
+        training_days[idx] -= 1
+
+    # Extract the behavior data
+    all_behavior_data = mat['allData']  # Shape: (num_cs, num_params, num_trials, num_fish)
+    import pdb; pdb.set_trace()

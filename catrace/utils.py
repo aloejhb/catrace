@@ -108,3 +108,23 @@ def get_ordered_odor_pairs(all_odors):
             if i != j:
                 odor_pairs.append((all_odors[i], all_odors[j]))
     return odor_pairs
+
+
+import math
+
+def format_number(num, sig=4):
+    if num == 0:
+        return '0'
+    else:
+        x = abs(num)
+        n = int(math.floor(math.log10(x)))
+        n_sig_digits = sig - n - 1
+        if n_sig_digits > 0:
+            # For numbers where significant digits span into decimal places
+            fmt = '{0:.' + str(n_sig_digits) + 'f}'
+            return fmt.format(num)
+        else:
+            # For numbers where significant digits are all in integer part
+            num_rounded = round(num, -n_sig_digits)
+            fmt = '{0:.0f}'
+            return fmt.format(num_rounded)
