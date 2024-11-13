@@ -189,8 +189,7 @@ def compute_behavior_measures_per_day(behavior_df, param_names, num_baseline_day
     return behavior_measure_df
 
 
-def prepare_juvenile_behavior_timecourse_df():
-    behavior_dir = '/tungstenfs/scratch/gfriedri/hubo/behavior/data'
+def prepare_juvenile_behavior_timecourse_df(behavior_dir):
     mat_file = pjoin(behavior_dir, 'juvenile_behavior_params.mat')
     num_trials_per_day = 9
 
@@ -201,6 +200,7 @@ def prepare_juvenile_behavior_timecourse_df():
     fish_ids = [str(fish_id[0][0]) for fish_id in mat['fishIds']]
     training_days = [int(day[0]) for day in mat['days']]
     param_names = [str(param_name[0]) for param_name in mat['paramNames'][0]]  # Get the parameter names
+    css = ('cs_minus', 'cs_plus')
     
     # Handle exceptions in training days
     for idx in [27, 28, 29]:
@@ -208,4 +208,21 @@ def prepare_juvenile_behavior_timecourse_df():
 
     # Extract the behavior data
     all_behavior_data = mat['allData']  # Shape: (num_cs, num_params, num_trials, num_fish)
-    import pdb; pdb.set_trace()
+    # (2, 7, 36, 46)
+
+    trials = list(range(1, all_behavior_data.shape[2]+1))
+    my_keys = []
+    timecourse_dfs = []
+    for cs_idx, cs in enumerate(css):
+        for param_idx, param_name in enumerate(param_names):
+            my_key = (cs, param_name)
+            timecourse_mat = all_behavior_data[cs_idx, param_idx, :, :]
+            timecourse_df = pd.DataFrame(timecourse_mat.T, columns=trials, index=fish_ids)
+            # column name is trial number
+            timecourse_df.index.name = 'fish_id'
+            timecourse_df.columns.name = 'trial'
+            my_keys.append(my_key)
+            timecourse_dfs.append(timecourse_df)
+
+    behavior_timecourse_df = pd.concat(timecourse_dfs, keys=my_keys, names=['cs', 'behavior_param'])
+    return behavior_timecourse_df

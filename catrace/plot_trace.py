@@ -104,7 +104,7 @@ def plot_average_time_trace(dff):
     plt.plot(dff.groupby('time').mean().mean(axis=1))
 
 
-def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', label='Mean', err_type='std',
+def plot_mean_with_std(time_traces_df, frame_rate=1, time_level_name='time', ax=None, color='blue', label='Mean', err_type='std',
                        linewidth=1, start_time_with_zero=False, std_alpha=0.3):
     """
     Plots the mean trace with a shaded area representing the standard deviation.
@@ -125,12 +125,16 @@ def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', labe
         err_trace = time_traces_df.std(axis=1)
     elif err_type == 'sem':
         err_trace = time_traces_df.sem(axis=1)
+    else:
+        raise ValueError(f'err_type must be either "std" or "sem". Got: {err}')
 
     # Create the plot
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
+    else:
+        fig = ax.get_figure()
     
-    tvec = mean_trace.index.get_level_values('time')
+    tvec = mean_trace.index.get_level_values(time_level_name)
     xvec = tvec / frame_rate
     if start_time_with_zero:
         xvec = xvec - xvec[0]
@@ -151,4 +155,4 @@ def plot_mean_with_std(time_traces_df, frame_rate=1, ax=None, color='blue', labe
     ax.set_ylabel('Value')
     ax.legend()
 
-    return ax
+    return fig, ax
