@@ -573,6 +573,7 @@ def plot_all_measures(mdff, measure_names=None, name_to_label=None, test_type='m
         test_results_list.append(test_results)
     return fig, axs, test_results_list
 
+from typing import Optional
 
 @dataclass_json
 @dataclass
@@ -580,21 +581,21 @@ class PlotBoxplotByCondParams:
     figsize: tuple = (4, 4)
     label_fontsize: float = 7
     tick_label_fontsize: float = 7
-    ylim: tuple = None
     ylevel_scale: float = 1.02
     do_plot_strip: bool = True
     strip_size: float = 1
     box_width: float=0.45
     box_linewidth: float=1.5
     box_color: str = 'tab:blue'
-    box_colors: list[str] = None
     mean_marker_size: float=1
     mean_marker_color: str = 'tab:red'
     pvalue_marker_fontsize: float=7
     pvalue_marker_xoffset: float = 0.5
-    hline_y: float = None
     hline_linewidth: float = 1.0
     show_ns: bool = False
+    ylim: Optional[tuple] = None
+    box_colors: Optional[list[str]] = None
+    hline_y: Optional[float] = None
 
 
 def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
@@ -663,7 +664,7 @@ def plot_boxplot_with_significance_by_cond(datadf, yname, ylabel, test_results,
     xtick_labels = ax.get_xticklabels()
     xtick_labels = [label.get_text() for label in xtick_labels]
     current_ylim = ax.get_ylim()
-    ymax = ylevel_scale * current_ylim[1]
+    ymax = ylevel_scale * (current_ylim[1] - current_ylim[0]) + current_ylim[0]
     if test_results is not None:
         for cond, p_value in test_results['Dunn_naive']['p_values'].items():
             if cond != 'naive':
@@ -707,9 +708,15 @@ def plot_measure_by_cond(mdff: pd.DataFrame,
     return fig, ax, results
 
 
-def plot_all_measure_by_cond(mdff, measure_names=None, test_type='kruskal', figsize=None):
+def plot_all_measure_by_cond(mdff, measure_names=None, test_type='kruskal', figsize=None,
+                             params=None):
     if measure_names is None:
         measure_names = mdff.columns
+
+    if params is None:
+        params = PlotBoxplotByCondParams()
+    else:
+        params = PlotBoxplotByCondParams.from_dict(params)
 
     ncol = 3
     nrow = np.ceil(len(measure_names) / ncol).astype(int)
@@ -720,7 +727,8 @@ def plot_all_measure_by_cond(mdff, measure_names=None, test_type='kruskal', figs
     for measure_name, ax in zip(measure_names, axs.flatten()):
         _, ax, test_results = plot_measure_by_cond(mdff, measure_name,
                                                    test_type=test_type,
-                                                   ax=ax)
+                                                   ax=ax,
+                                                   params=params)
         test_results_list.append(test_results)
     plt.tight_layout()
     return fig, axs, test_results_list
