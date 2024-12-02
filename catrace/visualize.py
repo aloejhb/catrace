@@ -707,19 +707,20 @@ def plot_measure_by_cond(mdff: pd.DataFrame,
     return fig, ax, results
 
 
-def plot_all_measure_by_cond(mdff, measure_names=None, name_to_label=None, test_type='kruskal'):
+def plot_all_measure_by_cond(mdff, measure_names=None, test_type='kruskal', figsize=None):
     if measure_names is None:
         measure_names = mdff.columns
 
     ncol = 3
     nrow = np.ceil(len(measure_names) / ncol).astype(int)
-    fig, axs = plt.subplots(nrow, ncol, figsize=(4*ncol, 4*nrow))
+    if figsize is None:
+        figsize = (2*ncol, 2*nrow)
+    fig, axs = plt.subplots(nrow, ncol, figsize=figsize)
     test_results_list = []
     for measure_name, ax in zip(measure_names, axs.flatten()):
-        _, ax, test_results = plot_measure_by_cond(measure_name, mdff,
-                                                    name_to_label=name_to_label,
-                                                    test_type=test_type,
-                                                    ax=ax)
+        _, ax, test_results = plot_measure_by_cond(mdff, measure_name,
+                                                   test_type=test_type,
+                                                   ax=ax)
         test_results_list.append(test_results)
     plt.tight_layout()
     return fig, axs, test_results_list
