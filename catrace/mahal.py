@@ -21,9 +21,19 @@ def compute_euclideans(points, ref):
     return mahals
 
 
-def compute_distances_df(df, window=None, model_window=None, model_trials=None, metric='mahal', reg=0):
+def shuffle_manifold_labels(df):
+    df_shuffled = df.sample(frac=1)
+    df_shuffled.index = df.index
+    return df_shuffled
+
+
+def compute_distances_df(df, window=None, model_window=None, model_trials=None, metric='mahal', reg=0,
+                         do_shuffle_manifold_labels=False, seed=None):
     df = ptt.select_time_points(df, window)
     odor_list = list(df.index.unique('odor'))
+
+    if do_shuffle_manifold_labels:
+        df = shuffle_manifold_labels(df)
 
     model_df = df
     if model_window is not None:
@@ -45,10 +55,7 @@ def compute_distances_df(df, window=None, model_window=None, model_trials=None, 
         # Compute inv_cov_mat for each odor
         inv_cov_mats = dict()
         for key, val in cov_mats.items():
-            try:
-                inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
-            except:
-                import pdb; pdb.set_trace()
+            inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
 
     distances_dict = dict()
     for odor1 in odor_list:
@@ -92,9 +99,12 @@ def compute_distances_mat(df, odor_list, **kwargs):
     return dist_mat
 
 
-def compute_center_euclidean_distance_mat(df, odor_list, window):
+def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_manifold_labels=False):
     df = ptt.select_time_points(df, window)
     df = ptt.select_odors_and_sort(df, odor_list)
+    if do_shuffle_manifold_labels:
+        df = shuffle_manifold_labels(df)
+
     centers = df.groupby(level='odor', sort=False, observed=True).mean()
     # Compute euclidean distance between centers
     dist_mat = pd.DataFrame(index=odor_list, columns=odor_list, dtype=float)

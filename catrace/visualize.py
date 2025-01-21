@@ -563,10 +563,10 @@ def plot_all_measures(mdff, measure_names=None, name_to_label=None, test_type='m
     if measure_names is None:
         measure_names = mdff.columns
 
-    fig, axs = plt.subplots(1, len(measure_names), figsize=(5*len(measure_names), 7))
+    fig, axs = plt.subplots(1, len(measure_names), figsize=(1.2*len(measure_names), 1.2))
     test_results_list = []
     for measure_name, ax in zip(measure_names, axs.flatten()):
-        _, ax, test_results = plot_measure(mdff, measure_name, 
+        _, test_results = plot_measure(mdff, measure_name, 
                                            name_to_label=name_to_label, 
                                            test_type=test_type,
                                            ax=ax, **kwargs)

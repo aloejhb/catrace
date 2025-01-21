@@ -48,6 +48,7 @@ class ComputeDistParams:
     odors: list
     overwrite_computation: bool
     parallelism: int
+    do_shuffle_manifold_labels: bool = False
 
 
 def compute_dist(params: ComputeDistParams):
@@ -63,7 +64,10 @@ def compute_dist(params: ComputeDistParams):
     overwrite_computation = params.overwrite_computation
     parallelism = params.parallelism
 
-    dist_dir = pjoin(in_dir, f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}')
+    dist_dir_name = f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
+    if params.do_shuffle_manifold_labels:
+        dist_dir_name += '_shuffled'
+    dist_dir = pjoin(in_dir, dist_dir_name)
 
     if not os.path.exists(dist_dir) or overwrite_computation:
         os.makedirs(dist_dir, exist_ok=True)
@@ -76,7 +80,7 @@ def compute_dist(params: ComputeDistParams):
 
         for k in range(num_repeats):
             out_dir = pjoin(dist_dir, f'repeat{k:02d}')
-            dist_params=dict(odor_list=odors, window=time_window)
+            dist_params=dict(odor_list=odors, window=time_window, do_shuffle_manifold_labels=params.do_shuffle_manifold_labels)
             if metric in ['mahal', 'euclidean']:
                 dist_params.update(dict(metric=metric, reg=reg))
             sample_and_dist_params = dict(sample_size=sample_size,
@@ -355,6 +359,7 @@ class RunDistanceParams:
     seed: int
     do_normalize_simdf: bool
     do_reorder_cs: bool
+    do_shuffle_manifold_labels: bool
     odor_orders: list = None
     naive_name: str = 'naive'
     overwrite_computation: bool = False
@@ -367,6 +372,8 @@ class RunDistanceParams:
     do_plot_per_fish: bool = False
     vsdict: dict = None
     plot_params: PlotDistanceParams = None
+    parallelism: int = 1
+    num_repeats: int = 50
 
 
 
@@ -394,11 +401,12 @@ def run_distance(params: RunDistanceParams):
                                             metric=metric,
                                             time_window=time_window,
                                             seed=seed,
-                                            num_repeats=50,
+                                            num_repeats=params.num_repeats,
                                             sample_size=sample_size,
                                             reg=params.reg,
                                             odors=dsconfig.odors_stimuli, overwrite_computation=overwrite_computation,
-                                            parallelism=16)
+                                            parallelism=params.parallelism,
+                                            do_shuffle_manifold_labels=params.do_shuffle_manifold_labels)
 
     print('Plotting average trace...')
     fig_avg_trace, ax = plot_avg_trace_with_window(in_dir, exp_list[0][0], time_window)

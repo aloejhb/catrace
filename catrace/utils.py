@@ -128,3 +128,20 @@ def format_number(num, sig=4):
             num_rounded = round(num, -n_sig_digits)
             fmt = '{0:.0f}'
             return fmt.format(num_rounded)
+ 
+
+def get_odor_pairs(odor_group1, odor_group2):
+    # Get all pairs of odors, including (A, B) and (B, A)
+    odor_pairs = [(odor1, odor2) for odor1 in odor_group1 for odor2 in odor_group2 if odor1 != odor2]
+    return odor_pairs
+
+
+def deduplicate_unordered_pairs(pairs):
+    unordered_pairs = list(set(tuple(sorted(p)) for p in pairs))
+    return unordered_pairs
+
+
+def get_unordered_odor_pairs(odor_group1, odor_group2):
+    odor_pairs = get_odor_pairs(odor_group1, odor_group2)
+    unordered_pairs = deduplicate_unordered_pairs(odor_pairs)
+    return unordered_pairs

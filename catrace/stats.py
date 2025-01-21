@@ -327,6 +327,7 @@ def apply_test_by_cond(df, yname, naive_name='naive', cond_name='condition', tes
 
     # Perform Dunn's posthoc test using pingouin
     dunn_results = pg.pairwise_tests(data=statdf, dv=yname, between=cond_name, padjust='bonf')
+    print(dunn_results)
 
     # Extract p-values, z-statistics, n-values, and key name
     p_values, z_statistics, n_values, key_name = extract_dunn_statistics(
