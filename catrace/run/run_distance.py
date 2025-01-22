@@ -48,7 +48,7 @@ class ComputeDistParams:
     odors: list
     overwrite_computation: bool
     parallelism: int
-    do_shuffle_manifold_labels: bool = False
+    do_shuffle_manifold_pair_labels: bool = False
 
 
 def compute_dist(params: ComputeDistParams):
@@ -65,7 +65,7 @@ def compute_dist(params: ComputeDistParams):
     parallelism = params.parallelism
 
     dist_dir_name = f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
-    if params.do_shuffle_manifold_labels:
+    if params.do_shuffle_manifold_pair_labels:
         dist_dir_name += '_shuffled'
     dist_dir = pjoin(in_dir, dist_dir_name)
 
@@ -80,7 +80,7 @@ def compute_dist(params: ComputeDistParams):
 
         for k in range(num_repeats):
             out_dir = pjoin(dist_dir, f'repeat{k:02d}')
-            dist_params=dict(odor_list=odors, window=time_window, do_shuffle_manifold_labels=params.do_shuffle_manifold_labels)
+            dist_params=dict(odor_list=odors, window=time_window, do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels)
             if metric in ['mahal', 'euclidean']:
                 dist_params.update(dict(metric=metric, reg=reg))
             sample_and_dist_params = dict(sample_size=sample_size,
@@ -359,7 +359,6 @@ class RunDistanceParams:
     seed: int
     do_normalize_simdf: bool
     do_reorder_cs: bool
-    do_shuffle_manifold_labels: bool
     odor_orders: list = None
     naive_name: str = 'naive'
     overwrite_computation: bool = False
@@ -374,8 +373,7 @@ class RunDistanceParams:
     plot_params: PlotDistanceParams = None
     parallelism: int = 1
     num_repeats: int = 50
-
-
+    do_shuffle_manifold_pair_labels: bool = False
 
 
 def run_distance(params: RunDistanceParams):
@@ -406,7 +404,7 @@ def run_distance(params: RunDistanceParams):
                                             reg=params.reg,
                                             odors=dsconfig.odors_stimuli, overwrite_computation=overwrite_computation,
                                             parallelism=params.parallelism,
-                                            do_shuffle_manifold_labels=params.do_shuffle_manifold_labels)
+                                            do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels)
 
     print('Plotting average trace...')
     fig_avg_trace, ax = plot_avg_trace_with_window(in_dir, exp_list[0][0], time_window)

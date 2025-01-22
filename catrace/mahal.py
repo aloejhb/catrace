@@ -98,14 +98,38 @@ def compute_distances_mat(df, odor_list, **kwargs):
     dist_mat = get_mean_dist_mat(dist_df, odor_list)
     return dist_mat
 
+def compute_center_euclidean(manifold1, manifold2):
+    """
+    Compute euclidean distance between the centers of two manifolds
+    Args:
+        manifold1: pd.DataFrame. Rows are time points and columns are neurons.
+        manifold2: pd.DataFrame. Rows are time points and columns are neurons.
+    Returns:
+        dist: float. Euclidean distance between the centers of the two manifolds.
+    """
+    center1 = manifold1.mean(axis=0) # Average over time points
+    center2 = manifold2.mean(axis=0)
+    dist = euclidean(center1, center2)
 
-def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_manifold_labels=False):
+    return dist
+
+
+def shuffle_manifold_pair_labels(manifold1, manifold2):
+    # Concatenate manifold1 and manifold2
+    manifold1and2 = pd.concat([manifold1, manifold2])
+    # Shuffle the rows
+    manifold1and2_shuffled = manifold1and2.sample(frac=1)
+    # Set the index to the original index
+    manifold1and2_shuffled.index = manifold1and2.index
+    # Split the shuffled manifold into two
+    manifold1 = manifold1and2_shuffled.iloc[:len(manifold1)]
+    manifold2 = manifold1and2_shuffled.iloc[len(manifold1):]
+    return manifold1, manifold2
+
+def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_manifold_pair_labels=False):
     df = ptt.select_time_points(df, window)
     df = ptt.select_odors_and_sort(df, odor_list)
-    if do_shuffle_manifold_labels:
-        df = shuffle_manifold_labels(df)
 
-    centers = df.groupby(level='odor', sort=False, observed=True).mean()
     # Compute euclidean distance between centers
     dist_mat = pd.DataFrame(index=odor_list, columns=odor_list, dtype=float)
     # The level name is 'odor' for the index and 'ref_odor' for the columns
@@ -113,11 +137,14 @@ def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_mani
     dist_mat.columns.name = 'ref_odor'
 
     for odor1 in odor_list:
-        center1 = centers.loc[odor1]
         for odor2 in odor_list:
-            center2 = centers.loc[odor2]
-            dist = euclidean(center1, center2)
+            manifold1 = df.xs(odor1, level='odor')
+            manifold2 = df.xs(odor2, level='odor')
+            if do_shuffle_manifold_pair_labels:
+                manifold1, manifold2 = shuffle_manifold_pair_labels(manifold1, manifold2)
+            dist = compute_center_euclidean(manifold1, manifold2)
             dist_mat.loc[odor1, odor2] = dist
+
     return dist_mat
 
 
