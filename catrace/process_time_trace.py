@@ -350,3 +350,8 @@ def shift_timepoints(dff, offset):
     # Remove the timepoints that are now negative
     dff = dff[dff.index.get_level_values('time') >= 0]
     return dff
+
+
+def convert_spike_prob_to_firing_rate(dff, frame_rate):
+    dff = dff * frame_rate
+    return dff

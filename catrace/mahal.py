@@ -21,55 +21,30 @@ def compute_euclideans(points, ref):
     return mahals
 
 
-def shuffle_manifold_labels(df):
-    df_shuffled = df.sample(frac=1)
-    df_shuffled.index = df.index
-    return df_shuffled
-
-
-def compute_distances_df(df, window=None, model_window=None, model_trials=None, metric='mahal', reg=0,
-                         do_shuffle_manifold_labels=False, seed=None):
+def compute_distances_df(df, window=None, metric='mahal', reg=0,
+                         do_shuffle_manifold_pair_labels=False, seed=None):
     df = ptt.select_time_points(df, window)
     odor_list = list(df.index.unique('odor'))
 
-    if do_shuffle_manifold_labels:
-        df = shuffle_manifold_labels(df)
-
-    model_df = df
-    if model_window is not None:
-        model_df = ptt.select_time_points(df, model_window)
-
-    if model_trials is not None:
-        idx = model_df.index.get_level_values('trial').isin(model_trials)
-        model_df = model_df[idx]
-
-    # Compute center for each odor
-    centers = model_df.groupby(level='odor', sort=False, observed=True).mean()
-
-    if metric == 'mahal':
-        # Compute cov_mat for each odor
-        cov_mats = dict()
-        for name, group in model_df.groupby(level='odor', sort=False, observed=True):
-            cov_mats[name] = np.cov(group.transpose())
-
-        # Compute inv_cov_mat for each odor
-        inv_cov_mats = dict()
-        for key, val in cov_mats.items():
-            inv_cov_mats[key] = invert_cov_mat(val, reg=reg)
-
     distances_dict = dict()
     for odor1 in odor_list:
-        data1 = df.xs(odor1, level='odor')
+        # data1 = df.xs(odor1, level='odor')
+        manifold1 = df.xs(odor1, level='odor')
         for odor2 in odor_list:
-            center2 = centers.loc[odor2]
+            manifold2 = df.xs(odor2, level='odor')
+
+            if do_shuffle_manifold_pair_labels:
+                manifold1, manifold2 = shuffle_manifold_pair_labels(manifold1, manifold2)
+
+            center2 = manifold2.mean(axis=0)
 
             if metric == 'mahal':
-                inv_cov_mat2 = inv_cov_mats[odor2]
-                distances = compute_mahals(data1.to_numpy(),
+                inv_cov_mat2 = invert_cov_mat(np.cov(manifold2.transpose()), reg=reg)
+                distances = compute_mahals(manifold1.to_numpy(),
                                           center2.to_numpy(),
                                           inv_cov_mat2)
             elif metric == 'euclidean':
-                distances = compute_euclideans(data1.to_numpy(),
+                distances = compute_euclideans(manifold1.to_numpy(),
                                               center2.to_numpy())
             else:
                 raise ValueError('Metric should be either mahal or euclidean.')
