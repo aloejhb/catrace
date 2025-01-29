@@ -1,4 +1,5 @@
 import json
+import hashlib
 import pandas as pd
 from dataclasses_json import DataClassJsonMixin
 
@@ -145,3 +146,11 @@ def get_unordered_odor_pairs(odor_group1, odor_group2):
     odor_pairs = get_odor_pairs(odor_group1, odor_group2)
     unordered_pairs = deduplicate_unordered_pairs(odor_pairs)
     return unordered_pairs
+
+
+def get_seed_from_hash(value):
+    if value is None:
+        seed = None
+    else:
+        seed = int(hashlib.sha256(str(value).encode()).hexdigest(), 16) % (2**32)
+    return seed

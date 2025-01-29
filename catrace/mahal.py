@@ -3,6 +3,7 @@ import pandas as pd
 import seaborn as sns
 from scipy.spatial.distance import mahalanobis, euclidean
 import catrace.process_time_trace as ptt
+from catrace.utils import get_seed_from_hash
 
 def invert_cov_mat(cov_mat, reg=1e-5):
     reg_term = reg * np.identity(cov_mat.shape[0])
@@ -22,9 +23,17 @@ def compute_euclideans(points, ref):
 
 
 def compute_distances_df(df, window=None, metric='mahal', reg=0,
-                         do_shuffle_manifold_pair_labels=False, seed=None):
+                         do_shuffle_manifold_pair_labels=False, shuffle_seed_value=None):
     df = ptt.select_time_points(df, window)
     odor_list = list(df.index.unique('odor'))
+    num_odors = len(odor_list)
+
+    if do_shuffle_manifold_pair_labels:
+        if shuffle_seed_value is not None:
+            master_rng = np.random.default_rng(shuffle_seed_value)
+            seed_values = master_rng.integers(0, 1e9, size=num_odors*num_odors).tolist()
+        else:
+            seed_values = [None] * num_odors*num_odors
 
     distances_dict = dict()
     for odor1 in odor_list:
@@ -34,7 +43,7 @@ def compute_distances_df(df, window=None, metric='mahal', reg=0,
             manifold2 = df.xs(odor2, level='odor')
 
             if do_shuffle_manifold_pair_labels:
-                manifold1, manifold2 = shuffle_manifold_pair_labels(manifold1, manifold2)
+                manifold1, manifold2 = shuffle_manifold_pair_labels(manifold1, manifold2, seed_value=seed_values.pop(0))
 
             center2 = manifold2.mean(axis=0)
 
@@ -88,12 +97,12 @@ def compute_center_euclidean(manifold1, manifold2):
 
     return dist
 
-
-def shuffle_manifold_pair_labels(manifold1, manifold2):
+def shuffle_manifold_pair_labels(manifold1, manifold2, seed_value):
+    random_state = np.random.default_rng(seed_value)
     # Concatenate manifold1 and manifold2
     manifold1and2 = pd.concat([manifold1, manifold2])
     # Shuffle the rows
-    manifold1and2_shuffled = manifold1and2.sample(frac=1)
+    manifold1and2_shuffled = manifold1and2.sample(frac=1, random_state=random_state)
     # Set the index to the original index
     manifold1and2_shuffled.index = manifold1and2.index
     # Split the shuffled manifold into two
@@ -101,7 +110,7 @@ def shuffle_manifold_pair_labels(manifold1, manifold2):
     manifold2 = manifold1and2_shuffled.iloc[len(manifold1):]
     return manifold1, manifold2
 
-def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_manifold_pair_labels=False):
+def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_manifold_pair_labels=False, shuffle_seed_value=None):
     df = ptt.select_time_points(df, window)
     df = ptt.select_odors_and_sort(df, odor_list)
 
@@ -111,12 +120,21 @@ def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_mani
     dist_mat.index.name = 'odor'
     dist_mat.columns.name = 'ref_odor'
 
+    if do_shuffle_manifold_pair_labels:
+        if shuffle_seed_value is not None:
+            master_rng = np.random.default_rng(shuffle_seed_value)
+            seed_values = master_rng.integers(0, 1e9, size=len(odor_list)*len(odor_list)).tolist()
+        else:
+            seed_values = [None] * len(odor_list)*len(odor_list)
+
     for odor1 in odor_list:
         for odor2 in odor_list:
             manifold1 = df.xs(odor1, level='odor')
             manifold2 = df.xs(odor2, level='odor')
             if do_shuffle_manifold_pair_labels:
-                manifold1, manifold2 = shuffle_manifold_pair_labels(manifold1, manifold2)
+                manifold1, manifold2 = shuffle_manifold_pair_labels(manifold1, manifold2, seed_value=seed_values.pop(0))
+                if shuffle_seed_value is not None:
+                    shuffle_seed_value = shuffle_seed_value + 1
             dist = compute_center_euclidean(manifold1, manifold2)
             dist_mat.loc[odor1, odor2] = dist
 

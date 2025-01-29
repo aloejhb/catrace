@@ -258,8 +258,9 @@ def compute_aavsba(simdf, aa_odors, ba_odors):
 
 
 def sample_neuron_and_comopute_distance_mat(df, sample_size, seed=None, metric='center_euclidean',
-                                            params={}):
+                                            params={}, shuffle_seed_value=None):
     df = sample_neuron(df, sample_size=sample_size, seed=seed)
+    params['shuffle_seed_value'] = shuffle_seed_value
     if metric in ['euclidean', 'mahal']:
         dist_mat = compute_distances_mat(df, **params)
     elif metric == 'center_euclidean':

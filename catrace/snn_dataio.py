@@ -48,6 +48,7 @@ def specify_odor_and_trial(dff, odors, num_trials):
 
 
 def simulation_mat_to_df(spike_timing, dt, num_neurons, num_steps, num_trials, odors):
+    # dt in unit ms
     dff = spike_timing_to_rate(spike_timing, dt, num_neurons, num_steps)
     dff = specify_odor_and_trial(dff, odors, num_trials)
     return dff

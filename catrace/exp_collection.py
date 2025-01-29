@@ -190,27 +190,33 @@ def dataio_func_wrapper(exp_name, seed, data_func, out_dir, in_dir, save_func, p
         dataio_func(data_func=data_func, exp_name=exp_name, out_dir=out_dir,
                     in_dir=in_dir, save_func=save_func, **params)
 
+import copy
 def process_data_db_parallel(data_func, exp_list,
                              out_dir, in_dir,
                              save_func=None,
-                             parallelism=1, seeds=None, params={}):
+                             parallelism=1, seeds=None, params={}, extra_params_list=None):
     # Check if the data_func accepts the 'seed' argument
     data_func_accepts_seed = 'seed' in inspect.signature(data_func).parameters
 
-    # Create list of tuples of exp_name and seed (None if seeds are not provided)
-    if seeds is not None:
-        exp_names_with_seeds = [(exp[0], seed) for exp, seed in zip(exp_list, seeds)]
-    else:
-        exp_names_with_seeds = [(exp[0], None) for exp in exp_list]
+    if seeds is None:
+        seeds = [None] * len(exp_list)
+
+    # Copy the params dictionary for each experiment
+    params_list = [copy.deepcopy(params) for _ in exp_list]
+    if extra_params_list is not None:
+        for i, extra_params in enumerate(extra_params_list):
+            params_list[i].update(extra_params)
+    
+    exp_names_with_seeds_and_params = [(exp[0], seed, params) for exp, seed, params in zip(exp_list, seeds, params_list)]
 
     if parallelism > 1:
         with Pool(processes=parallelism) as pool:
             # Use starmap to pass multiple arguments to the function
             pool.starmap(dataio_func_wrapper, 
                          [(exp_name, seed, data_func, out_dir, in_dir, save_func, params, data_func_accepts_seed) 
-                          for exp_name, seed in exp_names_with_seeds])
+                          for exp_name, seed, params in exp_names_with_seeds_and_params])
     else:
-        for exp_name, seed in exp_names_with_seeds:
+        for exp_name, seed, params in exp_names_with_seeds_and_params:
             dataio_func_wrapper(exp_name, seed, data_func, out_dir, in_dir, save_func, params, data_func_accepts_seed)
 
 

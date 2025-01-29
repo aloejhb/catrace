@@ -49,6 +49,7 @@ class ComputeDistParams:
     overwrite_computation: bool
     parallelism: int
     do_shuffle_manifold_pair_labels: bool = False
+    shuffle_master_seed: int = None
 
 
 def compute_dist(params: ComputeDistParams):
@@ -66,7 +67,7 @@ def compute_dist(params: ComputeDistParams):
 
     dist_dir_name = f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
     if params.do_shuffle_manifold_pair_labels:
-        dist_dir_name += '_shuffled'
+        dist_dir_name += f'_shuffled_seed{params.shuffle_master_seed}'
     dist_dir = pjoin(in_dir, dist_dir_name)
 
     if not os.path.exists(dist_dir) or overwrite_computation:
@@ -78,9 +79,16 @@ def compute_dist(params: ComputeDistParams):
             for _ in range(num_repeats)
         ]
 
+        shuffle_master_rng = np.random.default_rng(params.shuffle_master_seed)
+        shuffle_seed_values = [
+            shuffle_master_rng.integers(0, 1e9, size=num_exp).tolist() 
+            for _ in range(num_repeats)
+        ]
+
         for k in range(num_repeats):
             out_dir = pjoin(dist_dir, f'repeat{k:02d}')
             dist_params=dict(odor_list=odors, window=time_window, do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels)
+            extra_params_list = [dict(shuffle_seed_value=shuffle_seed_values[k][i]) for i in range(num_exp)]
             if metric in ['mahal', 'euclidean']:
                 dist_params.update(dict(metric=metric, reg=reg))
             sample_and_dist_params = dict(sample_size=sample_size,
@@ -88,7 +96,7 @@ def compute_dist(params: ComputeDistParams):
                                           params=dist_params)
             ecl.process_data_db_parallel(sample_neuron_and_comopute_distance_mat, exp_list,
                                         out_dir, in_dir, parallelism=parallelism, seeds=seeds[k],
-                                        params=sample_and_dist_params)
+                                        params=sample_and_dist_params, extra_params_list=extra_params_list)
     return dist_dir
 
 # Read the matrices
@@ -374,6 +382,7 @@ class RunDistanceParams:
     parallelism: int = 1
     num_repeats: int = 50
     do_shuffle_manifold_pair_labels: bool = False
+    shuffle_master_seed: int = None
 
 
 def run_distance(params: RunDistanceParams):
@@ -404,7 +413,8 @@ def run_distance(params: RunDistanceParams):
                                             reg=params.reg,
                                             odors=dsconfig.odors_stimuli, overwrite_computation=overwrite_computation,
                                             parallelism=params.parallelism,
-                                            do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels)
+                                            do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
+                                            shuffle_master_seed=params.shuffle_master_seed)
 
     print('Plotting average trace...')
     fig_avg_trace, ax = plot_avg_trace_with_window(in_dir, exp_list[0][0], time_window)

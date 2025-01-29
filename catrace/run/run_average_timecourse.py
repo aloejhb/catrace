@@ -30,6 +30,7 @@ class RunAverageTimecourseParams:
     alpha: float = 1
     ylim: tuple = None
     convert_to_rate: bool = False
+    naive_name: str = 'naive'
 
 def run_average_timecourse(params: RunAverageTimecourseParams):
     dsconfig= load_dataset_config(params.config_file)
@@ -65,9 +66,9 @@ def run_average_timecourse(params: RunAverageTimecourseParams):
     fig_time, ax = plot_trace_avg(dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True,
                    **sub_params)
     
-    naive_dff =  dff.xs('naive', level='condition', axis=1, drop_level=False)
+    naive_dff =  dff.xs(params.naive_name, level='condition', axis=1, drop_level=False)
     # trained_dff is the dataframe where condition is not equal to naive
-    trained_dff = dff.loc[:, dff.columns.get_level_values('condition') != 'naive']
+    trained_dff = dff.loc[:, dff.columns.get_level_values('condition') != params.naive_name]
     fig_naive_time, ax = plot_trace_avg(naive_dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True, **sub_params)
     fig_trained_time, ax = plot_trace_avg(trained_dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True, **sub_params)
 
