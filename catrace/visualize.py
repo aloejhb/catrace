@@ -269,8 +269,11 @@ def plot_boxplot_with_significance(datadf, xname, yname,
 
     # Get maximum y value from datadf
     max_y = datadf[yname].max()
+    ylevel = ylevel_scale*max_y
+
     # current_ylim = ax.get_ylim()
-    ylevel = ylevel_scale*max_y #current_ylim[1]
+    # ymax = ylevel_scale * (current_ylim[1] - current_ylim[0]) + current_ylim[0]
+ 
     plot_pvalue_marker(ax, ylevel, test_results, test_type, ref_key=ref_key,
                        show_ns=show_ns,
                        linewidth=pvalue_bar_linewidth,

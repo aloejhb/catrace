@@ -152,19 +152,24 @@ def plot_cap_and_save(vsname, odor1_group, odor2_group,
                       plot_measure_params,
                       tick_intervals,
                       capacity_ylim=None,
+                      capacity_ylevel_scale=1.0,
                       do_plot_shuffled_measure=False,
                       do_save=False,
-                      minor_tick_intervals=None):
+                      minor_tick_intervals=None,
+                      xtick_labels=None,
+                      do_plot_shuffled_on_capacity=True):
     test_results_dict = {}
     measure_name = 'capacity'
     if capacity_ylim is not None:
         plot_measure_params = replace(plot_measure_params, ylim=capacity_ylim)
+    if capacity_ylevel_scale != 1.0:
+        plot_measure_params = replace(plot_measure_params, ylevel_scale=capacity_ylevel_scale)
     fig, ax, test_results = plot_juv(odor1_group, odor2_group,
                                      measure_name,
                                      df_pooled,
                                      df_pooled_shuffled,
                                      conditions,
-                                     do_plot_shuffled=True,
+                                     do_plot_shuffled=do_plot_shuffled_on_capacity,
                                      tick_interval=tick_intervals[0],
                                      plot_measure_params=plot_measure_params,
                                      )
@@ -176,11 +181,16 @@ def plot_cap_and_save(vsname, odor1_group, odor2_group,
     test_results_dict[measure_name] = test_results
 
     if do_save:
+        if xtick_labels is not None:
+            ax.set_xticklabels(xtick_labels)
         figname = f'{dataset_name}_{vsname}_{measure_name}'
         save_figure_for_paper(fig, figname, paper_fig_dir)
         # save_stats_json(test_results, figname, paper_fig_dir, tuple_key_to_str=True)
 
-    measure_names = ['radius', 'dimension', 'axes_alignment', 'center_alignment', 'center_axes_alignment']
+    if 'axes_alignment' in df_pooled.columns:
+        measure_names = ['radius', 'dimension', 'axes_alignment', 'center_alignment', 'center_axes_alignment']
+    else:
+        measure_names = ['radius', 'dimension', 'axis_alignment', 'center_alignment', 'center_axis_alignment']
     for idx, measure_name in enumerate(measure_names):
         tick_interval = tick_intervals[idx+1]
         fig, ax, test_results = plot_juv(odor1_group, odor2_group,
@@ -210,6 +220,9 @@ def plot_cap_and_save(vsname, odor1_group, odor2_group,
             ax.set_ylabel(new_ylabel)
         
         if do_save:
+            if xtick_labels is not None:
+                ax.set_xticklabels(xtick_labels)
+
             figname = f'{dataset_name}_{vsname}_{measure_name}'
             if do_plot_shuffled_measure:
                 figname += '_with_shuffled'

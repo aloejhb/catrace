@@ -49,10 +49,14 @@ class ComputeDistParams:
     overwrite_computation: bool
     parallelism: int
     do_shuffle_manifold_pair_labels: bool = False
+    do_shuffle_manifold_labels_global: bool = False
     shuffle_master_seed: int = None
 
 
 def compute_dist(params: ComputeDistParams):
+    # Check that only one of do_shuffle_manifold_pair_labels and do_shuffle_manifold_labels_global is True
+    if params.do_shuffle_manifold_pair_labels and params.do_shuffle_manifold_labels_global:
+        raise ValueError('Only one of do_shuffle_manifold_pair_labels and do_shuffle_manifold_labels_global can be True.')
     in_dir = params.in_dir
     exp_list = params.exp_list
     metric = params.metric
@@ -68,6 +72,8 @@ def compute_dist(params: ComputeDistParams):
     dist_dir_name = f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
     if params.do_shuffle_manifold_pair_labels:
         dist_dir_name += f'_shuffled_seed{params.shuffle_master_seed}'
+    elif params.do_shuffle_manifold_labels_global:
+        dist_dir_name += f'_shuffled_global_seed{params.shuffle_master_seed}'
     dist_dir = pjoin(in_dir, dist_dir_name)
 
     if not os.path.exists(dist_dir) or overwrite_computation:
@@ -87,7 +93,8 @@ def compute_dist(params: ComputeDistParams):
 
         for k in range(num_repeats):
             out_dir = pjoin(dist_dir, f'repeat{k:02d}')
-            dist_params=dict(odor_list=odors, window=time_window, do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels)
+            dist_params=dict(odor_list=odors, window=time_window, do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
+                            do_shuffle_manifold_labels_global=params.do_shuffle_manifold_labels_global)
             extra_params_list = [dict(shuffle_seed_value=shuffle_seed_values[k][i]) for i in range(num_exp)]
             if metric in ['mahal', 'euclidean']:
                 dist_params.update(dict(metric=metric, reg=reg))
@@ -382,6 +389,7 @@ class RunDistanceParams:
     parallelism: int = 1
     num_repeats: int = 50
     do_shuffle_manifold_pair_labels: bool = False
+    do_shuffle_manifold_labels_global: bool = False
     shuffle_master_seed: int = None
 
 
@@ -414,6 +422,7 @@ def run_distance(params: RunDistanceParams):
                                             odors=dsconfig.odors_stimuli, overwrite_computation=overwrite_computation,
                                             parallelism=params.parallelism,
                                             do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
+                                            do_shuffle_manifold_labels_global=params.do_shuffle_manifold_labels_global,
                                             shuffle_master_seed=params.shuffle_master_seed)
 
     print('Plotting average trace...')

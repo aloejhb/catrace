@@ -23,10 +23,91 @@ def compute_euclideans(points, ref):
 
 
 def compute_distances_df(df, window=None, metric='mahal', reg=0,
-                         do_shuffle_manifold_pair_labels=False, shuffle_seed_value=None):
-    df = ptt.select_time_points(df, window)
+                         do_shuffle_manifold_pair_labels=False,
+                         do_shuffle_manifold_labels_global=False,
+                         shuffle_seed_value=None):
+    """
+    Compute distances between all pairs of odor manifolds in a DataFrame.
+
+    This function selects time points (based on the specified `window`) from the
+    given DataFrame, groups the data by odor, and computes either the Mahalanobis
+    or Euclidean distances from each point in one odor manifold (`odor1`) to the
+    mean (center) of another odor manifold (`odor2`).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A multi-index DataFrame containing neural response data with an 'odor' 
+        level in its index. Typically, rows represent time points (or time × trials),
+        and columns represent neurons (or features). The DataFrame index must contain
+        a level named 'odor'.
+    window : slice or list-like, optional
+        A time window or time-points slice used to select a subset of rows 
+        before computing distances. If None, all rows are used.
+    metric : {'mahal', 'euclidean'}, default='mahal'
+        Which distance metric to use. If 'mahal', the Mahalanobis distance is 
+        computed. If 'euclidean', the Euclidean distance is computed.
+    reg : float, default=0
+        Regularization term added to the covariance matrix when computing the
+        inverse (for Mahalanobis distance). Helps with numerical stability.
+    do_shuffle_manifold_pair_labels : bool, default=False
+        If True, within each pair of different odors (`odor1 != odor2`), the rows
+        of the two manifolds will be concatenated, shuffled, and split back to 
+        form new manifolds. This is a pairwise shuffle.
+    do_shuffle_manifold_labels_global : bool, default=False
+        If True, shuffles the entire DataFrame's rows once (keeping the same 
+        multi-index). This effectively breaks the association between odor labels
+        and neural activity globally. 
+        **Note**: Only one of `do_shuffle_manifold_pair_labels` or 
+        `do_shuffle_manifold_labels_global` can be True at a time.
+    shuffle_seed_value : int or None, optional
+        If provided, the random seed for reproducible shuffling. If None, the shuffle 
+        is not reproducible. When `do_shuffle_manifold_pair_labels=True`, separate 
+        random seeds will be drawn from `master_rng` for each pair of odors.
+
+    Returns
+    -------
+    distances_df : pd.DataFrame
+        A DataFrame of shape `(num_odors * num_odors, N_points_in_manifold1)` 
+        where each row corresponds to a pair of odors (`(odor1, odor2)` in the 
+        MultiIndex), and each column contains distances from each point in 
+        `odor1`'s manifold to the center of `odor2`'s manifold.
+
+        - The index of `distances_df` is a MultiIndex with levels ['odor', 'ref_odor'].
+        - The columns represent the distances for each point in the `odor1` manifold.
+
+    Raises
+    ------
+    ValueError
+        If both `do_shuffle_manifold_pair_labels` and `do_shuffle_manifold_labels_global`
+        are set to True.
+        If `metric` is not in {'mahal', 'euclidean'}.
+
+    Examples
+    --------
+    >>> # Suppose df is a DataFrame with levels: ('time', 'odor') in the index, 
+    >>> # and columns are neuron responses
+    >>> dist_df = compute_distances_df(df, window=slice(10,20), metric='euclidean')
+    >>> print(dist_df)
+    (odor1, odor2)   0       1       2   ...
+    --------------------------------------
+    (1, 1)          0.0     0.1     0.2  ...
+    (1, 2)          3.4     3.2     2.9  ...
+    (2, 1)          3.5     3.7     3.1  ...
+    (2, 2)          0.0     0.2     0.3  ...
+    ...
+    """
+    # Check only one of the shuffle options is True
+    if do_shuffle_manifold_pair_labels and do_shuffle_manifold_labels_global:
+        raise ValueError('Only one of the shuffle options should be True.')
+
+    if window is not None:
+        df = ptt.select_time_points(df, window)
     odor_list = list(df.index.unique('odor'))
     num_odors = len(odor_list)
+
+    if do_shuffle_manifold_labels_global:
+        df = shuffle_manifold_labels_global(df, seed=shuffle_seed_value)
 
     if do_shuffle_manifold_pair_labels:
         if shuffle_seed_value is not None:
@@ -37,12 +118,11 @@ def compute_distances_df(df, window=None, metric='mahal', reg=0,
 
     distances_dict = dict()
     for odor1 in odor_list:
-        # data1 = df.xs(odor1, level='odor')
-        manifold1 = df.xs(odor1, level='odor')
         for odor2 in odor_list:
+            manifold1 = df.xs(odor1, level='odor')
             manifold2 = df.xs(odor2, level='odor')
 
-            if do_shuffle_manifold_pair_labels:
+            if do_shuffle_manifold_pair_labels and odor1 != odor2:
                 manifold1, manifold2 = shuffle_manifold_pair_labels(manifold1, manifold2, seed_value=seed_values.pop(0))
 
             center2 = manifold2.mean(axis=0)
@@ -66,6 +146,20 @@ def compute_distances_df(df, window=None, metric='mahal', reg=0,
     # Convert to DataFrame using MultiIndex
     distances_df = pd.DataFrame(list(distances_dict.values()), index=multi_index)
     return distances_df
+
+
+def shuffle_manifold_pair_labels(manifold1, manifold2, seed_value):
+    random_state = np.random.default_rng(seed_value)
+    # Concatenate manifold1 and manifold2
+    manifold1and2 = pd.concat([manifold1, manifold2])
+    # Shuffle the rows
+    manifold1and2_shuffled = manifold1and2.sample(frac=1, random_state=random_state)
+    # Set the index to the original index
+    manifold1and2_shuffled.index = manifold1and2.index
+    # Split the shuffled manifold into two
+    manifold1 = manifold1and2_shuffled.iloc[:len(manifold1)]
+    manifold2 = manifold1and2_shuffled.iloc[len(manifold1):]
+    return manifold1, manifold2
 
 
 def sample_neuron_and_select_odors(df, sample_size, seed=None, odor_list=None):
@@ -97,20 +191,22 @@ def compute_center_euclidean(manifold1, manifold2):
 
     return dist
 
-def shuffle_manifold_pair_labels(manifold1, manifold2, seed_value):
-    random_state = np.random.default_rng(seed_value)
-    # Concatenate manifold1 and manifold2
-    manifold1and2 = pd.concat([manifold1, manifold2])
+def shuffle_manifold_labels_global(df, seed=None):
+    random_state = np.random.default_rng(seed)
     # Shuffle the rows
-    manifold1and2_shuffled = manifold1and2.sample(frac=1, random_state=random_state)
+    df_shuffled = df.sample(frac=1, random_state=random_state)
     # Set the index to the original index
-    manifold1and2_shuffled.index = manifold1and2.index
-    # Split the shuffled manifold into two
-    manifold1 = manifold1and2_shuffled.iloc[:len(manifold1)]
-    manifold2 = manifold1and2_shuffled.iloc[len(manifold1):]
-    return manifold1, manifold2
+    df_shuffled.index = df.index
+    return df_shuffled
 
-def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_manifold_pair_labels=False, shuffle_seed_value=None):
+
+def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_manifold_pair_labels=False, 
+                                            do_shuffle_manifold_labels_global=False,
+                                            shuffle_seed_value=None):
+    # Check only one of the shuffle options is True
+    if do_shuffle_manifold_pair_labels and do_shuffle_manifold_labels_global:
+        raise ValueError('Only one of the shuffle options should be True.')
+
     df = ptt.select_time_points(df, window)
     df = ptt.select_odors_and_sort(df, odor_list)
 
@@ -119,6 +215,9 @@ def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_mani
     # The level name is 'odor' for the index and 'ref_odor' for the columns
     dist_mat.index.name = 'odor'
     dist_mat.columns.name = 'ref_odor'
+
+    if do_shuffle_manifold_labels_global:
+        df = shuffle_manifold_labels_global(df, seed=shuffle_seed_value)
 
     if do_shuffle_manifold_pair_labels:
         if shuffle_seed_value is not None:
@@ -131,12 +230,13 @@ def compute_center_euclidean_distance_mat(df, odor_list, window, do_shuffle_mani
         for odor2 in odor_list:
             manifold1 = df.xs(odor1, level='odor')
             manifold2 = df.xs(odor2, level='odor')
-            if do_shuffle_manifold_pair_labels:
+            if do_shuffle_manifold_pair_labels and odor1 != odor2:
                 manifold1, manifold2 = shuffle_manifold_pair_labels(manifold1, manifold2, seed_value=seed_values.pop(0))
-                if shuffle_seed_value is not None:
-                    shuffle_seed_value = shuffle_seed_value + 1
             dist = compute_center_euclidean(manifold1, manifold2)
             dist_mat.loc[odor1, odor2] = dist
+
+    # Mmake dist_mat symmetric, this is necessary because shuffling introduces asymmetry from random sampling
+    dist_mat = (dist_mat + dist_mat.T) / 2
 
     return dist_mat
 
