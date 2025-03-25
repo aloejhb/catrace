@@ -7,7 +7,7 @@ import copy
 import argparse
 
 import gcmc
-from gcmc.contrib import gcmc_analysis_dataframe
+import gcmc.preprocess
 
 from typing import Union
 
@@ -62,8 +62,6 @@ def analysis_one_vs_one(params: AnalysisParams):
     if params.odors[0] == params.odors[1]:
         raise ValueError('params.odors must contain two different odors')
     odors = params.odors
-    odor1 = odors[0]
-    odor2 = odors[1]
 
     # outfile should not be empty
     if not outfile:
@@ -93,37 +91,58 @@ def analysis_one_vs_one(params: AnalysisParams):
         x_ind = np.random.choice(range(XtotT[0].shape[0]),params.N,replace=False)
         XtotT = [X[x_ind,:] for X in XtotT]
     else:
-        print('N = 0, no downsampling of neurons')
+        print('N = 0, no downsampling')
         x_ind = np.arange(XtotT[0].shape[0])
         XtotT = [X[x_ind,:] for X in XtotT]
 
-    # Downsample time points
-    XtotT = [X[:,np.random.choice(range(X.shape[1]),params.M,replace=False)] for X in XtotT]
+
+    # Preprocessing
+    input_manifolds = gcmc.preprocess.standard_preprocessing(XtotT,global_center=params.global_center,bias=params.bias,
+                                                             target_num_points_per_manifold=params.M)
+    input_manifolds_shuffle = gcmc.preprocess.input_manifolds_shuffle(input_manifolds)
+
+
+    # Gaussianize
+    if params.gaussianize:
+        input_manifolds_gaussianized = gcmc.preprocess.manifold_gaussianization(input_manifolds)
+        input_manifolds_shuffle_gaussianized = gcmc.preprocess.manifold_gaussianization(input_manifolds_shuffle)
+        input_manifolds_gaussianized = np.array(input_manifolds_gaussianized)
+        input_manifolds_shuffle_gaussianized = np.array(input_manifolds_shuffle_gaussianized)
+
+        input_manifolds = input_manifolds_gaussianized
+        input_manifolds_shuffle = input_manifolds_shuffle_gaussianized
 
     # Check if the manifolds contains NaN
-    for i in range(len(XtotT)):
-        if np.isnan(XtotT[i]).any():
+    for i in range(len(input_manifolds)):
+        if np.isnan(input_manifolds[i]).any():
             print(f'input_manifolds[{i}] contains NaN')
 
-    # This is a place holder until the centering and bias is clear to BoHu
-    assert params.global_center == True
-    assert params.bias == True
  
     # Step 2: Conduct analysis
-    P = XtotT[0].shape[0]
-    df_result = gcmc_analysis_dataframe(
-        XtotT,
-        (fish_id,params.condition,odor1,odor2,params.window[0],params.window[1]),
-        ['fish_id','condition','odor1','odor2','window_0','window_1'],
-        seed=params.seed,
-        n_hyperplanes=1000,
-        shuffle=True,
-        analysis_type='FIRST_VERSUS_REST',
-        scale=1,
-        geometry=True,
-        gaussianize=params.gaussianize,
-    )
+    df_list = []
+    matrix_list = {'center_alignment_matrix': [], 'axes_alignment_matrix': [], 'center_axes_alignment_matrix': []}
 
+    P = input_manifolds.shape[0]
+    for i_P in range(P):
+        input_manifolds_new = copy.deepcopy(input_manifolds)
+        input_manifolds_new[[0,i_P]] = input_manifolds_new[[i_P,0]] # swap the 0-th manifold and the i_P-th manifold
+        result = gcmc.manifold_analysis(input_manifolds_new,label_sample_type=gcmc.LabelSampleType.FIRST_ELEMENT_ONLY)
+        filtered_result = {key: value[0] for key, value in result.items() if isinstance(value, np.ndarray) if value.shape == (1,) if value[0] != None}
+        tuples = (fish_id,params.condition,params.window[0],params.window[1],False,i_P,params.seed, odors[0], odors[1])
+        index = pd.MultiIndex.from_tuples([tuples], names=['fish_id','condition','window_0','window_1','shuffle','i_P','seed', 'odor_0', 'odor_1'])
+        df_result = pd.DataFrame(filtered_result, index=index)
+        df_list.append(df_result)
+
+        input_manifolds_shuffle_new = copy.deepcopy(input_manifolds_shuffle)
+        input_manifolds_shuffle_new[[0,i_P]] = input_manifolds_shuffle_new[[i_P,0]] # swap the 0-th manifold and the i_P-th manifold
+        result = gcmc.manifold_analysis(input_manifolds_shuffle_new,label_sample_type=gcmc.LabelSampleType.FIRST_ELEMENT_ONLY)
+        filtered_result = {key: value[0] for key, value in result.items() if isinstance(value, np.ndarray) if value.shape == (1,) if value[0] != None}
+        tuples = (fish_id,params.condition,params.window[0],params.window[1],True,i_P,params.seed, odors[0], odors[1])
+        index = pd.MultiIndex.from_tuples([tuples], names=['fish_id','condition','window_0','window_1','shuffle','i_P','seed', 'odor_0', 'odor_1'])
+        df_result = pd.DataFrame(filtered_result, index=index)
+        df_list.append(df_result)
+
+    df_result = pd.concat(df_list)
     # Step 3: Save the results
     print(f'writing result to {outfile}')
     with open(outfile, 'wb') as f:

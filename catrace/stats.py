@@ -662,6 +662,7 @@ def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None
     # Get p-value, R-squared, and slope
     p_value = model.f_pvalue
     r_squared = model.rsquared
+    corr_coeff = dff[[x_measure, y_measure]].corr().iloc[0, 1]
     slope = model.params[x_measure]
 
     # Plot the regression line
@@ -670,7 +671,8 @@ def plot_regression(dff, x_measure, y_measure, hue=None, ax=None, hue_order=None
     p_value_srt = format_p_value(p_value)
     print(p_value_srt)
     # Annotate the plot with slope, R², and p-value
-    text_str = f'Slope: {format_number(slope, sig=3)}\nR²: {r_squared:.2f}\np-value: {p_value_srt}'
+    #text_str = f'Slope: {format_number(slope, sig=3)}\nR²: {r_squared:.2f}\np-value: {p_value_srt}'
+    text_str = f'r={corr_coeff:.2f}\n{p_value_srt}'
     if slope < 0:
         text_pos = (0.05, 0.25)
     else:

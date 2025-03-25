@@ -65,8 +65,6 @@ def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
     figsize=[col_width*ncol, row_height*nrow]
     fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
                              sharey=sharey, figsize=figsize)
-    vmin = min([df.to_numpy().min() for df in  dfs.values()])
-    vmax = max([df.to_numpy().max() for df in  dfs.values()])
     for idx, name in enumerate(cond_list):
         group = dfs[name]
         ax = axes.flatten()[idx]
@@ -80,8 +78,11 @@ def plot_conds_mat(dfs, cond_list, plot_func, sharex=False,
         # Get current clim
         if cbar_interval is not None:
             clim = cbar.mappable.get_clim()
-            # Set tick intervals for cbar to cbar_interval
-            cbar.set_ticks(np.arange(clim[0], clim[1], cbar_interval))
+            start = np.ceil(clim[0] / cbar_interval) * cbar_interval
+            end = np.floor(clim[1] / cbar_interval) * cbar_interval
+            ticks = np.arange(start, end + 0.5 * cbar_interval, cbar_interval)
+            cbar.set_ticks(ticks)
+
         # cbar = fig.colorbar(img, ax=ax)
         # cbar.ax.tick_params(labelsize=colorbar_fontsize)
 
@@ -364,6 +365,10 @@ class PlotBoxplotMultiOdorCondParams:
     pvalue_bar_linewidth: float = 1
     do_capitalize_labels: bool = False
     show_ns: bool = True
+    hue_colors: tuple = ('tab:blue', 'tab:orange')
+    strip_hue_colors: tuple = ('gray', 'gray')
+    mean_hue_colors: tuple = None
+
 
 def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    test_results=None,
@@ -390,7 +395,10 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
                                                    pvalue_marker_xoffset=0.01,
                                                    pvalue_bar_linewidth=1,
                                                    do_capitalize_labels=False,
-                                                   show_ns=True):
+                                                   show_ns=True,
+                                                   hue_colors=['tab:blue', 'tab:orange'],
+                                                   strip_hue_colors=['gray', 'gray'],
+                                                   mean_hue_colors=None):
     #### IMPORTANT ####
     # This function requires seaborn version from Bo's fork aloejhb
     ###################
@@ -409,9 +417,10 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
     # So far assuming only two conditions
     assert nconds == 2, 'Only two conditions are supported'
 
-    hue_colors = ['tab:blue', 'tab:orange']
-    strip_hue_colors = ['gray', 'gray']
-    mean_hue_colors = [_get_darker_color(color) for color in hue_colors]
+    #hue_colors = ['tab:blue', 'tab:orange']
+    #strip_hue_colors = ['gray', 'gray']
+    if mean_hue_colors is None:
+        mean_hue_colors = [_get_darker_color(color) for color in hue_colors]
     # Plotting stripplot and boxplot with hue
     if do_plot_strip:
         sns.stripplot(ax=ax, x=odor_name, y=yname, hue=condition_name, data=datadf,
@@ -473,6 +482,9 @@ def plot_boxplot_with_significance_multi_odor_cond(datadf, yname,
 
 def plot_pvalue_marker_multi_odor_two_cond(ax, test_results, datadf, condition_name='condition', hue_separation_scaler=1.0, show_ns=False,
                                            fontsize=7, pvalue_marker_xoffset=0.02, linewidth=1):
+    # Get the max of datadf
+    # ymax_data = datadf.max().max()
+    # ymax = 1.02 * ymax_data
     current_ylim = ax.get_ylim()
     ymax = 1.02 * current_ylim[1]
     # Getting the positions and labels

@@ -364,22 +364,24 @@ class PlotMeanDeltaMatParams:
     ylabels: list = None
     ylabel_colors: list = None
     cmap: str = 'coolwarm'
+    clim: tuple = None
 
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 def plot_mean_delta_mat(mean_delta_mat: pd.DataFrame,
                         params: PlotMeanDeltaMatParams = PlotMeanDeltaMatParams()):
-    cmin = mean_delta_mat.min().min()
-    cmax = mean_delta_mat.max().max()
-    print(cmin, cmax)
-    abs_max = max(abs(cmin), abs(cmax))
-    clim = (-abs_max, abs_max)
+    if params.clim is None:
+        cmin = mean_delta_mat.min().min()
+        cmax = mean_delta_mat.max().max()
+        abs_max = max(abs(cmin), abs(cmax))
+        params.clim = (-abs_max, abs_max)
+    print(f'clim: {params.clim}')
 
     params_dict = params.to_dict()
     figsize = params_dict.pop('figsize')
     fig, ax = plt.subplots(figsize=figsize)
     colorbar_fontsize = params_dict.pop('colorbar_fontsize')
-    img = plot_similarity_mat(mean_delta_mat, ax=ax, clim=clim,
+    img = plot_similarity_mat(mean_delta_mat, ax=ax,
                               **params_dict)
     # Use make_axes_locatable to adjust the size of the colorbar
     divider = make_axes_locatable(ax)
@@ -387,7 +389,7 @@ def plot_mean_delta_mat(mean_delta_mat: pd.DataFrame,
     cbar = fig.colorbar(img, cax=cax)
     cbar.ax.tick_params(labelsize=colorbar_fontsize)
     # color bar tick only labels the min and max and zero
-    cbar.set_ticks([clim[0], 0, clim[1]])
+    cbar.set_ticks([params.clim[0], 0, params.clim[1]])
     #cbar = fig.colorbar(img, ax=ax)
     # cbar.ax.tick_params(labelsize=colorbar_fontsize)
     fig.tight_layout()

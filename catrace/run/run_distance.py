@@ -171,6 +171,7 @@ def plot_matrix_per_condition(avg_simdf, conditions,
         cmin = min([mat.min().min() for mat in avg_mats.values()])
         cmax = max([mat.max().max() for mat in avg_mats.values()])
         clim = (cmin, cmax)
+        print(f'clim: {clim}')
         params.clim = clim
     params.ncol = 2
     
