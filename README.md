@@ -34,7 +34,7 @@ pip install git+https://github.com/aloejhb/catrace
 or clone the repository locally and install with
 ```
 git clone git@github.com:aloejhb/catrace
-cd segment-anything; pip install -e .
+cd catrace; pip install -e .
 ```
 
 ### Usage
