@@ -95,10 +95,6 @@ cd segment-anything; pip install -e .
 				<td style='padding: 8px;'>- Plot_trace.py` provides visualization functions for calcium imaging data<br>- It generates various plots, including individual trace heatmaps, average trace plots across trials and odors, and mean traces with standard deviation<br>- These functions facilitate the analysis and interpretation of neuronal activity patterns within the broader catrace project<br>- The visualizations aid in understanding responses to different stimuli over time.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/mft_manifold_analysis.py'>mft_manifold_analysis.py</a></b></td>
-				<td style='padding: 8px;'>- Mft_manifold_analysis.py<code> performs manifold analysis on neural activity data<br>- It computes parameters characterizing the dimensionality and geometry of neural response manifolds for different odor stimuli<br>- The module processes input data, applies manifold analysis algorithms (with optional center correlation), and saves the results<br>- It integrates with other modules for data loading and configuration management within the broader </code>catrace` project.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/response.py'>response.py</a></b></td>
 				<td style='padding: 8px;'>- The <code>response.py</code> module processes calcium imaging data to analyze neuronal responses to odors<br>- It computes and normalizes responses, allowing for selection of top-performing neurons<br>- The module generates visualizations, including box plots and histograms, comparing responses across different conditions and odors, facilitating statistical analysis and result interpretation within the broader catrace project.</td>
 			</tr>
@@ -119,16 +115,8 @@ cd segment-anything; pip install -e .
 				<td style='padding: 8px;'>- Catrace/frame_time.py<code> provides a function to convert time values from seconds to frame numbers<br>- It leverages NumPy for efficient array-based calculations, facilitating the conversion process within the broader </code>catrace` project, likely used for synchronizing or indexing events based on frame rate<br>- This function is crucial for handling temporal data within the applications video or animation processing pipeline.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/tca.py'>tca.py</a></b></td>
-				<td style='padding: 8px;'>- Catrace/tca.py<code> provides a function, </code>reshape_to_3d`, crucial for data preprocessing within the catrace project<br>- It transforms a Pandas DataFrame representing neural activity data into a three-dimensional NumPy array<br>- This reshaping facilitates subsequent analysis by organizing the data according to trials, neurons, and time points, enabling efficient processing and modeling of neural responses.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/dataio_read_matlab_struct.py'>dataio_read_matlab_struct.py</a></b></td>
 				<td style='padding: 8px;'>- The <code>catrace/dataio_read_matlab_struct.py</code> module facilitates data loading and organization within the broader catrace project<br>- It reads experimental configurations and neural activity data from MATLAB files, processes spike information, and constructs pandas DataFrames for subsequent analysis<br>- Specifically, it integrates time traces and experimental metadata, streamlining data access for downstream processing steps.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/mutual_information.py'>mutual_information.py</a></b></td>
-				<td style='padding: 8px;'>- The <code>mutual_information.py</code> module computes and analyzes mutual information between neuronal activity datasets (OB and Dp regions) within a larger neuroscience project<br>- It calculates mutual information matrices, enabling selection of neurons based on mutual information thresholds or ranges, facilitating investigation of functional relationships between brain regions<br>- The module leverages parallel processing for efficiency and integrates with other project components for data loading and analysis.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/_version.py'>_version.py</a></b></td>
@@ -137,10 +125,6 @@ cd segment-anything; pip install -e .
 			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/mahal.py'>mahal.py</a></b></td>
 				<td style='padding: 8px;'>- Computations of odor manifold distances are performed using Mahalanobis or Euclidean metrics<br>- The code calculates distances between pairs of odor manifolds, offering options for data shuffling to assess the robustness of distance measures<br>- Results are organized into dataframes and matrices, facilitating visualization of odor relationships via heatmaps<br>- The module integrates with other project components for data preprocessing and visualization.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/cross_trial.py'>cross_trial.py</a></b></td>
-				<td style='padding: 8px;'>- Catrace/cross_trial.py<code> processes and visualizes cross-trial similarity data within the larger </code>catrace` project<br>- It manipulates multi-level dataframes, separating data by conditions (naive/trained) and regions, then flattens and concatenates for analysis<br>- The module generates visualizations comparing similarity measures across odor conditions, facilitating the analysis of odor representation changes across training.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/deconvolve.py'>deconvolve.py</a></b></td>
@@ -157,14 +141,6 @@ cd segment-anything; pip install -e .
 			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/visualize.py'>visualize.py</a></b></td>
 				<td style='padding: 8px;'>- The <code>catrace/visualize.py</code> file is responsible for generating visualizations within the <code>catrace</code> project<br>- Specifically, it provides functions to create heatmaps, leveraging pre-loaded colormaps, for displaying and analyzing pattern data<br>- This contributes to the overall project goal by offering a visual representation of the statistical analyses performed elsewhere in the codebase (likely within the <code>catrace/stats.py</code> module, judging by the imports)<br>- The visualizations aid in interpreting the results of experiments and understanding the underlying patterns in the data.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/for_paper.py'>for_paper.py</a></b></td>
-				<td style='padding: 8px;'>- For_paper.py` facilitates result visualization and reporting for a research paper<br>- It saves experiment statistics as JSON files and generates publication-ready figures (SVG, PDF, optionally EPS), including associated metadata like notebook paths<br>- The functions streamline the process of creating figures comparing different experimental setups, ensuring consistent formatting for the paper.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/nrn_coord.py'>nrn_coord.py</a></b></td>
-				<td style='padding: 8px;'>- Nrn_coord.py` processes neuron coordinate data within a larger calcium imaging analysis pipeline<br>- It imports neuron location data from image stacks, links this data to metadata (e.g., response strength), and generates visualizations mapping metadata values onto neuron positions within the brain region<br>- This facilitates the analysis of neuronal activity patterns by spatially associating them with relevant experimental parameters.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/dataset.py'>dataset.py</a></b></td>
@@ -187,14 +163,6 @@ cd segment-anything; pip install -e .
 				<td style='padding: 8px;'>- Nrnpca.py` performs principal component analysis (PCA) on calcium imaging data<br>- It reads time-series data, applies PCA dimensionality reduction, and visualizes the results using scatter plots and confidence ellipses<br>- The script facilitates the analysis of neural responses to different stimuli by representing high-dimensional data in a lower-dimensional space, aiding in the interpretation of odor-evoked activity patterns.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/reduced_rank_regression.py'>reduced_rank_regression.py</a></b></td>
-				<td style='padding: 8px;'>- ReducedRankRegressor.py implements a reduced-rank regression model for dimensionality reduction and multitask learning<br>- It uses singular value decomposition to find a lower-rank approximation of the data, improving efficiency and generalizability<br>- The module integrates with a larger experiment framework, processing data, training the model, and saving the trained model and predictions<br>- The models parameters are configurable, allowing for flexibility in application.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/trial_similarity.py'>trial_similarity.py</a></b></td>
-				<td style='padding: 8px;'>- Trial_similarity.py` computes and visualizes trial similarity matrices over time for calcium imaging data<br>- It offers methods for calculating similarity using cosine distance or pattern correlation, both for comparing trials against each other and against a template<br>- The module further provides functions to generate plots of these similarities, facilitating analysis of population responses across experimental conditions.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/process_neuron.py'>process_neuron.py</a></b></td>
 				<td style='padding: 8px;'>- Process_neuron.py` facilitates neuron selection within the catrace project<br>- It processes neural activity data, identifying neuron assemblies based on specified criteria (e.g., top responding neurons or a percentile threshold)<br>- The module then filters the data, retaining only neurons belonging to these assemblies, and saves the results, including an assembly membership matrix, for downstream analysis<br>- This enhances the analysis of neural responses to odors.</td>
 			</tr>
@@ -203,12 +171,8 @@ cd segment-anything; pip install -e .
 				<td style='padding: 8px;'>- Catrace/param.py<code> centralizes configuration management within the </code>catrace<code> project<br>- It facilitates saving experiment parameters, instantiating a configuration object, and serializing it to a JSON file (</code>config.json`) within the designated output directory<br>- This ensures reproducible and easily accessible experiment setups across the entire catrace application.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/geometry.py'>geometry.py</a></b></td>
-				<td style='padding: 8px;'>- Catrace/geometry.py` provides functions for geometrical analysis within a larger neuroscience data processing pipeline<br>- It calculates angles between vectors derived from neural activity data, specifically focusing on odor responses<br>- These calculations, leveraging principal component analysis results from other modules, generate matrices visualizing relationships between different odor stimuli, facilitating comparative analysis of neural responses.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/distance_measure.py'>distance_measure.py</a></b></td>
-				<td style='padding: 8px;'>- Catrace/distance_measure.py<code> computes and analyzes distances between neural activity patterns<br>- It calculates distance matrices using various metrics (e.g., Euclidean, cosine) across different trials and odors, visualizes these distances, and computes distances from a starting point<br>- The module leverages UMAP for dimensionality reduction and integrates with other modules, such as </code>catrace.pattern_correlation`, for odor-specific distance analysis.</td>
+				<td style='padding: 8px;'>- Catrace/distance_measure.py computes and analyzes distances between neural activity patterns. It calculates distance matrices using various metrics (e.g., Euclidean, cosine) across different trials and odors, visualizes these distances, and computes distances from a starting point.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/dataio.py'>dataio.py</a></b></td>
@@ -221,10 +185,6 @@ cd segment-anything; pip install -e .
 			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/fit_curve.py'>fit_curve.py</a></b></td>
 				<td style='padding: 8px;'>- Fit_curve.py` fits double exponential functions to neural response data, estimating parameters for each odor presented<br>- It uses curve fitting techniques to model the probability of a neuron spiking over time<br>- The module computes peak response times and provides plotting functionality, contributing to the overall data analysis and visualization within the catrace project.</td>
-			</tr>
-			<tr style='border-bottom: 1px solid #eee;'>
-				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/cca.py'>cca.py</a></b></td>
-				<td style='padding: 8px;'>- Cca.py<code> performs canonical correlation analysis (CCA) on pre-processed data<br>- It leverages the </code>rcca` library to compute CCA components, transforming input dataframes into NumPy arrays for processing<br>- The function then generates CCA component embeddings and offers a utility to create random latent variables, likely for comparative analysis or simulation within a broader dimensionality reduction pipeline.</td>
 			</tr>
 			<tr style='border-bottom: 1px solid #eee;'>
 				<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/pattern_correlation.py'>pattern_correlation.py</a></b></td>
@@ -275,14 +235,6 @@ cd segment-anything; pip install -e .
 					<tr style='border-bottom: 1px solid #eee;'>
 						<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/run/run_capacity_bias_scale_dependent.py'>run_capacity_bias_scale_dependent.py</a></b></td>
 						<td style='padding: 8px;'>- The script performs a comparative analysis of neural activity patterns for two specified odors within a defined time window<br>- It preprocesses neural manifold data, applying downsampling and optional Gaussianization<br>- Geometric comparisons using the GCMC library quantify the similarity of neural responses to the two odors, saving the results for later aggregation and statistical analysis within the broader CATRACE project.</td>
-					</tr>
-					<tr style='border-bottom: 1px solid #eee;'>
-						<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/run/run_capacity.bk.py'>run_capacity.bk.py</a></b></td>
-						<td style='padding: 8px;'>- It performs geometric analysis of olfactory neural activity data<br>- The script processes neural trace data, selecting specific time windows and odors<br>- It then applies a geometric method (GCMC) to analyze neural manifolds, generating and saving statistical results to assess the capacity of the olfactory system<br>- These results are crucial for understanding odor representation in the brain.</td>
-					</tr>
-					<tr style='border-bottom: 1px solid #eee;'>
-						<td style='padding: 8px;'><b><a href='https://github.com/aloejhb/catrace/blob/master/catrace/run/run_select_assembly.py'>run_select_assembly.py</a></b></td>
-						<td style='padding: 8px;'>- Run_select_assembly.py<code> orchestrates the selection of neuron assemblies based on specified criteria<br>- It utilizes configuration parameters to process experimental data in parallel, identifying neurons based on cell type and odor responses<br>- Results are saved, leveraging existing data processing and storage components within the </code>catrace` project<br>- The script ensures efficient parallel computation and manages output directory creation.</td>
 					</tr>
 				</table>
 			</blockquote>
