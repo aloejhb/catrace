@@ -5,20 +5,9 @@
 
 <img src="logo/catrace_small.png" width="15%" style="position: relative; top: 0; right: 0;" alt="Project Logo"/>
 
-# CATRACE
+# CaTrace
 
 <em></em>
-
-<!-- BADGES -->
-<img src="https://img.shields.io/github/license/aloejhb/catrace?style=default&logo=opensourceinitiative&logoColor=white&color=0080ff" alt="license">
-<img src="https://img.shields.io/github/last-commit/aloejhb/catrace?style=default&logo=git&logoColor=white&color=0080ff" alt="last-commit">
-<img src="https://img.shields.io/github/languages/top/aloejhb/catrace?style=default&color=0080ff" alt="repo-top-language">
-<img src="https://img.shields.io/github/languages/count/aloejhb/catrace?style=default&color=0080ff" alt="repo-language-count">
-
-<!-- default option, no dependency badges. -->
-
-
-<!-- default option, no dependency badges. -->
 
 </div>
 <br>
