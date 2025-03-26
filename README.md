@@ -15,29 +15,27 @@
 
 ---
 
-## Table of Contents
-
-- [Table of Contents](#table-of-contents)
-- [Overview](#overview)
-- [Features](#features)
-- [Project Structure](#project-structure)
-    - [Project Index](#project-index)
-- [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-    - [Usage](#usage)
-    - [Testing](#testing)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
-
----
-
 ## Overview
 
+---
+## Getting Started
 
+### Prerequisites
 
+This project requires the following dependencies:
+
+- **Programming Language:** Python
+- **Package Manager:** Conda, Pip
+
+### Installation
+Install CaTrace:
+```
+pip install git+https://github.com/aloejhb/catrace
+```
+or clone the repository locally and install with
+```
+git clone git@github.com:aloejhb/catrace
+cd segment-anything; pip install -e .
 ---
 
 ## Features
@@ -500,56 +498,6 @@
 </details>
 
 ---
-
-## Getting Started
-
-### Prerequisites
-
-This project requires the following dependencies:
-
-- **Programming Language:** Python
-- **Package Manager:** Conda, Pip
-
-### Installation
-
-Build catrace from the source and intsall dependencies:
-
-1. **Clone the repository:**
-
-    ```sh
-    ❯ git clone https://github.com/aloejhb/catrace
-    ```
-
-2. **Navigate to the project directory:**
-
-    ```sh
-    ❯ cd catrace
-    ```
-
-3. **Install the dependencies:**
-
-<!-- SHIELDS BADGE CURRENTLY DISABLED -->
-	<!-- [![conda][conda-shield]][conda-link] -->
-	<!-- REFERENCE LINKS -->
-	<!-- [conda-shield]: https://img.shields.io/badge/conda-342B029.svg?style={badge_style}&logo=anaconda&logoColor=white -->
-	<!-- [conda-link]: https://docs.conda.io/ -->
-
-	**Using [conda](https://docs.conda.io/):**
-
-	```sh
-	❯ conda env create -f environment.yml
-	```
-<!-- SHIELDS BADGE CURRENTLY DISABLED -->
-	<!-- [![pip][pip-shield]][pip-link] -->
-	<!-- REFERENCE LINKS -->
-	<!-- [pip-shield]: https://img.shields.io/badge/Pip-3776AB.svg?style={badge_style}&logo=pypi&logoColor=white -->
-	<!-- [pip-link]: https://pypi.org/project/pip/ -->
-
-	**Using [pip](https://pypi.org/project/pip/):**
-
-	```sh
-	❯ pip install -r requirements.txt
-	```
 
 ### Usage
 
