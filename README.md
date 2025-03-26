@@ -274,14 +274,6 @@ pytest
 
 ---
 
-## Roadmap
-
-- [X] **`Task 1`**: <strike>Implement feature one.</strike>
-- [ ] **`Task 2`**: Implement feature two.
-- [ ] **`Task 3`**: Implement feature three.
-
----
-
 ## Contributing
 
 - **💬 [Join the Discussions](https://github.com/aloejhb/catrace/discussions)**: Share your insights, provide feedback, or ask questions.
