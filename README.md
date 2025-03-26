@@ -40,25 +40,17 @@ cd segment-anything; pip install -e .
 
 ## Features
 
-| Feature Category               | Feature                               | Dependency/Inference                               | Confidence |
-|--------------------------------|---------------------------------------|----------------------------------------------------|------------|
-| **Preprocessing**              | Read raw fluorescence traces          | `numpy`, `scipy`, `pandas`                         | High       |
-|                                | Deconvolve                            | `matplotlib`                                      | High       |
-| **Response amplitude**         | Machine learning algorithms           | `jax`, `ray`, `scikit-learn` (inferred)           | Medium     |
-| **Pattern similarity**         | Machine learning algorithms           | `jax`, `ray`, `scikit-learn` (inferred)           | Medium     |
-| **Distance between manifolds**                               | Deep learning (potential)             | `tensorflow` (inferred from `tf-estimator-nightly`) | Low        |
-| **Pattern similarity**   | Machine learning algorithms           | `jax`, `ray`, `scikit-learn` (inferred)           | Medium     |
-| **Dimensionality reduction**       | Efficient array handling              | `numpy`, `blosc2`                                  | High       |
-| **Development Tools**     | Version control (likely Git)          | Standard practice                                   | High       |
-|                           | Testing framework                     | `pytest`, `pytest-timeout`                         | High       |
-|                           | Linting and code style enforcement    | `pyflakes`, `pycodestyle`, `flake8`, `pydocstyle` | High       |
-| **Deployment/Packaging**   | Package management                    | `pip`, `conda`, `setuptools` (inferred)           | High       |
-|                           | Virtual environment management         | `virtualenv`                                      | High       |
-| **Other Libraries**       | Image processing (potential)          | `Pillow`                                          | Medium     |
-|                           | Web interaction (potential)           | `requests-oauthlib`                               | Medium     |
-|                           | Jupyter Notebook integration          | `jupyter-notebook`, `jupyter-client`, `ipython`    | High       |
-| **CUDA Support (Potential)** | GPU acceleration                     | `nvidia-cuda-nvrtc-cu11`, `cudatoolkit`, `cudnn`   | High       |
-
+| Feature Category                 | Feature                                                                         | 
+|----------------------------------|---------------------------------------------------------------------------------|
+| **Preprocessing**                | Read raw fluorescence traces                                                    |
+|				   | Compute ΔF/F traces                                                             |
+|                                  | Deconvolve to infer spike probability and spike rate                            | 
+| **Response amplitude**           | Compute neuron response during a time window                                    |
+| **Pattern similarity**           | Measure the similarity between response patterns, including pattern correlation, cosine distance | 
+| **Distance between manifolds**   | Compute distance between manifolds, including Euclidean distance between manifold centers (dE) and Mahalanobis distance (dM) | 
+| **Dimensionality reduction**     | Reduce dimensionality of neuronal population activity patterns, including PCA, isomap, UMAP etc., using scikit-learn              |
+| **Statistics and plotting**      | Perform statistical tests on experimental group data, including Mann-Whitney U, Kruskal-Wallis, t-test and plot relevant plots|
+| **Correlation with behavior**    | Correlate geometric properties of neuronal representations with behavior parameters, e.g. behavior discrimination score           |
 
 **Disclaimer:** This table is based on educated guesses from the dependencies.  A proper analysis requires access to the `catrace` source code.  The confidence levels reflect the certainty of the inferred features.  Some dependencies might be used for unrelated tasks or might be outdated/unused.
 
