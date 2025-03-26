@@ -52,7 +52,6 @@ cd segment-anything; pip install -e .
 | **Statistics and plotting**      | Perform statistical tests on experimental group data, including Mann-Whitney U, Kruskal-Wallis, t-test and plot relevant plots|
 | **Correlation with behavior**    | Correlate geometric properties of neuronal representations with behavior parameters, e.g. behavior discrimination score           |
 
-**Disclaimer:** This table is based on educated guesses from the dependencies.  A proper analysis requires access to the `catrace` source code.  The confidence levels reflect the certainty of the inferred features.  Some dependencies might be used for unrelated tasks or might be outdated/unused.
 
 ---
 
