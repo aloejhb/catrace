@@ -11,6 +11,7 @@
 
 </div>
 <br>
+<strong>CaTrace</strong> is a toolbox for analyzing calcium imaging time traces of neuronal population. It offers tools for basic neuronal response analysis, including response amplitude quantification, response pattern similarity metrics. More advanced analysis including distance between neural manifolds using Euclidean and Mahalanobis distance is included. Statistical analysis tools are provided to detect difference between experimental groups.
 
 ---
 
