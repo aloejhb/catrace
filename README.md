@@ -36,6 +36,20 @@ or clone the repository locally and install with
 git clone git@github.com:aloejhb/catrace
 cd segment-anything; pip install -e .
 ```
+
+### Usage
+
+Run the project with:
+
+**Using [conda](https://docs.conda.io/):**
+```sh
+conda activate {venv}
+python {entrypoint}
+```
+**Using [pip](https://pypi.org/project/pip/):**
+```sh
+python {entrypoint}
+```
 ---
 
 ## Features
@@ -243,20 +257,6 @@ cd segment-anything; pip install -e .
 </details>
 
 ---
-
-### Usage
-
-Run the project with:
-
-**Using [conda](https://docs.conda.io/):**
-```sh
-conda activate {venv}
-python {entrypoint}
-```
-**Using [pip](https://pypi.org/project/pip/):**
-```sh
-python {entrypoint}
-```
 
 ### Testing
 
