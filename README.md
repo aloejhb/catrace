@@ -35,17 +35,20 @@ or clone the repository locally and install with
 ```
 git clone git@github.com:aloejhb/catrace
 cd segment-anything; pip install -e .
+```
 ---
 
 ## Features
 
-| Feature Category          | Feature                               | Dependency/Inference                               | Confidence |
-|---------------------------|---------------------------------------|----------------------------------------------------|------------|
-| **Data Processing**       | Numerical computation                 | `numpy`, `scipy`, `pandas`                         | High       |
-|                           | Data visualization                    | `matplotlib`                                      | High       |
-| **Machine Learning**      | Machine learning algorithms           | `jax`, `ray`, `scikit-learn` (inferred)           | Medium     |
-|                           | Deep learning (potential)             | `tensorflow` (inferred from `tf-estimator-nightly`) | Low        |
-| **Data Structures**       | Efficient array handling              | `numpy`, `blosc2`                                  | High       |
+| Feature Category               | Feature                               | Dependency/Inference                               | Confidence |
+|--------------------------------|---------------------------------------|----------------------------------------------------|------------|
+| **Preprocessing**              | Read raw fluorescence traces          | `numpy`, `scipy`, `pandas`                         | High       |
+|                                | Deconvolve                            | `matplotlib`                                      | High       |
+| **Response amplitude**         | Machine learning algorithms           | `jax`, `ray`, `scikit-learn` (inferred)           | Medium     |
+| **Pattern similarity**         | Machine learning algorithms           | `jax`, `ray`, `scikit-learn` (inferred)           | Medium     |
+| **Distance between manifolds**                               | Deep learning (potential)             | `tensorflow` (inferred from `tf-estimator-nightly`) | Low        |
+| **Pattern similarity**   | Machine learning algorithms           | `jax`, `ray`, `scikit-learn` (inferred)           | Medium     |
+| **Dimensionality reduction**       | Efficient array handling              | `numpy`, `blosc2`                                  | High       |
 | **Development Tools**     | Version control (likely Git)          | Standard practice                                   | High       |
 |                           | Testing framework                     | `pytest`, `pytest-timeout`                         | High       |
 |                           | Linting and code style enforcement    | `pyflakes`, `pycodestyle`, `flake8`, `pydocstyle` | High       |
