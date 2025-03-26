@@ -22,10 +22,9 @@
 
 ### Prerequisites
 
-This project requires the following dependencies:
-
-- **Programming Language:** Python
-- **Package Manager:** Conda, Pip
+The dependent python packages will automatically be installed by pip. Here a few dependent package is highlighted for important features:
+- **CASCADE**: CASCADE is a toolbox by **[Rupprecht et al. 2021]** that translates calcium imaging ΔF/F traces into spiking probabilities or discrete spikes using deep learning models. CaTrace depends on it to deconvolve the ΔF/F time traces.
+- **GLUE**: This is a package by **[Chou et al. 2024]** for manifold capacity analysis. The connector to this package will be accessible after the official release of GLUE.
 
 ### Installation
 Install CaTrace:
