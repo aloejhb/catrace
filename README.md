@@ -38,18 +38,10 @@ cd catrace; pip install -e .
 ```
 
 ### Usage
+You can use CaTrace to run analysis on a single experiment or batch your analysis across a set of experiments.
+Refer to the demos folder for more examples.
 
-Run the project with:
 
-**Using [conda](https://docs.conda.io/):**
-```sh
-conda activate {venv}
-python {entrypoint}
-```
-**Using [pip](https://pypi.org/project/pip/):**
-```sh
-python {entrypoint}
-```
 ---
 
 ## Features
@@ -258,74 +250,11 @@ python {entrypoint}
 
 ---
 
-### Testing
-
-Catrace uses the {__test_framework__} test framework. Run the test suite with:
-
-**Using [conda](https://docs.conda.io/):**
-```sh
-conda activate {venv}
-pytest
-```
-**Using [pip](https://pypi.org/project/pip/):**
-```sh
-pytest
-```
-
----
-
-## Contributing
-
-- **💬 [Join the Discussions](https://github.com/aloejhb/catrace/discussions)**: Share your insights, provide feedback, or ask questions.
-- **🐛 [Report Issues](https://github.com/aloejhb/catrace/issues)**: Submit bugs found or log feature requests for the `catrace` project.
-- **💡 [Submit Pull Requests](https://github.com/aloejhb/catrace/blob/main/CONTRIBUTING.md)**: Review open PRs, and submit your own PRs.
-
-<details closed>
-<summary>Contributing Guidelines</summary>
-
-1. **Fork the Repository**: Start by forking the project repository to your github account.
-2. **Clone Locally**: Clone the forked repository to your local machine using a git client.
-   ```sh
-   git clone https://github.com/aloejhb/catrace
-   ```
-3. **Create a New Branch**: Always work on a new branch, giving it a descriptive name.
-   ```sh
-   git checkout -b new-feature-x
-   ```
-4. **Make Your Changes**: Develop and test your changes locally.
-5. **Commit Your Changes**: Commit with a clear message describing your updates.
-   ```sh
-   git commit -m 'Implemented new feature x.'
-   ```
-6. **Push to github**: Push the changes to your forked repository.
-   ```sh
-   git push origin new-feature-x
-   ```
-7. **Submit a Pull Request**: Create a PR against the original project repository. Clearly describe the changes and their motivations.
-8. **Review**: Once your PR is reviewed and approved, it will be merged into the main branch. Congratulations on your contribution!
-</details>
-
-<details closed>
-<summary>Contributor Graph</summary>
-<br>
-<p align="left">
-   <a href="https://github.com{/aloejhb/catrace/}graphs/contributors">
-      <img src="https://contrib.rocks/image?repo=aloejhb/catrace">
-   </a>
-</p>
-</details>
-
----
-
 ## License
 
 Catrace is protected under the [LICENSE](https://choosealicense.com/licenses) License. For more details, refer to the [LICENSE](https://choosealicense.com/licenses/) file.
 
 ---
-
-## Acknowledgments
-
-- Credit `contributors`, `inspiration`, `references`, etc.
 
 <div align="right">
 
