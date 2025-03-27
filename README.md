@@ -3,7 +3,7 @@
 <!-- HEADER STYLE: CLASSIC -->
 <div align="center">
 
-<img src="pictures/catrace_small.png" width="15%" style="position: relative; top: 0; right: 0;" alt="Project Logo"/>
+<img src="pictures/catrace_small_flipped.png" width="15%" style="position: relative; top: 0; right: 0;" alt="Project Logo"/>
 
 # CaTrace
 
