@@ -117,6 +117,8 @@ def regression_distance_with_behavior(config_file,
     if selected_conditions is not None:
         subsimdf_per_fish = subsimdf_per_fish[subsimdf_per_fish['condition'].isin(selected_conditions)] 
     merged_behavior_df = merge_with_behavior(subsimdf_per_fish, behavior_measure_df)
+    # Save behavior_measure_df to a csv file
+    behavior_measure_df.to_csv('behavior_measure_df.csv', index=False)
     plot_regression_params = plot_regression_params.to_dict() or {}
     fig, model, text_str = plot_regression(merged_behavior_df, metric, behavior_measure_name, hue='condition', **plot_regression_params)
     if metric == 'mahal':
