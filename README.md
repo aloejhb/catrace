@@ -39,7 +39,8 @@ cd catrace; pip install -e .
 
 ### Usage
 You can use CaTrace to run analysis on a single experiment or batch your analysis across a set of experiments.
-Refer to the demos folder for more examples.
+
+Refer to the [demos](demos/) for more examples.
 
 
 ---
@@ -49,8 +50,8 @@ Refer to the demos folder for more examples.
 | Feature Category                 | Feature                                                                         | 
 |----------------------------------|---------------------------------------------------------------------------------|
 | **Preprocessing**                | Read raw fluorescence traces                                                    |
-|				   | Compute ΔF/F traces                                                             |
-|                                  | Deconvolve to infer spike probability and spike rate                            | 
+|                                  | Compute ΔF/F traces                                                             |
+|                                  | Deconvolve to infer spike probability and spike rate using CASCADE **[Rupprecht et al. 2021]**                            | 
 | **Response amplitude**           | Compute neuron response during a time window                                    |
 | **Pattern similarity**           | Measure the similarity between response patterns, including pattern correlation, cosine distance | 
 | **Distance between manifolds**   | Compute distance between manifolds, including Euclidean distance between manifold centers (dE) and Mahalanobis distance (dM) | 
@@ -267,3 +268,6 @@ Catrace is protected under the [LICENSE](https://choosealicense.com/licenses) Li
 
 
 ---
+
+
+[def]: demos\
