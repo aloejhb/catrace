@@ -258,6 +258,12 @@ Refer to the [demos](demos/) for more examples.
 
 ---
 
+## References
+1. Hu, B. et al. Representational learning by optimization of neural manifolds in an olfactory memory network. 2024.11.17.623906 Preprint at https://doi.org/10.1101/2024.11.17.623906 (2024).
+2. Rupprecht, P. et al. A database and deep learning toolbox for noise-optimized, generalized spike inference from calcium imaging. Nat Neurosci 24, 1324–1337 (2021).
+3. Chou, C.-N. et al. Neural Manifold Capacity Captures Representation Geometry, Correlations, and Task-Efficiency Across Species and Behaviors. 2024.02.26.582157 Preprint at https://doi.org/10.1101/2024.02.26.582157 (2024).
+---
+
 ## License
 
 Catrace is protected under the [LICENSE](https://choosealicense.com/licenses) License. For more details, refer to the [LICENSE](https://choosealicense.com/licenses/) file.
