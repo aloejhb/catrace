@@ -26,6 +26,10 @@ dependencies = [
   "numpy",
   "pandas",
   "scikit-learn",
+  "dataclasses_json",
+  "matplotlib",
+  "umap-learn",
+  "seaborn"
 ]
 # `version` is automatically set to use `catrace.__version__`
 dynamic = ["version"]

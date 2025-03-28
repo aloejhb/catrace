@@ -61,7 +61,6 @@ def plot_embed_trial(embeddf):
             alpha=0.7,
             color=clr_cycle[cidx],
         )
-    pass
 
 
 def plot_embed_timecourse_all(embeddf, odor_list, select_odor):
@@ -90,15 +89,6 @@ def plot_embed_timecourse(ax, group, name, color):
     ]
     points[0].label = name
     return points
-
-
-# def svd(X):
-#   # Compute full SVD
-#   U, Sigma, Vh = np.linalg.svd(X,
-#       full_matrices=False, # It's not necessary to compute the full matrix of U or V
-#       compute_uv=True)
-# X_svd = np.dot(U, np.diag(Sigma))
-# return X_svd
 
 
 def svd(x):
@@ -182,23 +172,7 @@ def compute_pca_umap(df, n_components, umap_params, scale=False):
 
 def get_embeddf(latent, index):
     embeddf = pd.DataFrame(latent, index=index)
-    embeddf = embeddf.reindex(index.unique('odor'), level='odor')
     return embeddf
-
-
-# def plot_embed_2d(embeddf, component_idx, plot_type='line', ax=None):
-#     if ax is None:
-#         fig, ax = plt.subplots()
-#     embeddf = embeddf.iloc[:,list(component_idx)]
-#     groups = embeddf.groupby(['odor'])
-#     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
-#     for name, group in groups:
-#         if plot_type == 'line':
-#             ax.plot(group.iloc[:,0], group.iloc[:,1], marker='o',
-#                     linestyle='-', ms=4, label=name, alpha=0.7)
-#         elif plot_type == 'scatter':
-#             ax.scatter(group.iloc[:,0], group.iloc[:,1], marker='o',
-#                        s=4, label=name, alpha=0.7)
 
 
 def plot_embed_1d(embeddf, component_idx, ax=None):
@@ -304,24 +278,15 @@ def plot_on_poincare_disk(embeddf, ax=None, plot_type='scatter'):
             disk_y = y / (1 + z)
 
             if plot_type == 'line':
-                # ax.quiver(disk_x[:-1], disk_y[:-1],
-                #           disk_x[1:]-disk_x[:-1],
-                #           disk_y[1:]-disk_y[:-1],
-                #           scale_units='xy', angles='xy',
-                #           scale=1, color=color)
                 cmap = LinearSegmentedColormap.from_list(
                     'custom', [(0, 'white'), (1, color)], N=256
                 )
-                # cmap = 'viridis'
                 norm = plt.Normalize(-20, len(disk_x))
-                # lwidths = np.arange(len(disk_x)) / 10
                 points = np.array([disk_x, disk_y]).T.reshape(-1, 1, 2)
                 segments = np.concatenate([points[:-1], points[1:]], axis=1)
                 lc = LineCollection(segments, cmap=cmap, norm=norm)
                 lc.set_array(np.arange(len(disk_x)))
-                # linewidths=lwidths,
                 ax.add_collection(lc)
-                # ax.plot(disk_x, disk_y, label=name, alpha=0.7, color=color)
             ax.scatter(
                 disk_x,
                 disk_y,
@@ -342,40 +307,43 @@ def plot_on_poincare_disk(embeddf, ax=None, plot_type='scatter'):
 def plot_embed_2d(
     embeddf,
     component_idx,
-    ax,
+    ax=None,
+    manifold_level='manifold', 
     clr_cycle=None,
     markers=None,
     marker_size=2,
     plot_type='scatter',
 ):
-    odor_list = embeddf.index.unique('odor').tolist()
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.get_figure()
+
+    manifold_names = embeddf.index.unique(manifold_level).tolist()
     if clr_cycle is None:
         clr_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
     embeddf = embeddf.iloc[:, list(component_idx)]
     ax.margins(0.05)  # Optional, just adds 5% padding to the autoscaling
-    groups = embeddf.groupby(level='odor')
+    groups = embeddf.groupby(level=manifold_level)
     for name, group in groups:
-        cidx = odor_list.index(name)
+        cidx = manifold_names.index(name)
         color = clr_cycle[cidx]
-        marker = markers[cidx]
+        if markers is None:
+            marker = 'o'
+        else:
+            if isinstance(markers, list):
+                marker = markers[cidx]
+            else:
+                raise ValueError("Markers should be a list or a single string.")
 
-        trials = group.index.get_level_values('trial').unique()
-        for trial in trials:
-            trial_data = group.xs(trial, level='trial')
-            x = trial_data.iloc[:, 0]
-            y = trial_data.iloc[:, 1]
-
-            if plot_type == 'line':
-                cmap = LinearSegmentedColormap.from_list(
-                    'custom', [(0, 'white'), (1, color)], N=256
-                )
-                norm = plt.Normalize(-20, len(x))
-                points = np.array([x, y]).T.reshape(-1, 1, 2)
-                segments = np.concatenate([points[:-1], points[1:]], axis=1)
-                lc = LineCollection(segments, cmap=cmap, norm=norm)
-                lc.set_array(np.arange(len(x)))
-                ax.add_collection(lc)
+        if 'trial' in group.index.names:
+            _plot_embed_2d_trial_wise(
+                group, ax, name, marker, color, marker_size, plot_type
+            )
+        else:
+            x = group.iloc[:, 0].to_numpy()
+            y = group.iloc[:, 1].to_numpy()
             ax.scatter(
                 x,
                 y,
@@ -385,6 +353,37 @@ def plot_embed_2d(
                 color=color,
                 s=marker_size,
             )
+    return fig, ax
+
+
+def _plot_embed_2d_trial_wise(group, ax,
+                              name, marker, color, marker_size,
+                              plot_type='scatter'):
+    trials = group.index.get_level_values('trial').unique()
+    for trial in trials:
+        trial_data = group.xs(trial, level='trial')
+        x = trial_data.iloc[:, 0]
+        y = trial_data.iloc[:, 1]
+
+        if plot_type == 'line':
+            cmap = LinearSegmentedColormap.from_list(
+                'custom', [(0, 'white'), (1, color)], N=256
+            )
+            norm = plt.Normalize(-20, len(x))
+            points = np.array([x, y]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            lc = LineCollection(segments, cmap=cmap, norm=norm)
+            lc.set_array(np.arange(len(x)))
+            ax.add_collection(lc)
+        ax.scatter(
+            x,
+            y,
+            label=name,
+            marker=marker,
+            alpha=0.7,
+            color=color,
+            s=marker_size,
+        )
 
 
 def plot_latent(embeddf, component_idx, ax=None):

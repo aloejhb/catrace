@@ -15,11 +15,19 @@ from dataclasses_json import dataclass_json
 from .dataio import load_trace_file
 from .process_time_trace import mean_pattern_in_time_window
 from .process_neuron import sample_neuron
-from .mahal import compute_distances_mat, compute_center_euclidean_distance_mat
+from .manifold_distance import compute_distances_mat, compute_center_euclidean_distance_mat
 
 
 def cosine_distance(mat):
-    # Compute the pairwise cosine distances between trials
+    """
+    Compute cosine distances between each pair of activity patterns.
+    Args:
+        mat (numpy.ndarray): A 2D array of shape (n_activity_pattern, n_neurons).
+    Returns:
+        numpy.ndarray: A square matrix of shape (n_activity_pattern, n_activity_pattern)
+            containing the pairwise cosine distances.
+    """
+    # Compute the pairwise cosine distances between patterns
     distances = pdist(mat, metric='cosine')
     # Convert the condensed distance matrix to a square matrix
     sim_mat = squareform(distances)

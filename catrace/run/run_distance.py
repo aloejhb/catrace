@@ -8,7 +8,7 @@ import seaborn as sns
 
 import catrace.exp_collection as ecl
 import catrace.pattern_correlation as catpcr
-import catrace.mahal as catmah
+import catrace.manifold_distance as catmah
 
 
 from os.path import join as pjoin

@@ -74,7 +74,7 @@ Refer to the [demos](demos/) for more examples.
 |----------------------------------|---------------------------------------------------------------------------------|
 | **Preprocessing**                | Read raw fluorescence traces                                                    |
 |                                  | Compute ΔF/F traces                                                             |
-|                                  | Deconvolve to infer spike probability and spike rate using CASCADE **[Rupprecht et al. 2021]**                            | 
+|                                  | Deconvolve to infer spike probability and spike rate using [Cascade](https://github.com/HelmchenLabSoftware/Cascade) |
 | **Response amplitude**           | Compute neuron response during a time window                                    |
 | **Pattern similarity**           | Measure the similarity between response patterns, including pattern correlation, cosine distance | 
 | **Distance between manifolds**   | Compute distance between manifolds, including Euclidean distance between manifold centers (dE) and Mahalanobis distance (dM) | 

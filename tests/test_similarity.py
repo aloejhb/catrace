@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from catrace.mahal import compute_center_euclidean_distance_mat
+from catrace.manifold_distance import compute_center_euclidean_distance_mat
 from catrace.similarity import plot_similarity_mat
 
 # Test function for compute_center_euclidean_distance_mat with 3 odors
