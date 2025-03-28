@@ -2,12 +2,16 @@ import itertools
 import umap
 import numpy as np
 import pandas as pd
-from sklearn.metrics.pairwise import (paired_distances, euclidean_distances,
-                                      cosine_distances)
+from sklearn.metrics.pairwise import (
+    paired_distances,
+    euclidean_distances,
+    cosine_distances,
+)
 from scipy.spatial.distance import pdist, squareform
 from catrace.pattern_correlation import (
     get_same_odor_avgcorr,
-    get_paired_odor_avgcorr)
+    get_paired_odor_avgcorr,
+)
 
 
 def compute_distance_mat(embeddf, metric_name):
@@ -21,8 +25,8 @@ def compute_distance_mat(embeddf, metric_name):
     n_trial = len(trials)
     n_time = len(embeddf.index.unique('time_bin'))
     dist_mat = np.zeros((n_time, n_trial, n_trial))
-    for i,t1 in enumerate(trials):
-        for j,t2 in enumerate(trials):
+    for i, t1 in enumerate(trials):
+        for j, t2 in enumerate(trials):
             tc1 = embeddf.xs(t1, level=('odor', 'trial')).to_numpy()
             tc2 = embeddf.xs(t2, level=('odor', 'trial')).to_numpy()
             dist_mat[:, i, j] = paired_distances(tc1, tc2, metric=metric)
@@ -30,11 +34,18 @@ def compute_distance_mat(embeddf, metric_name):
 
 
 def plot_distance_mat(dist_mat, odor_range, n_trials_per_odor, ax=None):
-    same_dist = [get_same_odor_avgcorr(dist_mat, od, n_trials_per_odor, sigma=0)
-                for od in odor_range]
+    same_dist = [
+        get_same_odor_avgcorr(dist_mat, od, n_trials_per_odor, sigma=0)
+        for od in odor_range
+    ]
     odor_pairs = itertools.combinations(odor_range, 2)
-    diff_dist = [(odp, get_paired_odor_avgcorr(dist_mat, odp, n_trials_per_odor, sigma=0))
-                for odp in odor_pairs]
+    diff_dist = [
+        (
+            odp,
+            get_paired_odor_avgcorr(dist_mat, odp, n_trials_per_odor, sigma=0),
+        )
+        for odp in odor_pairs
+    ]
 
     for i, sd in enumerate(same_dist):
         ax.plot(sd, label=f'#{i}')
@@ -47,12 +58,15 @@ def plot_distance_mat(dist_mat, odor_range, n_trials_per_odor, ax=None):
 
 def compute_distances_to_starting_point(embeddf):
     first_bin = embeddf.index.unique('time_bin')[0]
-    start_point = embeddf.xs(first_bin,
-                             level='time_bin').mean(axis=0).values.reshape(1,-1)
+    start_point = (
+        embeddf.xs(first_bin, level='time_bin')
+        .mean(axis=0)
+        .values.reshape(1, -1)
+    )
 
     distance_list = []
     for i, row in embeddf.iterrows():
-        distance = euclidean_distances(start_point, row.values.reshape(1,-1))
+        distance = euclidean_distances(start_point, row.values.reshape(1, -1))
         distance_list.append(distance[0][0])
 
     distances = pd.DataFrame(distance_list, index=embeddf.index)
@@ -73,5 +87,10 @@ def compute_pairwise_distance(df, metric='cosine'):
 
     idxs = df.index.get_level_values('odor')
     df_flat = pd.DataFrame(dist_matrix, columns=idxs, index=idxs)
-    df_flat = df_flat.rename_axis('odor1', axis=0).rename_axis('odor2', axis=1).stack().reset_index()
+    df_flat = (
+        df_flat.rename_axis('odor1', axis=0)
+        .rename_axis('odor2', axis=1)
+        .stack()
+        .reset_index()
+    )
     return df_flat

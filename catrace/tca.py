@@ -7,5 +7,7 @@ def reshape_to_3d(dff: pd.DataFrame):
     num_trials = len(df_unstacked)
     num_neurons = len(dff.columns)
     num_timepoints = len(dff.index.unique('time'))
-    array_3d_reshaped = array_3d.reshape(num_trials, num_neurons, num_timepoints)
+    array_3d_reshaped = array_3d.reshape(
+        num_trials, num_neurons, num_timepoints
+    )
     return array_3d_reshaped

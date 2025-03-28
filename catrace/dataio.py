@@ -10,11 +10,12 @@ import itertools
 # Useful way of deleting a neuron in all trials
 # yy = xx.drop(xx.loc[idx[:, :, 0, 2],:].index)
 
+
 def get_time_trace_file(root_dir, exp_name, plane_num):
     """Get file path of time trace data based on the directory structure of neuRoi"""
     exp_dir = os.path.join(root_dir, exp_name)
     time_trace_dir = os.path.join(exp_dir, 'time_trace')
-    plane_string = 'plane{0:02d}'.format(plane_num+1)
+    plane_string = 'plane{0:02d}'.format(plane_num + 1)
     plane_dir = os.path.join(time_trace_dir, plane_string)
     trace_file = os.path.join(plane_dir, 'timetrace_roi.mat')
     return trace_file
@@ -24,7 +25,7 @@ def get_spike_dir(root_dir, exp_name, plane_num):
     """Get directory of spike prediction based on the directory structure of neuRoi"""
     exp_dir = os.path.join(root_dir, exp_name)
     spike_root_dir = os.path.join(exp_dir, 'deconvolution')
-    plane_string = 'plane{0:02d}'.format(plane_num+1)
+    plane_string = 'plane{0:02d}'.format(plane_num + 1)
     spike_dir = os.path.join(spike_root_dir, plane_string)
     return spike_dir
 
@@ -37,23 +38,30 @@ def read_trace(trace_file):
     trace_dict['odor_list'] = np.stack(time_trace['odorList'][0]).squeeze()
     trace_dict['roi_tag'] = time_trace['roiTagArray'].squeeze()
     if 'odorArraySorted' in time_trace.keys():
-        trace_dict['odor_cat'] = np.stack(time_trace['odorArraySorted'].squeeze()).squeeze()
+        trace_dict['odor_cat'] = np.stack(
+            time_trace['odorArraySorted'].squeeze()
+        ).squeeze()
     else:
         # output of older version of neuRoi, assume 3 trial
         # TODO deprecate this part for future neuRoi
         num_trial = 3
-        trace_dict['odor_cat'] = list(itertools.chain.from_iterable(itertools.repeat(i, num_trial) for i in trace_dict['odor_list']))
+        trace_dict['odor_cat'] = list(
+            itertools.chain.from_iterable(
+                itertools.repeat(i, num_trial) for i in trace_dict['odor_list']
+            )
+        )
     return trace_dict
 
 
 def read_spike(spike_dir):
     file_list = sorted(glob.glob(os.path.join(spike_dir, 'spike_*.npy')))
     spike_list = []
-    for file in (file_list):
+    for file in file_list:
         spike = np.load(file)
         spike_list.append(spike)
     spike_array = np.stack(spike_list)
     return spike_array
+
 
 def convert_trial_to_df(trial_trace, roi_tags):
     trial_df = pd.DataFrame(trial_trace, index=roi_tags)
@@ -65,15 +73,23 @@ def load_trace_file(root_dir, exp_name, plane_nb_list, num_trial, odor_list):
     for i, plane_nb in enumerate(plane_nb_list):
         trace_file = get_time_trace_file(root_dir, exp_name, plane_nb)
         trace_dict = read_trace(trace_file)
-        odordf = pd.DataFrame(trace_dict['odor_cat'],columns=['odor_cat'])
-        odordfi = odordf.groupby('odor_cat').apply(lambda x: x.reset_index()).sort_values('index')
+        odordf = pd.DataFrame(trace_dict['odor_cat'], columns=['odor_cat'])
+        odordfi = (
+            odordf.groupby('odor_cat')
+            .apply(lambda x: x.reset_index())
+            .sort_values('index')
+        )
         index = odordfi.index
-        trial_df_list = [convert_trial_to_df(t, trace_dict['roi_tag'])
-                         for t in trace_dict['raw_trace']]
-        df_list[i] = pd.concat(trial_df_list,
-                               keys=index, names=['odor', 'trial', 'neuron'])
-    tracedf = pd.concat(df_list, keys=plane_nb_list,
-                        names=['plane']+df_list[0].index.names)
+        trial_df_list = [
+            convert_trial_to_df(t, trace_dict['roi_tag'])
+            for t in trace_dict['raw_trace']
+        ]
+        df_list[i] = pd.concat(
+            trial_df_list, keys=index, names=['odor', 'trial', 'neuron']
+        )
+    tracedf = pd.concat(
+        df_list, keys=plane_nb_list, names=['plane'] + df_list[0].index.names
+    )
     tracedf = tracedf.reorder_levels(['odor', 'trial', 'plane', 'neuron'])
     tracedf = tracedf.reindex(odor_list, level='odor')
     return tracedf

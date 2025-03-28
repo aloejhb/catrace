@@ -5,19 +5,21 @@ from catrace.run.run_distance import read_mats_from_dir, average_over_repeats
 from catrace.run.run_distance import get_group_vs_group
 
 
-def load_distance_per_fish(config_file,
-                           distance_dir,
-                           measure_name,
-                           cs_odors=False,
-                           cs_single_direction=0,
-                           odor_group1=None,
-                           odor_group2=None,
-                           deduplicate=False,
-                           average_per_fish=False,
-                           cs_plus_vs_rest=False,
-                           odors_pool=None):
+def load_distance_per_fish(
+    config_file,
+    distance_dir,
+    measure_name,
+    cs_odors=False,
+    cs_single_direction=0,
+    odor_group1=None,
+    odor_group2=None,
+    deduplicate=False,
+    average_per_fish=False,
+    cs_plus_vs_rest=False,
+    odors_pool=None,
+):
 
-    dsconfig= load_dataset_config(config_file)
+    dsconfig = load_dataset_config(config_file)
 
     dist_dir = pjoin(dsconfig.processed_trace_dir, distance_dir)
     exp_list = dsconfig.exp_list
@@ -26,7 +28,9 @@ def load_distance_per_fish(config_file,
     avg_simdf = average_over_repeats(all_simdf)
 
     # Remove condition equal to naive
-    avg_simdf = avg_simdf[avg_simdf.index.get_level_values('condition') != 'naive']
+    avg_simdf = avg_simdf[
+        avg_simdf.index.get_level_values('condition') != 'naive'
+    ]
     if cs_odors:
         # Group avg_simdf by condition
         cond_subsimdfs = []
@@ -46,11 +50,13 @@ def load_distance_per_fish(config_file,
                 odor_group2 = [odors[0]]
             else:
                 raise ValueError('cs_single_direction should be 0, 1 or -1')
-            cond_subsimdf = get_group_vs_group(group,
-                                               odor_group1,
-                                               odor_group2,
-                                               measure_name=measure_name, 
-                                               deduplicate=deduplicate)
+            cond_subsimdf = get_group_vs_group(
+                group,
+                odor_group1,
+                odor_group2,
+                measure_name=measure_name,
+                deduplicate=deduplicate,
+            )
             cond_subsimdfs.append(cond_subsimdf)
         subsimdf = pd.concat(cond_subsimdfs)
     elif cs_plus_vs_rest:
@@ -60,19 +66,29 @@ def load_distance_per_fish(config_file,
             # capitialize the first letter of each odor
             odors = [odor.capitalize() for odor in odors]
 
-            odor_group1 = [odors[0]] # cs_plus
+            odor_group1 = [odors[0]]  # cs_plus
             # the other odor
-            odor_group2 = [odor for odor in odors_pool if odor not in odor_group1]
-            cond_subsimdf = get_group_vs_group(group,
-                                    odor_group1,
-                                    odor_group2,
-                                    measure_name=measure_name, 
-                                    deduplicate=deduplicate)
+            odor_group2 = [
+                odor for odor in odors_pool if odor not in odor_group1
+            ]
+            cond_subsimdf = get_group_vs_group(
+                group,
+                odor_group1,
+                odor_group2,
+                measure_name=measure_name,
+                deduplicate=deduplicate,
+            )
         cond_subsimdfs.append(cond_subsimdf)
         subsimdf = pd.concat(cond_subsimdfs)
 
     else:
-        subsimdf = get_group_vs_group(avg_simdf, odor_group1, odor_group2, measure_name=measure_name, deduplicate=deduplicate)
+        subsimdf = get_group_vs_group(
+            avg_simdf,
+            odor_group1,
+            odor_group2,
+            measure_name=measure_name,
+            deduplicate=deduplicate,
+        )
 
     if average_per_fish:
         # Average so that only fish_id and condition is left
@@ -82,7 +98,9 @@ def load_distance_per_fish(config_file,
 
     subsimdf_per_fish.reset_index(level='fish_id', inplace=True)
     # repace each string in the fish_id column with '_Dp' to ''
-    subsimdf_per_fish['fish_id'] = subsimdf_per_fish['fish_id'].str.replace('_Dp', '')
+    subsimdf_per_fish['fish_id'] = subsimdf_per_fish['fish_id'].str.replace(
+        '_Dp', ''
+    )
 
     subsimdf_per_fish = subsimdf_per_fish.reset_index()
     return subsimdf_per_fish
@@ -94,8 +112,11 @@ def load_distance_per_fish(config_file,
 
 
 def merge_with_behavior(subsimdf_per_fish, behavior_measure_df):
-    merged_behavior_df = pd.merge(subsimdf_per_fish, behavior_measure_df, on='fish_id', how='inner')
+    merged_behavior_df = pd.merge(
+        subsimdf_per_fish, behavior_measure_df, on='fish_id', how='inner'
+    )
     return merged_behavior_df
+
 
 # from catrace.stats import plot_regression
 # plot_regression(merged_behavior_df, 'auc_zeta_diff_per_day', 'mahal', hue='condition')
@@ -104,23 +125,37 @@ def merge_with_behavior(subsimdf_per_fish, behavior_measure_df):
 from ..dataset import load_dataset_config
 from ..stats import plot_regression
 
-def regression_distance_with_behavior(config_file,
-                                      metric,
-                                      load_distance_per_fish_params,
-                                      behavior_measure_df, behavior_measure_name,
-                                      num_baseline_days=None,
-                                      selected_conditions=None,
-                                      plot_regression_params=None):
+
+def regression_distance_with_behavior(
+    config_file,
+    metric,
+    load_distance_per_fish_params,
+    behavior_measure_df,
+    behavior_measure_name,
+    num_baseline_days=None,
+    selected_conditions=None,
+    plot_regression_params=None,
+):
     dsconfig = load_dataset_config(config_file)
 
     subsimdf_per_fish = load_distance_per_fish(**load_distance_per_fish_params)
     if selected_conditions is not None:
-        subsimdf_per_fish = subsimdf_per_fish[subsimdf_per_fish['condition'].isin(selected_conditions)] 
-    merged_behavior_df = merge_with_behavior(subsimdf_per_fish, behavior_measure_df)
+        subsimdf_per_fish = subsimdf_per_fish[
+            subsimdf_per_fish['condition'].isin(selected_conditions)
+        ]
+    merged_behavior_df = merge_with_behavior(
+        subsimdf_per_fish, behavior_measure_df
+    )
     # Save behavior_measure_df to a csv file
     behavior_measure_df.to_csv('behavior_measure_df.csv', index=False)
     plot_regression_params = plot_regression_params.to_dict() or {}
-    fig, model, text_str = plot_regression(merged_behavior_df, metric, behavior_measure_name, hue='condition', **plot_regression_params)
+    fig, model, text_str = plot_regression(
+        merged_behavior_df,
+        metric,
+        behavior_measure_name,
+        hue='condition',
+        **plot_regression_params,
+    )
     if metric == 'mahal':
         # remove legend
         ax = fig.get_axes()[0]
@@ -128,6 +163,6 @@ def regression_distance_with_behavior(config_file,
     if num_baseline_days is not None:
         title = f'Baseline days: {num_baseline_days}'
         fig.suptitle(title)
-    
+
     fig.tight_layout()
     return fig, model, text_str

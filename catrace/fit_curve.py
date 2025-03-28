@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit, minimize_scalar
 
+
 def bi_exponential(x, a1, b1, b2, c, t0):
     """
     Double exponential function
@@ -13,7 +14,8 @@ def bi_exponential(x, a1, b1, b2, c, t0):
         c: offset
         t0: time offset
     """
-    return a1 * (1 - np.exp(-b1 * (x-t0))) * np.exp(-b2 * (x-t0)) + c
+    return a1 * (1 - np.exp(-b1 * (x - t0))) * np.exp(-b2 * (x - t0)) + c
+
 
 def compute_biexp_peak_time(params):
     """
@@ -24,19 +26,22 @@ def compute_biexp_peak_time(params):
         peak_time: time at which the function reaches its maximum
     """
     a1, b1, b2, c, t0 = params
-    
+
     # Define the function to minimize (negative of bi_exponential to find the maximum)
     def neg_bi_exponential(x):
         return -bi_exponential(x, a1, b1, b2, c, t0)
-    
+
     # Use a scalar minimization method to find the peak time
     # The initial guess could be near t0, and the bounds can be adjusted as needed
-    result = minimize_scalar(neg_bi_exponential, bounds=(t0, t0 + 100), method='bounded')
-    
+    result = minimize_scalar(
+        neg_bi_exponential, bounds=(t0, t0 + 100), method='bounded'
+    )
+
     # The peak time will be the result of the minimization
     peak_time = result.x
-    
+
     return peak_time
+
 
 def fit_bi_exponential(x_data, y_data, initial_guess=None, maxfev=10000):
     """
@@ -51,7 +56,9 @@ def fit_bi_exponential(x_data, y_data, initial_guess=None, maxfev=10000):
     if initial_guess is None:
         initial_guess = [4, 0.1, 0.1, 0.1, 0]
 
-    params, _ = curve_fit(bi_exponential, x_data, y_data, p0=initial_guess, maxfev=maxfev)
+    params, _ = curve_fit(
+        bi_exponential, x_data, y_data, p0=initial_guess, maxfev=maxfev
+    )
 
     return params
 
@@ -75,17 +82,19 @@ def fit_bi_exponential_for_each_odor(df):
 
         # Fit the double exponential function to the data
         try:
-            params, _ = curve_fit(bi_exponential, x_data, y_data, p0=initial_guess, maxfev=10000)
+            params, _ = curve_fit(
+                bi_exponential, x_data, y_data, p0=initial_guess, maxfev=10000
+            )
             params = dict(zip(['a1', 'b1', 'b2', 'c', 't0'], params))
             # Store the parameters for the odor
             params_dict[odor] = params
 
         except RuntimeError:
-            print(f"Could not fit double exponential for odor: {odor}")
+            print(f'Could not fit double exponential for odor: {odor}')
             params_dict[odor] = np.nan
 
-
     return params_dict
+
 
 def plot_fits(x_data, y_data, params, ax):
     ax.plot(x_data, y_data, 'o')

@@ -19,6 +19,7 @@ from catrace.process_time_trace import select_time_points, select_odors_and_sort
 
 from typing import Optional, List, Tuple
 
+
 @dataclass_json
 @dataclass
 class AnalysisParams:
@@ -46,6 +47,7 @@ def get_manifolds(dff):
         manifolds.append(manifold)
     return manifolds
 
+
 def analysis_one_vs_one(params: AnalysisParams):
     fish_id = params.fish_id
     outfile = params.outfile
@@ -68,7 +70,7 @@ def analysis_one_vs_one(params: AnalysisParams):
     # outfile should not be empty
     if not outfile:
         raise ValueError('params.outfile must be specified')
-        
+
     if not params.overwrite_computation and os.path.exists(outfile):
         print(f'{outfile} already exists, skipping')
         return
@@ -79,7 +81,10 @@ def analysis_one_vs_one(params: AnalysisParams):
 
     if params.debug:
         from catrace.run.run_utils import plot_avg_trace_with_window_dff
-        fig_avg_trace, ax = plot_avg_trace_with_window_dff(session, params.window)
+
+        fig_avg_trace, ax = plot_avg_trace_with_window_dff(
+            session, params.window
+        )
         # Save the figure to current directory as png
         fig_avg_trace.savefig(outfile.replace('.pkl', '_avg_trace.png'))
 
@@ -90,15 +95,20 @@ def analysis_one_vs_one(params: AnalysisParams):
 
     # Downsample neurons
     if params.N > 0:
-        x_ind = np.random.choice(range(XtotT[0].shape[0]),params.N,replace=False)
-        XtotT = [X[x_ind,:] for X in XtotT]
+        x_ind = np.random.choice(
+            range(XtotT[0].shape[0]), params.N, replace=False
+        )
+        XtotT = [X[x_ind, :] for X in XtotT]
     else:
         print('N = 0, no downsampling of neurons')
         x_ind = np.arange(XtotT[0].shape[0])
-        XtotT = [X[x_ind,:] for X in XtotT]
+        XtotT = [X[x_ind, :] for X in XtotT]
 
     # Downsample time points
-    XtotT = [X[:,np.random.choice(range(X.shape[1]),params.M,replace=False)] for X in XtotT]
+    XtotT = [
+        X[:, np.random.choice(range(X.shape[1]), params.M, replace=False)]
+        for X in XtotT
+    ]
 
     # Check if the manifolds contains NaN
     for i in range(len(XtotT)):
@@ -108,13 +118,20 @@ def analysis_one_vs_one(params: AnalysisParams):
     # This is a place holder until the centering and bias is clear to BoHu
     assert params.global_center == True
     assert params.bias == True
- 
+
     # Step 2: Conduct analysis
     P = XtotT[0].shape[0]
     df_result = gcmc_analysis_dataframe(
         XtotT,
-        (fish_id,params.condition,odor1,odor2,params.window[0],params.window[1]),
-        ['fish_id','condition','odor1','odor2','window_0','window_1'],
+        (
+            fish_id,
+            params.condition,
+            odor1,
+            odor2,
+            params.window[0],
+            params.window[1],
+        ),
+        ['fish_id', 'condition', 'odor1', 'odor2', 'window_0', 'window_1'],
         seed=params.seed,
         n_hyperplanes=1000,
         shuffle=True,
@@ -131,6 +148,7 @@ def analysis_one_vs_one(params: AnalysisParams):
     if params.debug:
         print(df_result)
 
+
 def main(args: Union[argparse.Namespace, dict]):
     if isinstance(args, dict):
         params = AnalysisParams.from_dict(args)
@@ -139,12 +157,10 @@ def main(args: Union[argparse.Namespace, dict]):
 
     print('running with params:', params)
     analysis_one_vs_one(params)
-    
 
-    
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--params')
     args = parser.parse_args()
     main(args)
-   

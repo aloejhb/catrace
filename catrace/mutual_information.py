@@ -10,8 +10,8 @@ from . import exp_collection as ecl
 
 
 def compute_mi_experiment(dfx, dfy, parallelism=None):
-    x = dfx.to_numpy() # OB
-    y = dfy.to_numpy() # Dp
+    x = dfx.to_numpy()  # OB
+    y = dfy.to_numpy()  # Dp
 
     # Initialize and fit the scaler
     scaler_x = MinMaxScaler()
@@ -20,7 +20,9 @@ def compute_mi_experiment(dfx, dfy, parallelism=None):
     y_scaled = scaler_y.fit_transform(y)
 
     # Now compute the mutual information matrix
-    mi_matrix = compute_mi_matrix_continuous(x_scaled, y_scaled, parallelism=parallelism)
+    mi_matrix = compute_mi_matrix_continuous(
+        x_scaled, y_scaled, parallelism=parallelism
+    )
     return mi_matrix
 
 
@@ -68,24 +70,23 @@ def select_mi_mat_by_traces(mi_mat, dfob, dfdp, dfob_sel, dfdp_sel):
     return mi_mat_sel
 
 
-def select_neuron_by_mi(df, mi_mat, mi_range,
-                        method='range',
-                        axis=1):
+def select_neuron_by_mi(df, mi_mat, mi_range, method='range', axis=1):
     """
     Select neurons by its mean MI with neurons from the other region
     """
-    mi_mean = np.mean(mi_mat, axis=int(not axis)) # Mean along the other axis
+    mi_mean = np.mean(mi_mat, axis=int(not axis))  # Mean along the other axis
     if method == 'range':
         pass
     elif method == 'proportion':
         mi_range = [np.quantile(mi_mean, mir) for mir in mi_range]
     else:
-        raise ValueError('Selection method should be either range or proportion')
+        raise ValueError(
+            'Selection method should be either range or proportion'
+        )
 
     idx = np.where((mi_mean >= mi_range[0]) & (mi_mean <= mi_range[1]))[0]
 
     return df.iloc[:, idx]
-
 
 
 def select_high_mi(db_dir, trace_dir, exp_name, mi_threshold):
@@ -98,7 +99,7 @@ def select_high_mi(db_dir, trace_dir, exp_name, mi_threshold):
         dfdp.columns = dfdp.columns.set_names('time')
         dfdp = dfdp.stack('time').unstack(['plane', 'neuron'])
 
-    mi_file = pjoin(db_dir, 'mutual_information', f"mi_matrix_{exp_name}.npy")
+    mi_file = pjoin(db_dir, 'mutual_information', f'mi_matrix_{exp_name}.npy')
     mi_matrix = np.load(mi_file)
 
     top_indices = np.argwhere(mi_matrix >= mi_threshold)
@@ -114,7 +115,9 @@ def select_high_mi(db_dir, trace_dir, exp_name, mi_threshold):
     return dfob_mi, dfdp_mi, top_indices
 
 
-def select_high_resp_low_mi(db_dir, trace_dir, exp_name, region, mi_thresh, resp_thresh):
+def select_high_resp_low_mi(
+    db_dir, trace_dir, exp_name, region, mi_thresh, resp_thresh
+):
     """
     Select neurons that have high response but low mutual information between OB and Dp
     """
@@ -123,7 +126,7 @@ def select_high_resp_low_mi(db_dir, trace_dir, exp_name, region, mi_thresh, resp
         df.columns = df.columns.set_names('time')
         df = df.stack('time').unstack(['plane', 'neuron'])
 
-    mi_file = pjoin(db_dir, 'mutual_information', f"mi_matrix_{exp_name}.npy")
+    mi_file = pjoin(db_dir, 'mutual_information', f'mi_matrix_{exp_name}.npy')
     mi_matrix = np.load(mi_file)
 
     top_indices = np.argwhere(mi_matrix >= mi_threshold)

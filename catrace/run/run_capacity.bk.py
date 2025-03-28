@@ -6,7 +6,8 @@ import pickle
 
 
 import sys
-sys.path.append("/mnt/home/cchou/Documents/Research/Correlation_geometry/gcmc")
+
+sys.path.append('/mnt/home/cchou/Documents/Research/Correlation_geometry/gcmc')
 import gcmc
 import gcmc.data
 import gcmc.preprocess
@@ -15,13 +16,15 @@ from gcmc import gcmc_analysis
 from gcmc.types import ResultReportLevel
 
 
-
 # Select the time window
 def select_timepoints(df, window):
     """Select trace dataframe in a given time window"""
-    df_filtered = df[(df.index.get_level_values('time') >= window[0])
-                & (df.index.get_level_values('time') <= window[1])]
+    df_filtered = df[
+        (df.index.get_level_values('time') >= window[0])
+        & (df.index.get_level_values('time') <= window[1])
+    ]
     return df_filtered
+
 
 def get_manifolds(dff):
     manifolds = []
@@ -29,7 +32,6 @@ def get_manifolds(dff):
         manifold = group.T.to_numpy()
         manifolds.append(manifold)
     return manifolds
-
 
 
 def analysis_5(params):
@@ -51,7 +53,7 @@ def analysis_5(params):
     seed = params['seed']
 
     home_dir = '/mnt/home/cchou/ceph/zebrafish_olfactory_manifolds'
-    dataset_dir = os.path.join(home_dir,'data', 'full_datasets', dev_stage)
+    dataset_dir = os.path.join(home_dir, 'data', 'full_datasets', dev_stage)
     trace_dir = os.path.join(dataset_dir, subdir_name)
 
     # load manifold
@@ -59,23 +61,28 @@ def analysis_5(params):
 
     # select window
     session_in_window = select_timepoints(session, window)
-    XtotT = [get_manifolds(session_in_window.query(f'odor=="{odor1}"'))[0],
-        get_manifolds(session_in_window.query(f'odor=="{odor2}"'))[0]]
+    XtotT = [
+        get_manifolds(session_in_window.query(f'odor=="{odor1}"'))[0],
+        get_manifolds(session_in_window.query(f'odor=="{odor2}"'))[0],
+    ]
 
     df_list = []
     for _ in range(num_rep):
         # downsample neurons
-        x_ind = np.random.choice(range(XtotT[0].shape[0]),N,replace=False)
-        XtotT = [X[x_ind,:] for X in XtotT]
+        x_ind = np.random.choice(range(XtotT[0].shape[0]), N, replace=False)
+        XtotT = [X[x_ind, :] for X in XtotT]
 
         # downsample points
         # XtotT = [X[:,np.random.choice(range(X.shape[1]),M,replace=False)] for X in XtotT]
-        XtotT = [X[:,np.random.choice(range(X.shape[1]),M,replace=False)] * 7.5 for X in XtotT]
+        XtotT = [
+            X[:, np.random.choice(range(X.shape[1]), M, replace=False)] * 7.5
+            for X in XtotT
+        ]
 
         df_result = gcmc_analysis_dataframe(
             XtotT,
-            (fish_id,condition,odor1,odor2,window[0],window[1]),
-            ['fish_id','condition','odor1','odor2','window_0','window_1'],
+            (fish_id, condition, odor1, odor2, window[0], window[1]),
+            ['fish_id', 'condition', 'odor1', 'odor2', 'window_0', 'window_1'],
             seed=seed,
             n_hyperplanes=1000,
             shuffle=False,
@@ -90,7 +97,9 @@ def analysis_5(params):
 
     # Step 3: Save the results
     os.makedirs(outdir, exist_ok=True)
-    outfile = os.path.join(outdir, f"{os.environ['DISBATCH_REPEAT_INDEX']}" + '.pkl')
+    outfile = os.path.join(
+        outdir, f"{os.environ['DISBATCH_REPEAT_INDEX']}" + '.pkl'
+    )
     print(f'writing result to {outfile}', flush=True)
     with open(outfile, 'wb') as f:
         pickle.dump(df_result, f)

@@ -13,7 +13,9 @@ def flatten_and_concatenate(dfs, df_names, level_name, col_name):
     for df in dfs:
         df_flattened = flatten_dataframe(df, col_name)
         df_flattend_list.append(df_flattened)
-    concatenated_df = pd.concat(df_flattend_list, keys=df_names, names=[level_name])
+    concatenated_df = pd.concat(
+        df_flattend_list, keys=df_names, names=[level_name]
+    )
     return concatenated_df
 
 
@@ -29,20 +31,28 @@ def process_cross_trial_similarity(cross_trial_dff, odors, region=None):
     - pd.DataFrame: The concatenated DataFrame.
     """
     # Select the columns where odor is in odors
-    selected_cross_trial_dff = cross_trial_dff.loc[:, cross_trial_dff.columns.get_level_values('odor').isin(odors)]
-    
+    selected_cross_trial_dff = cross_trial_dff.loc[
+        :, cross_trial_dff.columns.get_level_values('odor').isin(odors)
+    ]
+
     # Separate naive and trained conditions
-    naive_df = selected_cross_trial_dff.xs('naive', level='condition', drop_level=False)
-    trained_df = selected_cross_trial_dff.loc[cross_trial_dff.index.get_level_values('condition') != 'naive', :]
-    
+    naive_df = selected_cross_trial_dff.xs(
+        'naive', level='condition', drop_level=False
+    )
+    trained_df = selected_cross_trial_dff.loc[
+        cross_trial_dff.index.get_level_values('condition') != 'naive', :
+    ]
+
     # Further separate by region
     if region is not None:
         naive_df = naive_df.xs(region, level='region', drop_level=False)
         trained_df = trained_df.xs(region, level='region', drop_level=False)
 
     # Flatten and concatenate the DataFrames
-    concatenated_df = flatten_and_concatenate([naive_df, trained_df], ['naive', 'trained'], 'condition', 'cosine')
-    
+    concatenated_df = flatten_and_concatenate(
+        [naive_df, trained_df], ['naive', 'trained'], 'condition', 'cosine'
+    )
+
     return concatenated_df
 
 
@@ -64,7 +74,14 @@ def process_cross_trial_similarity(cross_trial_dff, odors, region=None):
 
 from catrace.visualize import plot_measure_multi_odor_cond, PlotBoxplotMultiOdorCondParams
 
-def process_and_plot_cross_trial_similarity(cross_trial_dff, dsconfig, odor_keys, region=None, params: PlotBoxplotMultiOdorCondParams=PlotBoxplotMultiOdorCondParams()):
+
+def process_and_plot_cross_trial_similarity(
+    cross_trial_dff,
+    dsconfig,
+    odor_keys,
+    region=None,
+    params: PlotBoxplotMultiOdorCondParams = PlotBoxplotMultiOdorCondParams(),
+):
     """
     Process and plot the cross-trial similarity data by selecting and concatenating specific conditions and regions.
 
@@ -78,14 +95,18 @@ def process_and_plot_cross_trial_similarity(cross_trial_dff, dsconfig, odor_keys
     dfs = []
     for odor_key in odor_keys:
         odors = get_odors_by_key(dsconfig, odor_key)
-        concatenated_df = process_cross_trial_similarity(cross_trial_dff, odors, region=region)
+        concatenated_df = process_cross_trial_similarity(
+            cross_trial_dff, odors, region=region
+        )
         dfs.append(concatenated_df)
 
     multi_df = pd.concat(dfs, keys=odor_keys, names=['odor_key'])
     measure_name = 'cosine'
-    fig, ax, test_results = plot_measure_multi_odor_cond(multi_df,
-                                                         measure_name,
-                                                         odor_name='odor_key',
-                                                         condition_name='condition',
-                                                         params=params)
+    fig, ax, test_results = plot_measure_multi_odor_cond(
+        multi_df,
+        measure_name,
+        odor_name='odor_key',
+        condition_name='condition',
+        params=params,
+    )
     return fig, test_results, multi_df

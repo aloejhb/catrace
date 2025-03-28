@@ -15,8 +15,9 @@ from . import dataio
 from . import frame_time
 
 
-def plot_exp_pattern_correlation(dfovf_cut, odor_list, frame_rate,
-                                 time_window=[5.3,7.3], ax=None):
+def plot_exp_pattern_correlation(
+    dfovf_cut, odor_list, frame_rate, time_window=[5.3, 7.3], ax=None
+):
     pat = ptt.mean_pattern_in_time_window(dfovf_cut, time_window, frame_rate)
     pat = pat.reindex(odor_list, level='odor').reset_index()
     # pat['odor'] = pd.Categorical(pat.odor, ordered=True,
@@ -28,13 +29,15 @@ def plot_exp_pattern_correlation(dfovf_cut, odor_list, frame_rate,
 
 
 def load_dfovf(exp_name, region_name, data_root_dir, cut_time=12):
-    plane_nb_list = np.array([1,2,3,4]) - 1
+    plane_nb_list = np.array([1, 2, 3, 4]) - 1
     num_trial = 3
     odor_list = ['phe', 'trp', 'arg', 'tdca', 'tca', 'gca', 'acsf', 'spont']
-    frame_rate = 30/4
+    frame_rate = 30 / 4
     # Load data
     exp_subdir = os.path.join(exp_name, region_name)
-    tracedf = dataio.load_trace_file(data_root_dir, exp_subdir, plane_nb_list, num_trial, odor_list)
+    tracedf = dataio.load_trace_file(
+        data_root_dir, exp_subdir, plane_nb_list, num_trial, odor_list
+    )
 
     # Cut first X second to exclude PMT off period
     cut_win = frame_time.convert_sec_to_frame([cut_time, 40], frame_rate)
@@ -42,17 +45,22 @@ def load_dfovf(exp_name, region_name, data_root_dir, cut_time=12):
 
     # Calculate dF/F
     fzero_twindow = np.array([0.5, 2.5]) + 12 - cut_time
-    dfovf = ptt.compute_dfovf(tracedf, fzero_twindow, frame_rate, intensity_offset=-10)
+    dfovf = ptt.compute_dfovf(
+        tracedf, fzero_twindow, frame_rate, intensity_offset=-10
+    )
 
     return dfovf
 
-def plot_explist(data_list, plot_func, sharex=False,
-                 sharey=False, *args, **kwargs):
+
+def plot_explist(
+    data_list, plot_func, sharex=False, sharey=False, *args, **kwargs
+):
     ncol = 5
     nrow = int(np.ceil(len(data_list) / ncol))
-    figsize=[17, 3.4*nrow]
-    fig, axes = plt.subplots(nrow, ncol, sharex=sharex,
-                             sharey=sharey, figsize=figsize)
+    figsize = [17, 3.4 * nrow]
+    fig, axes = plt.subplots(
+        nrow, ncol, sharex=sharex, sharey=sharey, figsize=figsize
+    )
     for idx, data in enumerate(data_list):
         ax = axes.flatten()[idx]
         plot_func(data, *args, **kwargs, ax=ax)
@@ -60,25 +68,35 @@ def plot_explist(data_list, plot_func, sharex=False,
     return fig
 
 
-def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
-                           sharey=False,
-                           width=10, height=2,
-                           fish_ids=None,
-                           *args, **kwargs):
+def plot_explist_with_cond(
+    data_list,
+    exp_cond_list,
+    plot_func,
+    sharex=False,
+    sharey=False,
+    width=10,
+    height=2,
+    fish_ids=None,
+    *args,
+    **kwargs,
+):
     total_exp = len(data_list)
     cond_list = list(dict.fromkeys(exp_cond_list))
     cond_count = [exp_cond_list.count(cond) for cond in cond_list]
     cond_cumsum = np.cumsum(cond_count)
 
     ncol = 5
-    nrow_list = [int(np.ceil(ct/ncol)) for ct in cond_count]
+    nrow_list = [int(np.ceil(ct / ncol)) for ct in cond_count]
     total_nrow = sum(nrow_list)
 
-    axidx_list = [_get_axidx(k, cond_cumsum, nrow_list, ncol) for k in range(total_exp)]
+    axidx_list = [
+        _get_axidx(k, cond_cumsum, nrow_list, ncol) for k in range(total_exp)
+    ]
 
-    figsize=[width, height*total_nrow]
-    fig, axes = plt.subplots(total_nrow, ncol, sharex=sharex,
-                             sharey=sharey, figsize=figsize)
+    figsize = [width, height * total_nrow]
+    fig, axes = plt.subplots(
+        total_nrow, ncol, sharex=sharex, sharey=sharey, figsize=figsize
+    )
     for idx, data in enumerate(data_list):
         axidx = axidx_list[idx]
         ax = axes.flatten()[axidx]
@@ -89,24 +107,29 @@ def plot_explist_with_cond(data_list, exp_cond_list, plot_func, sharex=False,
     plt.tight_layout()
     return fig, axes
 
+
 def _get_axidx(k, cond_cumsum, nrow_list, ncol):
-    ncond = sum(cond_cumsum<=k)
+    ncond = sum(cond_cumsum <= k)
     if ncond == 0:
         shift = 0
         nrow_shift = 0
     else:
-        shift = cond_cumsum[ncond-1]
+        shift = cond_cumsum[ncond - 1]
         nrow_shift = np.sum(nrow_list[:ncond])
-    return nrow_shift*ncol + k - shift
+    return nrow_shift * ncol + k - shift
 
 
-def plot_explist_decorator(plot_func, csplus_dict, data_dict, sharex=False, sharey=False):
+def plot_explist_decorator(
+    plot_func, csplus_dict, data_dict, sharex=False, sharey=False
+):
     def plot_explist_wrapper(csplus, region, *args, **kwargs):
         csexp_list = csplus_dict[csplus]
         data_list = [data_dict[region][exp] for exp in csexp_list]
-        return plot_explist(data_list, plot_func, sharex, sharey, *args, **kwargs)
-    return plot_explist_wrapper
+        return plot_explist(
+            data_list, plot_func, sharex, sharey, *args, **kwargs
+        )
 
+    return plot_explist_wrapper
 
 
 def get_data_dict_decorator(exp_list, region_list, dfovf_dict, data_func):
@@ -118,14 +141,15 @@ def get_data_dict_decorator(exp_list, region_list, dfovf_dict, data_func):
                 exp_name = exp[0]
                 print(exp_name, region)
                 dfovf = dfovf_dict[region][exp_name]
-                data_dict[region][exp_name] = data_func(dfovf,
-                                                        *args, **kwargs)
+                data_dict[region][exp_name] = data_func(dfovf, *args, **kwargs)
         return data_dict
+
     return get_data_dict
 
 
-def process_data_dict_decorator(data_func, exp_list, region_list,
-                                db_dir, in_collect_name):
+def process_data_dict_decorator(
+    data_func, exp_list, region_list, db_dir, in_collect_name
+):
     def get_data_dict(*args, **kwargs):
         data_dict = dict()
         for exp in exp_list:
@@ -136,7 +160,9 @@ def process_data_dict_decorator(data_func, exp_list, region_list,
                 df = read_df(in_collect_name, exp_name, region, db_dir)
                 data_dict[exp_name][region] = data_func(df, *args, **kwargs)
         return data_dict
+
     return get_data_dict
+
 
 def process_data_list_decorator(data_func, exp_list, in_dir):
 
@@ -153,8 +179,7 @@ def process_data_list_decorator(data_func, exp_list, in_dir):
     return process_func
 
 
-def process_data_db_decorator(data_func, exp_list,
-                              out_dir, in_dir=None):
+def process_data_db_decorator(data_func, exp_list, out_dir, in_dir=None):
     def process_data_db(*args, **kwargs):
         for exp in exp_list:
             exp_name = exp[0]
@@ -168,8 +193,10 @@ def process_data_db_decorator(data_func, exp_list,
 
     return process_data_db
 
-def dataio_func(exp_name, data_func, out_dir, in_dir=None,
-                save_func=None,  **kwargs):
+
+def dataio_func(
+    exp_name, data_func, out_dir, in_dir=None, save_func=None, **kwargs
+):
     if in_dir:
         df = read_df(in_dir, exp_name)
         results = data_func(df, **kwargs)
@@ -181,20 +208,52 @@ def dataio_func(exp_name, data_func, out_dir, in_dir=None,
 
 
 # Move the wrapper function outside
-def dataio_func_wrapper(exp_name, seed, data_func, out_dir, in_dir, save_func, params, data_func_accepts_seed):
+def dataio_func_wrapper(
+    exp_name,
+    seed,
+    data_func,
+    out_dir,
+    in_dir,
+    save_func,
+    params,
+    data_func_accepts_seed,
+):
     # If data_func accepts a seed, include it; otherwise, don't pass it
     if data_func_accepts_seed:
-        dataio_func(data_func=data_func, exp_name=exp_name, out_dir=out_dir,
-                    in_dir=in_dir, save_func=save_func, seed=seed, **params)
+        dataio_func(
+            data_func=data_func,
+            exp_name=exp_name,
+            out_dir=out_dir,
+            in_dir=in_dir,
+            save_func=save_func,
+            seed=seed,
+            **params,
+        )
     else:
-        dataio_func(data_func=data_func, exp_name=exp_name, out_dir=out_dir,
-                    in_dir=in_dir, save_func=save_func, **params)
+        dataio_func(
+            data_func=data_func,
+            exp_name=exp_name,
+            out_dir=out_dir,
+            in_dir=in_dir,
+            save_func=save_func,
+            **params,
+        )
+
 
 import copy
-def process_data_db_parallel(data_func, exp_list,
-                             out_dir, in_dir,
-                             save_func=None,
-                             parallelism=1, seeds=None, params={}, extra_params_list=None):
+
+
+def process_data_db_parallel(
+    data_func,
+    exp_list,
+    out_dir,
+    in_dir,
+    save_func=None,
+    parallelism=1,
+    seeds=None,
+    params={},
+    extra_params_list=None,
+):
     # Check if the data_func accepts the 'seed' argument
     data_func_accepts_seed = 'seed' in inspect.signature(data_func).parameters
 
@@ -206,25 +265,57 @@ def process_data_db_parallel(data_func, exp_list,
     if extra_params_list is not None:
         for i, extra_params in enumerate(extra_params_list):
             params_list[i].update(extra_params)
-    
-    exp_names_with_seeds_and_params = [(exp[0], seed, params) for exp, seed, params in zip(exp_list, seeds, params_list)]
+
+    exp_names_with_seeds_and_params = [
+        (exp[0], seed, params)
+        for exp, seed, params in zip(exp_list, seeds, params_list)
+    ]
 
     if parallelism > 1:
         with Pool(processes=parallelism) as pool:
             # Use starmap to pass multiple arguments to the function
-            pool.starmap(dataio_func_wrapper, 
-                         [(exp_name, seed, data_func, out_dir, in_dir, save_func, params, data_func_accepts_seed) 
-                          for exp_name, seed, params in exp_names_with_seeds_and_params])
+            pool.starmap(
+                dataio_func_wrapper,
+                [
+                    (
+                        exp_name,
+                        seed,
+                        data_func,
+                        out_dir,
+                        in_dir,
+                        save_func,
+                        params,
+                        data_func_accepts_seed,
+                    )
+                    for exp_name, seed, params in exp_names_with_seeds_and_params
+                ],
+            )
     else:
         for exp_name, seed, params in exp_names_with_seeds_and_params:
-            dataio_func_wrapper(exp_name, seed, data_func, out_dir, in_dir, save_func, params, data_func_accepts_seed)
+            dataio_func_wrapper(
+                exp_name,
+                seed,
+                data_func,
+                out_dir,
+                in_dir,
+                save_func,
+                params,
+                data_func_accepts_seed,
+            )
 
 
-def process_data_model_decorator(data_func, exp_list, region_list,
-                                out_collect_name, db_dir, in_collect_name=None):
+def process_data_model_decorator(
+    data_func,
+    exp_list,
+    region_list,
+    out_collect_name,
+    db_dir,
+    in_collect_name=None,
+):
     model_out_dir = os.path.join(db_dir, out_collect_name, 'models')
     if not os.path.exists(model_out_dir):
         os.mkdir(model_out_dir)
+
     def process_data_model(*args, **kwargs):
         for exp in exp_list:
             exp_name = exp[0]
@@ -237,11 +328,13 @@ def process_data_model_decorator(data_func, exp_list, region_list,
                     outdf, model = data_func(exp_name, region, *args, **kwargs)
                 update_df(outdf, out_collect_name, exp_name, region, db_dir)
                 update_df(model, model_out_dir, exp_name, region, '')
+
     return process_data_model
 
 
-def process_data_db_decorator_dict(data_func, exp_list, region_list,
-                                   db_dir, in_collect_name=None):
+def process_data_db_decorator_dict(
+    data_func, exp_list, region_list, db_dir, in_collect_name=None
+):
     def process_data_db(*args, **kwargs):
         result = dict()
         for exp in exp_list:
@@ -256,6 +349,7 @@ def process_data_db_decorator_dict(data_func, exp_list, region_list,
                     outdf = data_func(exp_name, region, *args, **kwargs)
                 result[exp_name][region] = outdf
         return result
+
     return process_data_db
 
 
@@ -264,7 +358,9 @@ def process_dataframe_decorator(data_func, level=['fish_id', 'cond'], axis=1):
     #     level = ['region', 'fish_id', 'cond']
 
     def process_dataframe(df, **kwargs):
-        out_dataframe = df.groupby(level=level, axis=axis).apply(data_func, **kwargs)
+        out_dataframe = df.groupby(level=level, axis=axis).apply(
+            data_func, **kwargs
+        )
         return out_dataframe
 
     return process_dataframe
@@ -288,6 +384,7 @@ def read_df(collect_name, exp_name, region=None, db_dir='', verbose=True):
     df = pd.read_pickle(df_file)
     return df
 
+
 def update_df(df, collect_name, exp_name, region=None, db_dir=''):
     collect_dir = os.path.join(db_dir, collect_name)
     if not os.path.exists(collect_dir):
@@ -304,9 +401,9 @@ def get_filename(exp_name, region, ext):
     return '{}_{}.{}'.format(exp_name, region, ext)
 
 
-def concatenate_df_from_db(in_dir: str,
-                           exp_list: list[tuple[str]],
-                           axis: int=1):
+def concatenate_df_from_db(
+    in_dir: str, exp_list: list[tuple[str]], axis: int = 1
+):
     """
     Concatenates dataframes from files based on experiment list
 
@@ -321,9 +418,10 @@ def concatenate_df_from_db(in_dir: str,
     Example:
         >>> combined_df = concatenate_df_from_db('/path/to/data', [('exp_fish1', 'naive'), ('exp_fish2', 'trained')])
     """
-    df_list = [read_df(in_dir, exp[0])\
-               for exp in exp_list]
-    all_df = pd.concat(df_list, axis=axis, keys=exp_list, names=['fish_id', 'condition'])
+    df_list = [read_df(in_dir, exp[0]) for exp in exp_list]
+    all_df = pd.concat(
+        df_list, axis=axis, keys=exp_list, names=['fish_id', 'condition']
+    )
     return all_df
 
 
@@ -368,12 +466,20 @@ def read_np(collect_name, exp_name, file_name, db_dir):
     return result
 
 
-def concatenate_np_from_db(exp_list, in_collect_name, file_name, db_dir, axis=1):
-    arr_list = [read_np(in_collect_name, exp_name, file_name, db_dir)\
-                for exp_name, cond in exp_list]
+def concatenate_np_from_db(
+    exp_list, in_collect_name, file_name, db_dir, axis=1
+):
+    arr_list = [
+        read_np(in_collect_name, exp_name, file_name, db_dir)
+        for exp_name, cond in exp_list
+    ]
 
-    df_list = [pd.DataFrame(arr).rename_axis('latent', axis=1) for arr in arr_list]
-    all_df = pd.concat(df_list, axis=axis, keys=exp_list, names=['fish_id', 'cond'])
+    df_list = [
+        pd.DataFrame(arr).rename_axis('latent', axis=1) for arr in arr_list
+    ]
+    all_df = pd.concat(
+        df_list, axis=axis, keys=exp_list, names=['fish_id', 'cond']
+    )
     all_df.index = all_df.index.rename('time_index')
     return all_df
 
@@ -381,15 +487,18 @@ def concatenate_np_from_db(exp_list, in_collect_name, file_name, db_dir, axis=1)
 def concatenate_df_from_dict(df_dict, exp_list, region_list, axis=1):
     expkey_list = get_expkey_list(exp_list, region_list)
     df_list = [df_dict[expkey[0]][expkey[1]] for expkey in expkey_list]
-    all_df = pd.concat(df_list, axis, keys=expkey_list,
-                       names=('fish_id', 'region', 'cond'))
+    all_df = pd.concat(
+        df_list, axis, keys=expkey_list, names=('fish_id', 'region', 'cond')
+    )
     return all_df
 
 
 def mean_mat_over_cond(mat_list, exp_cond_list, cond_list):
     avg_mats = dict()
     for cond in cond_list:
-        filtered_dfs = [df for df, con in zip(mat_list, exp_cond_list) if con == cond]
+        filtered_dfs = [
+            df for df, con in zip(mat_list, exp_cond_list) if con == cond
+        ]
         average_df = pd.DataFrame().reindex_like(filtered_dfs[0])
 
         for df in filtered_dfs:
@@ -403,16 +512,22 @@ def mean_mat_over_cond(mat_list, exp_cond_list, cond_list):
 def mean_mat_over_cond_with_nan(mat_list, exp_cond_list, cond_list):
     avg_mats = dict()
     for cond in cond_list:
-        filtered_dfs = [df for df, con in zip(mat_list, exp_cond_list) if con == cond]
+        filtered_dfs = [
+            df for df, con in zip(mat_list, exp_cond_list) if con == cond
+        ]
         # Convert list of dataframes to 3D numpy array
         stacked_array = np.stack([df.values for df in filtered_dfs], axis=0)
-        
+
         # Compute the nanmean along the first axis (axis=0)
         nanmean_array = np.nanmean(stacked_array, axis=0)
-        
+
         # Convert the result back to a dataframe
-        average_df = pd.DataFrame(nanmean_array, columns=filtered_dfs[0].columns, index=filtered_dfs[0].index)
-        
+        average_df = pd.DataFrame(
+            nanmean_array,
+            columns=filtered_dfs[0].columns,
+            index=filtered_dfs[0].index,
+        )
+
         avg_mats[cond] = average_df
     return avg_mats
 
@@ -421,7 +536,7 @@ def mean_mat(mat_list):
     average_df = pd.DataFrame().reindex_like(mat_list[0])
 
     for df in mat_list:
-            average_df = average_df.add(df, fill_value=0)
+        average_df = average_df.add(df, fill_value=0)
 
     average_df = average_df / len(mat_list)
     return average_df

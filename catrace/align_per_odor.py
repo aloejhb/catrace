@@ -3,17 +3,23 @@ from scipy.optimize import curve_fit
 import pandas as pd
 from .fit_curve import fit_bi_exponential, compute_biexp_peak_time
 
+
 # Define the Gaussian function
 def gaussian(x, amplitude, mean, stddev):
-    return amplitude * np.exp(-((x - mean) ** 2) / (2 * stddev ** 2))
+    return amplitude * np.exp(-((x - mean) ** 2) / (2 * stddev**2))
+
 
 def fit_gaussian_to_odor(time_points, activity_values, stddev_bounds=(1, 5)):
     # Initial guess for the parameters: amplitude, mean, stddev
     # amplitude: maximum value of the activity
     # mean: time where the maximum value occurs
     # stddev
-    initial_guess = [activity_values.max(), time_points[np.argmax(activity_values)], 2]
-    
+    initial_guess = [
+        activity_values.max(),
+        time_points[np.argmax(activity_values)],
+        2,
+    ]
+
     # Define bounds for the parameters: (amplitude, mean, stddev)
     # amplitude: [0, np.inf] (positive and unbounded)
     # mean: [min(time_points), max(time_points)] (within the range of time points)
@@ -23,23 +29,39 @@ def fit_gaussian_to_odor(time_points, activity_values, stddev_bounds=(1, 5)):
 
     # Fit the Gaussian function to the data
     try:
-        params, _ = curve_fit(gaussian, time_points, activity_values, p0=initial_guess, bounds=(lower_bounds, upper_bounds))
+        params, _ = curve_fit(
+            gaussian,
+            time_points,
+            activity_values,
+            p0=initial_guess,
+            bounds=(lower_bounds, upper_bounds),
+        )
         return params
     except RuntimeError:
         return None
 
 
-def find_peak_times(odor_avg, window=None, first_window_size=None, second_window_size=None, method='gaussian', fit_params={}):
+def find_peak_times(
+    odor_avg,
+    window=None,
+    first_window_size=None,
+    second_window_size=None,
+    method='gaussian',
+    fit_params={},
+):
     if first_window_size:
         avg_timecourse = odor_avg.mean(axis=0)
         max_time = avg_timecourse.idxmax()
-        window = (int(max_time - first_window_size/2), int(max_time + first_window_size/2))
+        window = (
+            int(max_time - first_window_size / 2),
+            int(max_time + first_window_size / 2),
+        )
 
     odor_avg_original = odor_avg.copy()
-    odor_avg = odor_avg_original.loc[:, window[0]:window[1]]
+    odor_avg = odor_avg_original.loc[:, window[0] : window[1]]
     # Convert columns to float (time points)
     time_points = np.array(odor_avg.columns, dtype=float)
-    
+
     if method == 'gaussian':
         fit_params['stddev_bounds'] = fit_params.get('stddev_bounds', (1, 5))
 
@@ -47,16 +69,25 @@ def find_peak_times(odor_avg, window=None, first_window_size=None, second_window
     results = {}
     for odor in odor_avg.index:
         activity_values = odor_avg.loc[odor].values
-        peak_time = fit_peak_times(time_points, activity_values, method, fit_params)
+        peak_time = fit_peak_times(
+            time_points, activity_values, method, fit_params
+        )
         if second_window_size:
             # set second window around peak time
-            second_window = (int(peak_time - second_window_size/2), int(peak_time + second_window_size/2))
+            second_window = (
+                int(peak_time - second_window_size / 2),
+                int(peak_time + second_window_size / 2),
+            )
             # update time points and activity values
-            second_odor_avg = odor_avg_original.loc[:, second_window[0]:second_window[1]]
+            second_odor_avg = odor_avg_original.loc[
+                :, second_window[0] : second_window[1]
+            ]
             second_time_points = np.array(second_odor_avg.columns, dtype=float)
             second_activity_values = second_odor_avg.loc[odor].values
             # fit again
-            peak_time = fit_peak_times(second_time_points, second_activity_values, method, fit_params)
+            peak_time = fit_peak_times(
+                second_time_points, second_activity_values, method, fit_params
+            )
         results[odor] = peak_time
 
     # Convert the results to a Series
@@ -64,16 +95,22 @@ def find_peak_times(odor_avg, window=None, first_window_size=None, second_window
     return peak_times
 
 
-def fit_peak_times(time_points, activity_values, method='gaussian', fit_params={}):
+def fit_peak_times(
+    time_points, activity_values, method='gaussian', fit_params={}
+):
     pktime = np.nan
     if method == 'gaussian':
-        params = fit_gaussian_to_odor(time_points, activity_values, **fit_params)
+        params = fit_gaussian_to_odor(
+            time_points, activity_values, **fit_params
+        )
         if params is not None:
             amplitude, mean, stddev = params
             pktime = mean
     elif method == 'biexp':
         time_offset = time_points[0]
-        params = fit_bi_exponential(time_points-time_offset, activity_values, **fit_params)
+        params = fit_bi_exponential(
+            time_points - time_offset, activity_values, **fit_params
+        )
         if params is not None:
             pktime = compute_biexp_peak_time(params) + time_offset
     else:
@@ -108,4 +145,3 @@ def align_odors(dff, delays):
     dff_odors_aligned = pd.concat(aligned_data).sort_index()
 
     return dff_odors_aligned
-

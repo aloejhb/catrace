@@ -5,6 +5,7 @@ Implemented by Chris Rayner (2015)
 dchrisrayner AT gmail DOT com
 Optimal linear 'bottlenecking' or 'multitask learning'.
 """
+
 import os
 import numpy as np
 import joblib
@@ -29,6 +30,7 @@ class ReducedRankRegressor(object):
     - rrank is a rank constraint.
     - reg is a regularization parameter (optional).
     """
+
     def __init__(self, rank, reg=None):
         self.rank = rank
         self.reg = reg
@@ -48,8 +50,10 @@ class ReducedRankRegressor(object):
         # CXX = N * CovXX and CXY = N * CovXY
         # but in singular value decomposition, the V is always unitary
         # Hence the scaling by N is only visible in _S
-        _U, _S, V = np.linalg.svd(np.dot(CXY.T, np.dot(np.linalg.pinv(CXX), CXY)))
-        self.W = np.asarray(V[0:self.rank, :].T)
+        _U, _S, V = np.linalg.svd(
+            np.dot(CXY.T, np.dot(np.linalg.pinv(CXX), CXY))
+        )
+        self.W = np.asarray(V[0 : self.rank, :].T)
         self.A = np.asarray(np.dot(np.linalg.pinv(CXX), np.dot(CXY, self.W)))
 
         return self
@@ -77,13 +81,15 @@ class ReducedRankRegressor(object):
         return np.matmul(X, self.A)
 
 
-def estimate_rrr_experiment(exp_name, rrr_param, trace_dir, out_base_dir, db_dir):
+def estimate_rrr_experiment(
+    exp_name, rrr_param, trace_dir, out_base_dir, db_dir
+):
     df_ob = ecl.read_df(trace_dir, exp_name, 'OB', db_dir)
     df_dp = ecl.read_df(trace_dir, exp_name, 'Dp', db_dir)
 
-    estimator, x_latent, y_predict = compute_rrr_experiment(df_ob, df_dp,
-                                                            rrr_param)
-
+    estimator, x_latent, y_predict = compute_rrr_experiment(
+        df_ob, df_dp, rrr_param
+    )
 
     out_dir = os.path.join(db_dir, out_base_dir, exp_name)
     if not os.path.exists(out_dir):

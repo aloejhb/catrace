@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+
 def spike_timing_to_rate(data, dt, num_neurons, num_steps, debug=False):
     dt_in_steps = dt * 10
     df = pd.DataFrame(data, columns=['step', 'neuron'])
@@ -9,17 +10,21 @@ def spike_timing_to_rate(data, dt, num_neurons, num_steps, debug=False):
     # Bin the time points
     df['time'] = (df['step'] // (dt_in_steps)).astype(int)
     # Count spikes per neuron per bin
-    result = df.pivot_table(index='neuron', columns='time', aggfunc='size', fill_value=0)
+    result = df.pivot_table(
+        index='neuron', columns='time', aggfunc='size', fill_value=0
+    )
     print(result.shape)
-    num_times = np.floor(num_steps/ (dt_in_steps)).astype(int)
+    num_times = np.floor(num_steps / (dt_in_steps)).astype(int)
     # Ensure all neurons are represented in the result
-    all_neurons = pd.DataFrame(0.0, index=np.arange(1, num_neurons + 1), columns=range(0, num_times))
+    all_neurons = pd.DataFrame(
+        0.0, index=np.arange(1, num_neurons + 1), columns=range(0, num_times)
+    )
     print(all_neurons.shape)
     # Update the full DataFrame with the existing counts
     all_neurons.update(result)
 
     # Normalize by dt to get rate (assuming dt is in milliseconds or needs conversion to seconds)
-    all_neurons /= (dt / 1000)
+    all_neurons /= dt / 1000
 
     all_neurons = all_neurons.T
     if debug:
@@ -41,13 +46,18 @@ def specify_odor_and_trial(dff, odors, num_trials):
     time_labels = np.tile(np.arange(num_time_points), num_odors * num_trials)
 
     # Setting the MultiIndex
-    dff.index = pd.MultiIndex.from_arrays([trial_labels, odor_labels, time_labels], names=['trial', 'odor', 'time'])
+    dff.index = pd.MultiIndex.from_arrays(
+        [trial_labels, odor_labels, time_labels],
+        names=['trial', 'odor', 'time'],
+    )
     dff = dff.reorder_levels(['odor', 'trial', 'time'])
     dff = dff.reindex(odors, level='odor')
     return dff
 
 
-def simulation_mat_to_df(spike_timing, dt, num_neurons, num_steps, num_trials, odors):
+def simulation_mat_to_df(
+    spike_timing, dt, num_neurons, num_steps, num_trials, odors
+):
     # dt in unit ms
     dff = spike_timing_to_rate(spike_timing, dt, num_neurons, num_steps)
     dff = specify_odor_and_trial(dff, odors, num_trials)

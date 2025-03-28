@@ -3,6 +3,7 @@ from .utils import load_config
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
+
 @dataclass_json
 @dataclass
 class DatasetConfig:
@@ -31,6 +32,8 @@ def get_odors_by_key(dsconfig, odor_key):
     # odor_key should be a string starting with 'odors_', if not raise an error
     assert odor_key.startswith('odors_'), 'The key should start with "odors_"'
     # odor_key should be in the dataset config
-    assert hasattr(dsconfig, odor_key), f'The key "{odor_key}" is not in the dataset config'
+    assert hasattr(
+        dsconfig, odor_key
+    ), f'The key "{odor_key}" is not in the dataset config'
     odors = getattr(dsconfig, odor_key)
     return odors

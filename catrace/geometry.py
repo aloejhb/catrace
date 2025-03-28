@@ -37,7 +37,9 @@ def compute_angles(df):
     return results
 
 
-def compute_mahal_angles(trace_dir, pca_dir, exp_name, region, window, odor_list, eigenvec_num=0):
+def compute_mahal_angles(
+    trace_dir, pca_dir, exp_name, region, window, odor_list, eigenvec_num=0
+):
     dff = ecl.read_df(trace_dir, exp_name, region)
 
     # For each pair of odors
@@ -46,7 +48,9 @@ def compute_mahal_angles(trace_dir, pca_dir, exp_name, region, window, odor_list
     angles = {}
     for src_odor, ref_odor in odor_pairs:
         # Get the first eigenvector of the reference odor
-        odor_pca_dir = re.sub(r'_odors_([a-zA-Z]+)_', f'_odors_{ref_odor}_', pca_dir)
+        odor_pca_dir = re.sub(
+            r'_odors_([a-zA-Z]+)_', f'_odors_{ref_odor}_', pca_dir
+        )
         model_file = pjoin(odor_pca_dir, 'models', f'{exp_name}_{region}.pkl')
         with open(model_file, 'rb') as file:
             model = pickle.load(file)
@@ -75,7 +79,9 @@ def dict_to_matrix(data, odor_list):
     - A pandas DataFrame representing the matrix.
     """
     # Convert dictionary to DataFrame with 'Value' as the column for dictionary values
-    df = pd.DataFrame.from_dict(data, orient='index', columns=['Value']).reset_index()
+    df = pd.DataFrame.from_dict(
+        data, orient='index', columns=['Value']
+    ).reset_index()
     # Split the 'index' column (containing tuples) into two separate columns for 'Row' and 'Column'
     df[['Row', 'Column']] = pd.DataFrame(df['index'].tolist(), index=df.index)
     df.drop(columns=['index'], inplace=True)
@@ -88,9 +94,9 @@ def dict_to_matrix(data, odor_list):
     matrix_df = matrix_df.fillna(0).astype(int)
 
     # Sort rows
-    matrix_df.index = pd.Categorical(matrix_df.index,
-                                     categories=odor_list,
-                                     ordered=True)
+    matrix_df.index = pd.Categorical(
+        matrix_df.index, categories=odor_list, ordered=True
+    )
     matrix_df = matrix_df.sort_index()
 
     # Sort columns
@@ -99,7 +105,14 @@ def dict_to_matrix(data, odor_list):
 
 
 def plot_matrix(matrix, ax=None, vmin=None, vmax=None):
-    ax = sns.heatmap(matrix, ax=ax, cmap="RdBu_r", cbar=False,
-                     vmin=vmin, vmax=vmax,
-                     xticklabels=matrix.columns, yticklabels=matrix.index)
+    ax = sns.heatmap(
+        matrix,
+        ax=ax,
+        cmap='RdBu_r',
+        cbar=False,
+        vmin=vmin,
+        vmax=vmax,
+        xticklabels=matrix.columns,
+        yticklabels=matrix.index,
+    )
     return ax

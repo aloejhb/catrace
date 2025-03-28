@@ -6,8 +6,6 @@ import pandas as pd
 import re
 
 
-
-
 def get_spike_dir(root_dir, exp_name, plane_num):
     """Get directory of spike prediction based on the directory structure of neuRoi"""
     exp_dir = os.path.join(root_dir, exp_name)
@@ -20,7 +18,7 @@ def get_spike_dir(root_dir, exp_name, plane_num):
 def read_spike(spike_dir):
     file_list = sorted(glob.glob(os.path.join(spike_dir, 'spike_*.npy')))
     spike_list = []
-    for file in (file_list):
+    for file in file_list:
         spike = np.load(file)
         spike_list.append(spike)
     spike_array = np.stack(spike_list)
@@ -47,7 +45,9 @@ def load_experiment(root_dir, exp_name):
     exp_info['num_trial'] = exp_info_struct[3][0, 0]
     exp_info['num_plane'] = exp_info_struct[4][0, 0]
     myexp['exp_info'] = exp_info
-    myexp['raw_file_list'] = list(np.concatenate(np.concatenate(myexp_struct[0][0][2])))
+    myexp['raw_file_list'] = list(
+        np.concatenate(np.concatenate(myexp_struct[0][0][2]))
+    )
     myexp['exp_dir'] = myexp_struct[0][0][3][0]
     return myexp
 
@@ -64,8 +64,9 @@ def get_odor_name(file_name):
 def generate_exp_dataframe(raw_file_list, odor_list):
     raw_odor_list = [get_odor_name(x) for x in raw_file_list]
     expdf = pd.DataFrame(list(raw_file_list), columns=['file'])
-    raw_odor_cat = pd.Categorical(raw_odor_list, categories=odor_list,
-                                  ordered=True)
+    raw_odor_cat = pd.Categorical(
+        raw_odor_list, categories=odor_list, ordered=True
+    )
     expdf['odor'] = raw_odor_cat
     expdf = expdf.sort_values(by=['odor'])
     return expdf
@@ -73,7 +74,9 @@ def generate_exp_dataframe(raw_file_list, odor_list):
 
 def read_trace(trace_file):
     time_trace = sio.loadmat(trace_file)
-    import pdb; pdb.set_trace()
+    import pdb
+
+    pdb.set_trace()
 
     trace_dict = {}
     trace_dict['raw_trace'] = np.stack(time_trace['timeTraceMatList'][0])
@@ -87,7 +90,9 @@ def get_time_trace_file(exp_dir, plane_nb, file_name):
     time_trace_dir = os.path.join(exp_dir, 'time_trace')
     plane_string = 'plane{0:02d}'.format(plane_nb)
     plane_dir = os.path.join(time_trace_dir, plane_string)
-    trace_file_regexp = os.path.join(plane_dir, file_name.replace('.tif', '*.mat'))
+    trace_file_regexp = os.path.join(
+        plane_dir, file_name.replace('.tif', '*.mat')
+    )
     trace_file = glob.glob(trace_file_regexp)
     if trace_file:
         trace_file = trace_file[0]
@@ -103,11 +108,13 @@ def load_trace_file(exp_dir, plane_nb, file_name):
 
 
 def load_trace_to_df(exp, plane_nb, keep_common_roi=True):
-    trace_dict_list = [load_trace_file(exp['exp_dir'], plane_nb, x)
-                       for x in exp['dataframe']['file']]
+    trace_dict_list = [
+        load_trace_file(exp['exp_dir'], plane_nb, x)
+        for x in exp['dataframe']['file']
+    ]
     roi_list = [x['roiArray'] for x in trace_dict_list]
     trace_list = [x['timeTraceMat'] for x in trace_dict_list]
     # if keep_common_roi:
-        
+
     colname = 'trace_plane{0:02d}'.format(plane_nb)
     exp['dataframe'][colname] = trace_list

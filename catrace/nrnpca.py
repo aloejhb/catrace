@@ -31,19 +31,21 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
     kwargs : `~matplotlib.patches.Patch` properties
     """
     if x.size != y.size:
-        raise ValueError("x and y must be the same size")
+        raise ValueError('x and y must be the same size')
 
     cov = np.cov(x, y)
-    pearson = cov[0, 1]/np.sqrt(cov[0, 0] * cov[1, 1])
+    pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
     # Using a special case to obtain the eigenvalues of this
     # two-dimensionl dataset.
     ell_radius_x = np.sqrt(1 + pearson)
     ell_radius_y = np.sqrt(1 - pearson)
-    ellipse = Ellipse((0, 0),
+    ellipse = Ellipse(
+        (0, 0),
         width=ell_radius_x * 2,
         height=ell_radius_y * 2,
         facecolor=facecolor,
-        **kwargs)
+        **kwargs,
+    )
 
     # Calculating the stdandard deviation of x from
     # the squareroot of the variance and multiplying
@@ -55,13 +57,16 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor='none', **kwargs):
     scale_y = np.sqrt(cov[1, 1]) * n_std
     mean_y = np.mean(y)
 
-    transf = transforms.Affine2D() \
-        .rotate_deg(45) \
-        .scale(scale_x, scale_y) \
+    transf = (
+        transforms.Affine2D()
+        .rotate_deg(45)
+        .scale(scale_x, scale_y)
         .translate(mean_x, mean_y)
+    )
 
     ellipse.set_transform(transf + ax.transData)
     return ax.add_patch(ellipse)
+
 
 def read_trace_file(trace_file):
     time_trace = sio.loadmat(trace_file)
@@ -70,26 +75,53 @@ def read_trace_file(trace_file):
     return df_trace_mat, odor_list
 
 
-def plot_response_pca(pattern, odor_list, n_trial, ax, scatterkwargs={}, ellipsekwargs={}, fig_title=''):
+def plot_response_pca(
+    pattern,
+    odor_list,
+    n_trial,
+    ax,
+    scatterkwargs={},
+    ellipsekwargs={},
+    fig_title='',
+):
     n_odor = len(odor_list)
 
     pca = PCA(n_components=2)
     pc = pca.fit_transform(pattern)
-    color_seq = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f']
+    color_seq = [
+        '#1f77b4',
+        '#ff7f0e',
+        '#2ca02c',
+        '#d62728',
+        '#9467bd',
+        '#8c564b',
+        '#e377c2',
+        '#7f7f7f',
+    ]
 
     for i in range(n_odor):
         # if i == 0:
         #     pcx = pc[0:2, :]
         # else:
         #     pcx = pc[i*n_trial-1:(i+1)*n_trial-1, :]
-        pcx = pc[i*n_trial:(i+1)*n_trial, :]
+        pcx = pc[i * n_trial : (i + 1) * n_trial, :]
         color = color_seq[i]
-        ax.scatter(pcx[:, 0], pcx[:, 1], c=color, label=odor_list[i], **scatterkwargs)
+        ax.scatter(
+            pcx[:, 0], pcx[:, 1], c=color, label=odor_list[i], **scatterkwargs
+        )
         # ax.legend(framealpha=0.5)
-        confidence_ellipse(pcx[:, 0], pcx[:, 1], ax, n_std=2, edgecolor=color, alpha=0.5, **ellipsekwargs)
+        confidence_ellipse(
+            pcx[:, 0],
+            pcx[:, 1],
+            ax,
+            n_std=2,
+            edgecolor=color,
+            alpha=0.5,
+            **ellipsekwargs,
+        )
     if fig_title:
         ax.set_title(fig_title)
-        
+
 
 if __name__ == '__main__':
     pass
@@ -112,8 +144,6 @@ if __name__ == '__main__':
 
     # ob_df_trace_mat = np.concatenate((ob_df_dict[2], ob_df_dict[3], ob_df_dict[3]), axis=1)
     # plot_response_pca(ob_df_trace_mat, ol, time_window, fig_title='OB')
-    
-    
 
     # df_dict = {}
     # odor_list_dict = {}

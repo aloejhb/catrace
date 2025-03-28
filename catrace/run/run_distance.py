@@ -21,15 +21,23 @@ from scipy.stats import mannwhitneyu
 from catrace.dataset import DatasetConfig
 from catrace.utils import load_config
 from ..stats import pool_training_conditions
-from ..similarity import (plot_similarity_mat,
-                          sample_neuron_and_comopute_distance_mat,
-                          compute_diff_to_naive,
-                          plot_mean_delta_mat, PlotMeanDeltaMatParams)
+from ..similarity import (
+    plot_similarity_mat,
+    sample_neuron_and_comopute_distance_mat,
+    compute_diff_to_naive,
+    plot_mean_delta_mat,
+    PlotMeanDeltaMatParams,
+)
 
-from ..visualize import (PlotBoxplotParams, PlotPerCondMatParams,
-                         plot_measure, plot_conds_mat, move_pvalue_indicator,
-                         plot_measure_multi_odor_cond,
-                         PlotBoxplotMultiOdorCondParams)
+from ..visualize import (
+    PlotBoxplotParams,
+    PlotPerCondMatParams,
+    plot_measure,
+    plot_conds_mat,
+    move_pvalue_indicator,
+    plot_measure_multi_odor_cond,
+    PlotBoxplotMultiOdorCondParams,
+)
 from .run_utils import plot_avg_trace_with_window
 
 
@@ -55,8 +63,14 @@ class ComputeDistParams:
 
 def compute_dist(params: ComputeDistParams):
     # Check that only one of do_shuffle_manifold_pair_labels and do_shuffle_manifold_labels_global is True
-    if params.do_shuffle_manifold_pair_labels and params.do_shuffle_manifold_labels_global:
-        raise ValueError('Only one of do_shuffle_manifold_pair_labels and do_shuffle_manifold_labels_global can be True.')
+    if (
+        params.do_shuffle_manifold_pair_labels
+        and params.do_shuffle_manifold_labels_global
+    ):
+        raise ValueError(
+            'Only one of do_shuffle_manifold_pair_labels and'
+            ' do_shuffle_manifold_labels_global can be True.'
+        )
     in_dir = params.in_dir
     exp_list = params.exp_list
     metric = params.metric
@@ -69,7 +83,9 @@ def compute_dist(params: ComputeDistParams):
     overwrite_computation = params.overwrite_computation
     parallelism = params.parallelism
 
-    dist_dir_name = f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
+    dist_dir_name = (
+        f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
+    )
     if params.do_shuffle_manifold_pair_labels:
         dist_dir_name += f'_shuffled_seed{params.shuffle_master_seed}'
     elif params.do_shuffle_manifold_labels_global:
@@ -81,30 +97,47 @@ def compute_dist(params: ComputeDistParams):
         num_exp = len(exp_list)
         master_rng = np.random.default_rng(seed)
         seeds = [
-            master_rng.integers(0, 1e9, size=num_exp).tolist() 
+            master_rng.integers(0, 1e9, size=num_exp).tolist()
             for _ in range(num_repeats)
         ]
 
         shuffle_master_rng = np.random.default_rng(params.shuffle_master_seed)
         shuffle_seed_values = [
-            shuffle_master_rng.integers(0, 1e9, size=num_exp).tolist() 
+            shuffle_master_rng.integers(0, 1e9, size=num_exp).tolist()
             for _ in range(num_repeats)
         ]
 
         for k in range(num_repeats):
             out_dir = pjoin(dist_dir, f'repeat{k:02d}')
-            dist_params=dict(odor_list=odors, window=time_window, do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
-                            do_shuffle_manifold_labels_global=params.do_shuffle_manifold_labels_global)
-            extra_params_list = [dict(shuffle_seed_value=shuffle_seed_values[k][i]) for i in range(num_exp)]
+            dist_params = dict(
+                odor_list=odors,
+                window=time_window,
+                do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
+                do_shuffle_manifold_labels_global=params.do_shuffle_manifold_labels_global,
+            )
+            extra_params_list = [
+                dict(shuffle_seed_value=shuffle_seed_values[k][i])
+                for i in range(num_exp)
+            ]
             if metric in ['mahal', 'euclidean']:
                 dist_params.update(dict(metric=metric, reg=reg))
-            sample_and_dist_params = dict(sample_size=sample_size,
-                                          metric=params.metric,
-                                          params=dist_params)
-            ecl.process_data_db_parallel(sample_neuron_and_comopute_distance_mat, exp_list,
-                                        out_dir, in_dir, parallelism=parallelism, seeds=seeds[k],
-                                        params=sample_and_dist_params, extra_params_list=extra_params_list)
+            sample_and_dist_params = dict(
+                sample_size=sample_size,
+                metric=params.metric,
+                params=dist_params,
+            )
+            ecl.process_data_db_parallel(
+                sample_neuron_and_comopute_distance_mat,
+                exp_list,
+                out_dir,
+                in_dir,
+                parallelism=parallelism,
+                seeds=seeds[k],
+                params=sample_and_dist_params,
+                extra_params_list=extra_params_list,
+            )
     return dist_dir
+
 
 # Read the matrices
 def read_mats_from_dir(dist_dir, exp_list, num_repeats):
@@ -118,13 +151,17 @@ def read_mats_from_dir(dist_dir, exp_list, num_repeats):
         simdf = ecl.read_df(in_dir, exp_name, verbose=False)
         simdf.index.name = 'odor'
         simdf_lists.append(simdf)
-    all_simdf = pd.concat(simdf_lists, keys=keys, names=['fish_id', 'condition', 'sample'])
+    all_simdf = pd.concat(
+        simdf_lists, keys=keys, names=['fish_id', 'condition', 'sample']
+    )
     return all_simdf
 
 
 # Average over repeats
 def average_over_repeats(all_simdf):
-    avg_simdf = all_simdf.groupby(['fish_id', 'condition', 'odor'], observed=True, sort=False).mean()
+    avg_simdf = all_simdf.groupby(
+        ['fish_id', 'condition', 'odor'], observed=True, sort=False
+    ).mean()
     return avg_simdf
 
 
@@ -141,7 +178,9 @@ def get_mat_lists(matdf, fish_ids=None):
     grouped = matdf.groupby(['fish_id', 'condition'])
     if fish_ids is not None:
         grouped = sorted(grouped, key=lambda x: fish_ids.index(x[0][0]))
-    data_list = [group.droplevel(['fish_id', 'condition']) for name, group in grouped]
+    data_list = [
+        group.droplevel(['fish_id', 'condition']) for name, group in grouped
+    ]
     exp_cond_list = [name[1] for name, group in grouped]
     return data_list, exp_cond_list
 
@@ -155,7 +194,13 @@ def plot_matrix_per_fish(avg_simdf, cmap='turbo'):
 
     cmin = min([mat.min().min() for mat in simdf_list])
     cmax = max([mat.max().max() for mat in simdf_list])
-    fig, axs = ecl.plot_explist_with_cond(simdf_list, exp_cond_list, plot_similarity_mat, clim=(cmin, cmax), cmap=cmap)
+    fig, axs = ecl.plot_explist_with_cond(
+        simdf_list,
+        exp_cond_list,
+        plot_similarity_mat,
+        clim=(cmin, cmax),
+        cmap=cmap,
+    )
     ax = axs[-1, 0]
     img = ax.get_children()[0]
     fig.colorbar(img, ax=ax)
@@ -163,8 +208,9 @@ def plot_matrix_per_fish(avg_simdf, cmap='turbo'):
 
 
 # Plot matrix per condition
-def plot_matrix_per_condition(avg_simdf, conditions,
-                              params=PlotPerCondMatParams()):
+def plot_matrix_per_condition(
+    avg_simdf, conditions, params=PlotPerCondMatParams()
+):
     simdf_list, exp_cond_list = get_mat_lists(avg_simdf)
     avg_mats = ecl.mean_mat_over_cond(simdf_list, exp_cond_list, conditions)
     if params.clim is None:
@@ -174,12 +220,16 @@ def plot_matrix_per_condition(avg_simdf, conditions,
         print(f'clim: {clim}')
         params.clim = clim
     params.ncol = 2
-    
-    fig, axs = plot_conds_mat(avg_mats, conditions, plot_similarity_mat, **params.to_dict())
+
+    fig, axs = plot_conds_mat(
+        avg_mats, conditions, plot_similarity_mat, **params.to_dict()
+    )
     return fig, axs
 
 
-def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=True):
+def get_group_vs_group(
+    dff, odor1_group, odor2_group, measure_name, deduplicate=True
+):
     """
     Get the DataFrame containing the group vs. group data for the given DataFrame.
 
@@ -193,31 +243,43 @@ def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=
 
     """
     # Get tuples of (odor1, odor2) that are in the group
-    odor_tuples = [(odor1, odor2) for odor1 in odor1_group for odor2 in odor2_group]
+    odor_tuples = [
+        (odor1, odor2) for odor1 in odor1_group for odor2 in odor2_group
+    ]
     # Remove the tuples that have the same odor1 and odor2
-    odor_tuples = [odor_tuple for odor_tuple in odor_tuples if odor_tuple[0] != odor_tuple[1]]
-    
+    odor_tuples = [
+        odor_tuple
+        for odor_tuple in odor_tuples
+        if odor_tuple[0] != odor_tuple[1]
+    ]
+
     # Conditionally deduplicate the odor_tuples by sorting and removing duplicates
     if deduplicate:
-        odor_tuples = list({tuple(sorted(odor_tuple)) for odor_tuple in odor_tuples})
+        odor_tuples = list(
+            {tuple(sorted(odor_tuple)) for odor_tuple in odor_tuples}
+        )
     # Stack the DataFrame so that 'ref_odor' becomes part of the MultiIndex
-    dff_stacked = dff.stack()  # This moves the columns (ref_odor) into the index
-    
+    dff_stacked = (
+        dff.stack()
+    )  # This moves the columns (ref_odor) into the index
+
     # Rename the stacked column for clarity
     dff_stacked.name = 'value'
-    
+
     # Use pd.IndexSlice to slice through the MultiIndex
     idx = pd.IndexSlice
-    
+
     # Prepare the filter based on odor_tuples
     filtered_dfs = []
     for odor1, odor2 in odor_tuples:
         # Slice through MultiIndex using `odor1` and `odor2` while preserving other levels
-        if 'sample' in dff_stacked.index.names:  # Adjust for additional levels (like 'sample')
+        if (
+            'sample' in dff_stacked.index.names
+        ):  # Adjust for additional levels (like 'sample')
             sliced_df = dff_stacked.loc[idx[:, :, :, odor1, odor2]]
         else:  # Default case with two extra levels before 'odor' and 'ref_odor'
             sliced_df = dff_stacked.loc[idx[:, :, odor1, odor2]]
-        
+
         filtered_dfs.append(sliced_df)
 
     # Concatenate all the filtered DataFrames
@@ -225,22 +287,26 @@ def get_group_vs_group(dff, odor1_group, odor2_group, measure_name, deduplicate=
 
     # Rename the first two levels of the index to 'odor' and 'ref_odor'
     new_index_names = list(gvg.index.names)
-    
-    if len(new_index_names) >= 2:  # Ensure there are at least two levels to rename
-        new_index_names[0] = 'odor'      # First level becomes 'odor'
+
+    if (
+        len(new_index_names) >= 2
+    ):  # Ensure there are at least two levels to rename
+        new_index_names[0] = 'odor'  # First level becomes 'odor'
         new_index_names[1] = 'ref_odor'  # Second level becomes 'ref_odor'
-    
+
     # Apply the new index names
     gvg = gvg.rename_axis(new_index_names, axis=0)
-    
+
     # Convert the final gvg to a DataFrame with the specified column name (measure_name)
     gvg_df = gvg.to_frame(name=measure_name)
-    
+
     return gvg_df
 
 
 # Statistics on odors
-def pool_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, naive_name='naive'):
+def pool_odor_pair(
+    group1, group2, selected_conditions, avg_simdf, metric, naive_name='naive'
+):
     if metric == 'mahal':
         deduplicate = False
     else:
@@ -255,19 +321,38 @@ def pool_odor_pair(group1, group2, selected_conditions, avg_simdf, metric, naive
     else:
         raise ValueError(f'Unknown metric: {metric}')
 
-    subsimdf = get_group_vs_group(avg_simdf, group1, group2, measure_name=measure_name,
-                                  deduplicate=deduplicate)
+    subsimdf = get_group_vs_group(
+        avg_simdf,
+        group1,
+        group2,
+        measure_name=measure_name,
+        deduplicate=deduplicate,
+    )
     # Select conditions
-    subsimdf = subsimdf[subsimdf.index.get_level_values('condition').isin(selected_conditions)]
+    subsimdf = subsimdf[
+        subsimdf.index.get_level_values('condition').isin(selected_conditions)
+    ]
 
     # Map naive to naive, others to trained
-    condition_map = {cond: 'trained' if cond != naive_name else 'naive' for cond in selected_conditions}
+    condition_map = {
+        cond: 'trained' if cond != naive_name else 'naive'
+        for cond in selected_conditions
+    }
     pooled_subsimdf = pool_training_conditions(subsimdf, condition_map)
 
     return pooled_subsimdf
 
-def plot_single_vs(pooled_subsimdf, vsname, measure_name, title_fontsize=7, params=PlotBoxplotParams()):
-    fig, ax, test_results = plot_measure(pooled_subsimdf, measure_name, test_type='mannwhitneyu', params=params)
+
+def plot_single_vs(
+    pooled_subsimdf,
+    vsname,
+    measure_name,
+    title_fontsize=7,
+    params=PlotBoxplotParams(),
+):
+    fig, ax, test_results = plot_measure(
+        pooled_subsimdf, measure_name, test_type='mannwhitneyu', params=params
+    )
     # Title
     fig.suptitle(vsname, fontsize=title_fontsize)
     # tight layout
@@ -276,15 +361,24 @@ def plot_single_vs(pooled_subsimdf, vsname, measure_name, title_fontsize=7, para
 
 def normalize_to_percent(pooled_subsimdf, normalize=True):
     # From pooled_subsimdf, get the rows where condition is naive
-    pooled_subsimdf_naive = pooled_subsimdf[pooled_subsimdf.index.get_level_values('condition') == 'naive']
+    pooled_subsimdf_naive = pooled_subsimdf[
+        pooled_subsimdf.index.get_level_values('condition') == 'naive'
+    ]
     # Compute the mean of naive
-    pooled_subsimdf_naive_mean = pooled_subsimdf_naive.groupby(['odor', 'ref_odor']).mean()
+    pooled_subsimdf_naive_mean = pooled_subsimdf_naive.groupby(
+        ['odor', 'ref_odor']
+    ).mean()
     # Subtract the pooled_subsimdf_naive_mean from pooled_subsimdf and then normalize by the pooled_subsimdf_naive_mean
     pooled_subsimdf_normailized = pooled_subsimdf - pooled_subsimdf_naive_mean
     if normalize:
-        pooled_subsimdf_normailized = pooled_subsimdf_normailized / pooled_subsimdf_naive_mean * 100
+        pooled_subsimdf_normailized = (
+            pooled_subsimdf_normailized / pooled_subsimdf_naive_mean * 100
+        )
     # Get the rows where condition is not naive
-    pooled_subsimdf_normalized_trained = pooled_subsimdf_normailized[pooled_subsimdf_normailized.index.get_level_values('condition') != 'naive']
+    pooled_subsimdf_normalized_trained = pooled_subsimdf_normailized[
+        pooled_subsimdf_normailized.index.get_level_values('condition')
+        != 'naive'
+    ]
     return pooled_subsimdf_normalized_trained
 
 
@@ -294,6 +388,7 @@ def compute_diff_to_naive_from_simdfdf(avg_simdf, *args, **kwargs):
 
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
 
 def combine_figures_to_grid(figs, nrows, ncols):
     """
@@ -308,7 +403,9 @@ def combine_figures_to_grid(figs, nrows, ncols):
         matplotlib.figure.Figure: The combined figure with a grid of subfigures.
     """
     if len(figs) > nrows * ncols:
-        raise ValueError("The number of figures exceeds the grid capacity (nrows * ncols).")
+        raise ValueError(
+            'The number of figures exceeds the grid capacity (nrows * ncols).'
+        )
 
     # Create the main figure
     fig = plt.figure(figsize=(ncols * 4, nrows * 4))
@@ -331,7 +428,9 @@ def combine_figures_to_grid(figs, nrows, ncols):
         # Create a new axis in the subfigure and remove ticks/labels
         ax = subfigs[i].add_subplot(1, 1, 1)
         ax.imshow(img)
-        ax.axis('off')  # Turn off axis labels and ticks to treat the figure as an image
+        ax.axis(
+            'off'
+        )  # Turn off axis labels and ticks to treat the figure as an image
 
     # Adjust layout
     fig.tight_layout()
@@ -340,9 +439,14 @@ def combine_figures_to_grid(figs, nrows, ncols):
 
 
 def compare_vs(vskeys, subsimdfs, measure_name):
-    #vskeys = ['aa_vs_ba', 'aa_vs_aa']
-    normalized_subsimdfs = {key: normalize_to_percent(subsimdfs[key]) for key in vskeys}
-    concat_subsimdf = pd.concat([normalized_subsimdfs[vskeys[0]], normalized_subsimdfs[vskeys[1]]], keys=vskeys)
+    # vskeys = ['aa_vs_ba', 'aa_vs_aa']
+    normalized_subsimdfs = {
+        key: normalize_to_percent(subsimdfs[key]) for key in vskeys
+    }
+    concat_subsimdf = pd.concat(
+        [normalized_subsimdfs[vskeys[0]], normalized_subsimdfs[vskeys[1]]],
+        keys=vskeys,
+    )
     # rename the level of keys to vsname
     concat_subsimdf.index = concat_subsimdf.index.rename('vsname', level=0)
     fig, ax = plt.subplots()
@@ -361,7 +465,9 @@ def compare_vs(vskeys, subsimdfs, measure_name):
 class PlotDistanceParams:
     per_cond: PlotPerCondMatParams
     mean_delta: PlotMeanDeltaMatParams
-    vs_measure: PlotBoxplotMultiOdorCondParams = PlotBoxplotMultiOdorCondParams()
+    vs_measure: PlotBoxplotMultiOdorCondParams = (
+        PlotBoxplotMultiOdorCondParams()
+    )
 
 
 @dataclass_json
@@ -405,50 +511,70 @@ def run_distance(params: RunDistanceParams):
     report_dir = params.report_dir
     summary_name = params.summary_name
 
-    dsconfig= load_config(params.config_file, DatasetConfig)
+    dsconfig = load_config(params.config_file, DatasetConfig)
     exp_list = dsconfig.exp_list
     trace_dir = dsconfig.processed_trace_dir
     select_neuron_dir = pjoin(trace_dir, assembly_name)
     time_window = np.array(time_window)
     in_dir = select_neuron_dir
 
-    compute_dist_params = ComputeDistParams(in_dir=in_dir,
-                                            exp_list=exp_list,
-                                            metric=metric,
-                                            time_window=time_window,
-                                            seed=seed,
-                                            num_repeats=params.num_repeats,
-                                            sample_size=sample_size,
-                                            reg=params.reg,
-                                            odors=dsconfig.odors_stimuli, overwrite_computation=overwrite_computation,
-                                            parallelism=params.parallelism,
-                                            do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
-                                            do_shuffle_manifold_labels_global=params.do_shuffle_manifold_labels_global,
-                                            shuffle_master_seed=params.shuffle_master_seed)
+    compute_dist_params = ComputeDistParams(
+        in_dir=in_dir,
+        exp_list=exp_list,
+        metric=metric,
+        time_window=time_window,
+        seed=seed,
+        num_repeats=params.num_repeats,
+        sample_size=sample_size,
+        reg=params.reg,
+        odors=dsconfig.odors_stimuli,
+        overwrite_computation=overwrite_computation,
+        parallelism=params.parallelism,
+        do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
+        do_shuffle_manifold_labels_global=params.do_shuffle_manifold_labels_global,
+        shuffle_master_seed=params.shuffle_master_seed,
+    )
 
     print('Plotting average trace...')
-    fig_avg_trace, ax = plot_avg_trace_with_window(in_dir, exp_list[0][0], time_window)
+    fig_avg_trace, ax = plot_avg_trace_with_window(
+        in_dir, exp_list[0][0], time_window
+    )
 
     print('Computing distance matrices...')
     dist_dir = compute_dist(compute_dist_params)
 
-    all_simdf = read_mats_from_dir(dist_dir, exp_list, compute_dist_params.num_repeats)
+    all_simdf = read_mats_from_dir(
+        dist_dir, exp_list, compute_dist_params.num_repeats
+    )
     avg_simdf = average_over_repeats(all_simdf)
     if do_normalize_simdf:
         avg_simdf = normalize_simdf(avg_simdf)
-    
+
     print('Plotting per condition...')
     per_cond_params = params.plot_params.per_cond
     print(per_cond_params.to_dict())
-    fig_per_cond, axs = plot_matrix_per_condition(avg_simdf, dsconfig.conditions, params=per_cond_params)
+    fig_per_cond, axs = plot_matrix_per_condition(
+        avg_simdf, dsconfig.conditions, params=per_cond_params
+    )
 
     print('Plotting delta matrix...')
     if params.do_reorder_cs:
-        mean_delta_mat = compute_diff_to_naive_from_simdfdf(avg_simdf, params.do_reorder_cs, params.odor_orders, dsconfig.odors_aa, naive_name=params.naive_name)
+        mean_delta_mat = compute_diff_to_naive_from_simdfdf(
+            avg_simdf,
+            params.do_reorder_cs,
+            params.odor_orders,
+            dsconfig.odors_aa,
+            naive_name=params.naive_name,
+        )
     else:
-        mean_delta_mat = compute_diff_to_naive_from_simdfdf(avg_simdf, do_reorder_cs=params.do_reorder_cs, naive_name=params.naive_name)
-    fig_delta, ax = plot_mean_delta_mat(mean_delta_mat, params.plot_params.mean_delta)
-
+        mean_delta_mat = compute_diff_to_naive_from_simdfdf(
+            avg_simdf,
+            do_reorder_cs=params.do_reorder_cs,
+            naive_name=params.naive_name,
+        )
+    fig_delta, ax = plot_mean_delta_mat(
+        mean_delta_mat, params.plot_params.mean_delta
+    )
 
     if metric == 'mahal':
         measure_name = 'D_M'
@@ -459,36 +585,53 @@ def run_distance(params: RunDistanceParams):
     else:
         raise ValueError(f'Unknown metric: {metric}')
 
-
-
     print('Plotting vs statistics...')
     if params.vsdict is None:
-        vsdict = {'aa_vs_aa': (dsconfig.odors_aa, dsconfig.odors_aa),
-                'aa_vs_ba': (dsconfig.odors_aa, dsconfig.odors_ba),
-                'ba_vs_aa': (dsconfig.odors_ba, dsconfig.odors_aa),
-                'ba_vs_ba': (dsconfig.odors_ba, dsconfig.odors_ba)}
+        vsdict = {
+            'aa_vs_aa': (dsconfig.odors_aa, dsconfig.odors_aa),
+            'aa_vs_ba': (dsconfig.odors_aa, dsconfig.odors_ba),
+            'ba_vs_aa': (dsconfig.odors_ba, dsconfig.odors_aa),
+            'ba_vs_ba': (dsconfig.odors_ba, dsconfig.odors_ba),
+        }
         if params.do_compare_cs:
-            vsdict.update({'cs_vs_ba': (dsconfig.odors_cs, dsconfig.odors_ba),
-                        'ba_vs_cs': (dsconfig.odors_ba, dsconfig.odors_cs),
-                        'cs_plus_vs_cs_minus': ([dsconfig.odors_cs[0]], [dsconfig.odors_cs[1]])})
+            vsdict.update({
+                'cs_vs_ba': (dsconfig.odors_cs, dsconfig.odors_ba),
+                'ba_vs_cs': (dsconfig.odors_ba, dsconfig.odors_cs),
+                'cs_plus_vs_cs_minus': (
+                    [dsconfig.odors_cs[0]],
+                    [dsconfig.odors_cs[1]],
+                ),
+            })
     else:
         vsdict = params.vsdict
 
     subsimdfs = {}
     for vsname, (group1, group2) in vsdict.items():
         try:
-            pooled_subsimdf = pool_odor_pair(group1, group2, dsconfig.conditions, avg_simdf, metric, naive_name=params.naive_name)
+            pooled_subsimdf = pool_odor_pair(
+                group1,
+                group2,
+                dsconfig.conditions,
+                avg_simdf,
+                metric,
+                naive_name=params.naive_name,
+            )
         except Exception as err:
             print(f'Error in {vsname}')
             raise err
         subsimdfs[vsname] = pooled_subsimdf
 
-    vsdff = pd.concat(subsimdfs.values(), keys=subsimdfs.keys(),
-                      names=['vsname'])
-    fig_multi_vs, ax, test_results = plot_measure_multi_odor_cond(vsdff, measure_name, odor_name='vsname', condition_name='condition', params=params.plot_params.vs_measure)
-    
+    vsdff = pd.concat(
+        subsimdfs.values(), keys=subsimdfs.keys(), names=['vsname']
+    )
+    fig_multi_vs, ax, test_results = plot_measure_multi_odor_cond(
+        vsdff,
+        measure_name,
+        odor_name='vsname',
+        condition_name='condition',
+        params=params.plot_params.vs_measure,
+    )
 
-    
     if params.vsdict is None:
         # Compare percentage changes
         vskeys = ['aa_vs_aa', 'aa_vs_ba']
@@ -501,11 +644,9 @@ def run_distance(params: RunDistanceParams):
     else:
         concat_subsimdf = None
 
-
     if params.vs_same_ylim is not None:
-        #move_pvalue_indicator(vsax, params.vs_same_ylim[1])
+        # move_pvalue_indicator(vsax, params.vs_same_ylim[1])
         pass
-
 
     print('Plotting per fish...')
     if params.do_plot_per_fish:
@@ -532,7 +673,7 @@ def run_distance(params: RunDistanceParams):
         fig_avg_trace=fig_avg_trace,
         fig_per_cond=fig_per_cond,
         fig_delta=fig_delta,
-        fig_multi_vs=fig_multi_vs
+        fig_multi_vs=fig_multi_vs,
     )
     if params.do_plot_per_fish:
         output_figs['fig_per_fish'] = fig_per_fish

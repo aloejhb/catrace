@@ -8,7 +8,11 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
 from ..dataset import load_dataset_config
-from ..exp_collection import (read_df, plot_explist_with_cond, concatenate_df_from_db)
+from ..exp_collection import (
+    read_df,
+    plot_explist_with_cond,
+    concatenate_df_from_db,
+)
 from ..process_time_trace import select_odors_and_sort
 from ..plot_trace import plot_trace_avg
 
@@ -32,20 +36,26 @@ class RunAverageTimecourseParams:
     convert_to_rate: bool = False
     naive_name: str = 'naive'
 
+
 def run_average_timecourse(params: RunAverageTimecourseParams):
-    dsconfig= load_dataset_config(params.config_file)
+    dsconfig = load_dataset_config(params.config_file)
     exp_list = dsconfig.exp_list
     trace_dir = dsconfig.processed_trace_dir
     select_neuron_dir = pjoin(trace_dir, params.assembly_name)
     in_dir = select_neuron_dir
-    
 
     if params.do_plot_per_fish:
         dffs = [read_df(in_dir, exp[0]) for exp in exp_list]
         exp_cond_list = [exp[1] for exp in exp_list]
-        fig_per_fish, axs = plot_explist_with_cond(dffs, exp_cond_list, plot_trace_avg,
-                                           frame_rate=1, yname='spike_rate',
-                                           sharex=True, sharey=True)
+        fig_per_fish, axs = plot_explist_with_cond(
+            dffs,
+            exp_cond_list,
+            plot_trace_avg,
+            frame_rate=1,
+            yname='spike_rate',
+            sharex=True,
+            sharey=True,
+        )
 
     if params.dff is None:
         dff = concatenate_df_from_db(in_dir, exp_list)
@@ -58,20 +68,50 @@ def run_average_timecourse(params: RunAverageTimecourseParams):
         dff = dff * dsconfig.frame_rate
     # Get figsize, label_fontsize, legend_fontsize, linewidth from params into a dictionary
     params_dict = params.to_dict()
-    sub_params = {k: params_dict[k] for k in ['figsize', 'label_fontsize', 'legend_fontsize', 'linewidth', 'odor_colors']}
+    sub_params = {
+        k: params_dict[k]
+        for k in [
+            'figsize',
+            'label_fontsize',
+            'legend_fontsize',
+            'linewidth',
+            'odor_colors',
+        ]
+    }
 
-    fig_frame, ax = plot_trace_avg(dff, frame_rate=None, cut_time=0, show_legend=True,
-                                   **sub_params)
+    fig_frame, ax = plot_trace_avg(
+        dff, frame_rate=None, cut_time=0, show_legend=True, **sub_params
+    )
 
-    fig_time, ax = plot_trace_avg(dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True,
-                   **sub_params)
-    
-    naive_dff =  dff.xs(params.naive_name, level='condition', axis=1, drop_level=False)
+    fig_time, ax = plot_trace_avg(
+        dff,
+        frame_rate=dsconfig.frame_rate,
+        cut_time=params.cut_time,
+        show_legend=True,
+        **sub_params,
+    )
+
+    naive_dff = dff.xs(
+        params.naive_name, level='condition', axis=1, drop_level=False
+    )
     # trained_dff is the dataframe where condition is not equal to naive
-    trained_dff = dff.loc[:, dff.columns.get_level_values('condition') != params.naive_name]
-    fig_naive_time, ax = plot_trace_avg(naive_dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True, **sub_params)
-    fig_trained_time, ax = plot_trace_avg(trained_dff, frame_rate=dsconfig.frame_rate, cut_time=params.cut_time, show_legend=True, **sub_params)
-
+    trained_dff = dff.loc[
+        :, dff.columns.get_level_values('condition') != params.naive_name
+    ]
+    fig_naive_time, ax = plot_trace_avg(
+        naive_dff,
+        frame_rate=dsconfig.frame_rate,
+        cut_time=params.cut_time,
+        show_legend=True,
+        **sub_params,
+    )
+    fig_trained_time, ax = plot_trace_avg(
+        trained_dff,
+        frame_rate=dsconfig.frame_rate,
+        cut_time=params.cut_time,
+        show_legend=True,
+        **sub_params,
+    )
 
     outfigs = {}
     outfigs['fig_frame'] = fig_frame
@@ -86,6 +126,5 @@ def run_average_timecourse(params: RunAverageTimecourseParams):
         for fig in outfigs.values():
             ax = fig.get_axes()[0]
             ax.set_ylim(params.ylim)
-
 
     return dff, outfigs

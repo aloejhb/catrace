@@ -9,6 +9,7 @@ from skimage.io import imread
 
 
 class Roi:
+
     def __init__(self, tag, position, plane=None, meta=None):
         self.tag = tag
         self.position = position
@@ -46,16 +47,20 @@ def draw_stack(rois, stack_shape, meta_attr):
     for roi in rois:
         if roi.meta is not None:
             if meta_attr in roi.meta:
-                stack[roi.plane, roi.position[:, 0], roi.position[:, 1]] = \
-                  roi.meta[meta_attr]
+                stack[roi.plane, roi.position[:, 0], roi.position[:, 1]] = (
+                    roi.meta[meta_attr]
+                )
     return stack
 
 
 def assign_meta(rois, meta_df, meta_attr, verbal=False):
     for k, roi in enumerate(rois):
-        roi_plane = np.ceil((roi.plane + 1) / 2) - 1# 8 plane to original 4 plane * 2 subplanes
-        roi_line = meta_df.loc[(meta_df['plane']==roi_plane) &
-                        (meta_df['neuron']==roi.tag)]
+        roi_plane = (
+            np.ceil((roi.plane + 1) / 2) - 1
+        )  # 8 plane to original 4 plane * 2 subplanes
+        roi_line = meta_df.loc[
+            (meta_df['plane'] == roi_plane) & (meta_df['neuron'] == roi.tag)
+        ]
         if not roi_line.empty:
             val = roi_line[meta_attr].values[0]
             roi.set_meta({meta_attr: val})
@@ -69,7 +74,7 @@ def assign_meta(rois, meta_df, meta_attr, verbal=False):
 def plot_stack(stack, figsize=(6, 10), matshow_kwargs=None):
     nplane = stack.shape[0]
     ncol = 2
-    nrow = np.ceil(nplane/ncol).astype(int)
+    nrow = np.ceil(nplane / ncol).astype(int)
 
     fig = plt.figure(figsize=figsize)
     gs1 = gridspec.GridSpec(nrow, ncol)
@@ -88,6 +93,7 @@ def plot_stack(stack, figsize=(6, 10), matshow_kwargs=None):
     clb = fig.colorbar(imgs[-1], cax=cbar_ax)
     return fig, clb
 
+
 # expname, region, data_root_dir,
 # meta_df = cluster_df.loc[cluster_df['fish_id'] == expname]
 # 'cluster_id'
@@ -97,7 +103,7 @@ def map_meta_to_roi_stack(exp_dir, meta_df, meta_attr):
     """
     roi_stack_file = os.path.join(exp_dir, 'roi', 'roi_stack.tif')
     roi_stack = imread(roi_stack_file)
-    rois= import_roi_stack(roi_stack)
+    rois = import_roi_stack(roi_stack)
     rois = assign_meta(rois, meta_df, meta_attr)
     # Note that the rois (neurons) not in meta_df are skipped.
     # These are the neurons that are not selected for having large enough respsonse
@@ -110,7 +116,9 @@ def plot_meta_stack(mstack, cmap, title=None):
     pal.insert(0, (0, 0, 0))
     stack_cmap = matplotlib.colors.ListedColormap(pal)
     matshow_kwargs = dict(vmin=0, vmax=20, cmap=stack_cmap)
-    fig, clb = plot_stack(mstack, figsize=(7, 10), matshow_kwargs=matshow_kwargs)
+    fig, clb = plot_stack(
+        mstack, figsize=(7, 10), matshow_kwargs=matshow_kwargs
+    )
     clb.set_ticks(range(21))
     if title:
         fig.suptitle(title)

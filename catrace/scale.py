@@ -30,7 +30,7 @@ def quantile_all(df, q=0.999):
     scaler = StandardScaler(copy=True, with_mean=True, with_std=False)
     scaler.fit(df)
     df_centered = scaler.transform(df)
-    df_scaled = df_centered / np.quantile(np.absolute(df_centered),q=q)
+    df_scaled = df_centered / np.quantile(np.absolute(df_centered), q=q)
     df_out = pd.DataFrame(data=df_scaled, columns=df.columns, index=df.index)
     return df_out
 
@@ -46,7 +46,9 @@ def centering(df):
 def scale_by_response(df, window, method='max'):
     times = df.index.get_level_values('time')
     idx = (times >= window[0]) & (times <= window[1])
-    response = df.iloc[idx, :].mean(axis=1).groupby(level=('odor', 'trial')).mean()
+    response = (
+        df.iloc[idx, :].mean(axis=1).groupby(level=('odor', 'trial')).mean()
+    )
     if method == 'max':
         normalizer = response.max()
     elif method == 'mean':

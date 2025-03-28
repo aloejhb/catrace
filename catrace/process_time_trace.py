@@ -16,16 +16,17 @@ from . import frame_time
 from . import utils
 
 
-def compute_dfovf(trace, fzero_twindow, frame_rate=1, intensity_offset=0,
-                  fzero_percent=0.5):
+def compute_dfovf(
+    trace, fzero_twindow, frame_rate=1, intensity_offset=0, fzero_percent=0.5
+):
     # Calculate dF/F from raw time traces
     # trace: a NxM matrix/dataframe containing N traces of length M
     fzero_window = convert_sec_to_frame(fzero_twindow, frame_rate)
     trace_fg = trace - intensity_offset
     if isinstance(trace_fg, pd.DataFrame):
-        trace_zero = trace_fg.iloc[:, fzero_window[0]:fzero_window[1]]
+        trace_zero = trace_fg.iloc[:, fzero_window[0] : fzero_window[1]]
     else:
-        trace_zero = trace_fg[:, fzero_window[0]:fzero_window[1]]
+        trace_zero = trace_fg[:, fzero_window[0] : fzero_window[1]]
     fzero = np.quantile(trace_zero, fzero_percent, axis=1)
     dfovf = (trace_fg - fzero[:, None]) / fzero[:, None]
     return dfovf
@@ -37,10 +38,10 @@ def detect_onset(y, thresh, xwindow, sigma=0, normalize=True, debug=False):
     if normalize:
         miny = min(y)
         maxy = max(y)
-        y = (y - miny)/(maxy - miny)
+        y = (y - miny) / (maxy - miny)
     dy = np.gradient(y)
     xvec = np.arange(len(y))
-    onset = xvec[(dy > thresh) & (xvec >= xwindow[0]) & (xvec <=xwindow[1])]
+    onset = xvec[(dy > thresh) & (xvec >= xwindow[0]) & (xvec <= xwindow[1])]
     if len(onset) == 0:
         onset = np.nan
     else:
@@ -56,7 +57,9 @@ def detect_tracedf_onset(trace, onset_param, debug=False):
     trial_avg = trace.groupby(level=['odor', 'trial']).mean()
     if debug:
         onset_param['debug'] = True
-    onset_list = [detect_onset(row, **onset_param) for index, row in trial_avg.iterrows()]
+    onset_list = [
+        detect_onset(row, **onset_param) for index, row in trial_avg.iterrows()
+    ]
     if debug:
         on_list = [x[0] for x in onset_list]
         y = np.array([x[1] for x in onset_list])
@@ -69,7 +72,7 @@ def detect_tracedf_onset(trace, onset_param, debug=False):
 
 
 def cut_tracedf(tracedf, window):
-    cdf = tracedf.iloc[:, window[0]:window[1]]
+    cdf = tracedf.iloc[:, window[0] : window[1]]
     cdf.columns = pd.RangeIndex(start=0, stop=len(cdf.columns), step=1)
     return cdf
 
@@ -78,9 +81,10 @@ def align_tracedf(tracedf, onsetdf, pre_time, post_time, frame_rate):
     pre_nframe = int(pre_time * frame_rate)
     post_nframe = int(post_time * frame_rate)
     tracedf_group = tracedf.groupby(['odor', 'trial'])
-    cut_df = [cut_tracedf(group, onsetdf.loc[name],
-                          pre_nframe, post_nframe)
-              for name, group in tracedf_group]
+    cut_df = [
+        cut_tracedf(group, onsetdf.loc[name], pre_nframe, post_nframe)
+        for name, group in tracedf_group
+    ]
     cut_df = pd.concat(cut_df)
     return cut_df
 
@@ -100,25 +104,39 @@ def align_dff(dff, delays, exp_name):
     new_time = dff_aligned.index.get_level_values('orig_time') - delay
     # Append the new 'time' level to the existing MultiIndex
     dff_aligned.index = pd.MultiIndex.from_arrays(
-        [dff_aligned.index.get_level_values('odor'), dff_aligned.index.get_level_values('trial'), new_time],
-        names=['odor', 'trial', 'time']
+        [
+            dff_aligned.index.get_level_values('odor'),
+            dff_aligned.index.get_level_values('trial'),
+            new_time,
+        ],
+        names=['odor', 'trial', 'time'],
     )
 
     return dff_aligned
 
 
-def select_response(tracedf, snr_thresh, base_window, response_window, frame_rate):
+def select_response(
+    tracedf, snr_thresh, base_window, response_window, frame_rate
+):
     base_fwindow = convert_sec_to_frame(base_window, frame_rate)
     response_fwindow = convert_sec_to_frame(response_window, frame_rate)
-    base = tracedf.loc[:,base_fwindow[0]:base_fwindow[1]]
-    response = tracedf.loc[:,response_fwindow[0]:response_fwindow[1]]
-    tracedf['response'] = (response.max(axis=1) > snr_thresh[0]*base.std(axis=1)) & (response.max(axis=1) < snr_thresh[1]*base.std(axis=1))
+    base = tracedf.loc[:, base_fwindow[0] : base_fwindow[1]]
+    response = tracedf.loc[:, response_fwindow[0] : response_fwindow[1]]
+    tracedf['response'] = (
+        response.max(axis=1) > snr_thresh[0] * base.std(axis=1)
+    ) & (response.max(axis=1) < snr_thresh[1] * base.std(axis=1))
 
-    select = tracedf['response'].groupby(level=[2,3]).max()
-    tracedf = tracedf.merge(select,left_on=('plane','neuron'),
-                            left_index=True,right_on=('plane','neuron'),
-                            right_index=True)
-    tracedf = tracedf[tracedf['response_y']].drop(columns=['response_x','response_y'])
+    select = tracedf['response'].groupby(level=[2, 3]).max()
+    tracedf = tracedf.merge(
+        select,
+        left_on=('plane', 'neuron'),
+        left_index=True,
+        right_on=('plane', 'neuron'),
+        right_index=True,
+    )
+    tracedf = tracedf[tracedf['response_y']].drop(
+        columns=['response_x', 'response_y']
+    )
     return tracedf
 
 
@@ -138,25 +156,30 @@ def unstack_pattern(df):
 
 def bin_tracedf(tracedf, bin_size, axis=0):
     if axis == 1:
-        tracedf = restack_as_pattern(tracedf)# tracedf.transpose()
+        tracedf = restack_as_pattern(tracedf)  # tracedf.transpose()
 
     time_index = tracedf.index.get_level_values(level='time')
 
-    bins = np.arange(0, len(time_index.unique())+bin_size, bin_size) - 1
+    bins = np.arange(0, len(time_index.unique()) + bin_size, bin_size) - 1
     tracedf['time_bin'] = pd.cut(time_index, bins)
     binned_dfovf = tracedf.set_index('time_bin', append=True)
 
     names = list(binned_dfovf.index.names)
     names.remove('time')
     binned_dfovf = binned_dfovf.groupby(level=names).mean()
-    binned_dfovf = binned_dfovf.reindex(tracedf.index.unique('odor'), level='odor')
+    binned_dfovf = binned_dfovf.reindex(
+        tracedf.index.unique('odor'), level='odor'
+    )
 
     return binned_dfovf
 
 
 def truncate_binned_df(df, frame_window):
     frame_interval = pd.Interval(left=frame_window[0], right=frame_window[1])
-    selected_index = [tb.overlaps(frame_interval) for tb in df.index.get_level_values('time_bin')]
+    selected_index = [
+        tb.overlaps(frame_interval)
+        for tb in df.index.get_level_values('time_bin')
+    ]
     df_trunc = df[selected_index]
     return df_trunc
 
@@ -181,14 +204,18 @@ def mean_pattern_in_time_window(df, time_window, frame_rate=None):
     time_window = np.array(time_window)
     if frame_rate is None:
         fwindow = time_window
-    else:    
+    else:
         fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
-    df_filtered = df[(df.index.get_level_values('time') >= fwindow[0])
-                     & (df.index.get_level_values('time') <= fwindow[1])]
+    df_filtered = df[
+        (df.index.get_level_values('time') >= fwindow[0])
+        & (df.index.get_level_values('time') <= fwindow[1])
+    ]
     all_levels = list(df.index.names)
     all_levels.remove('time')
     # Group by except time, sort=False keeps the original order
-    pattern = df_filtered.groupby(level=all_levels, sort=False, observed=True).mean()
+    pattern = df_filtered.groupby(
+        level=all_levels, sort=False, observed=True
+    ).mean()
     return pattern
 
 
@@ -225,8 +252,9 @@ def select_odors_df(df, odors):
 def sort_odors(df, odor_list):
     cat_odor = pd.CategoricalDtype(categories=odor_list, ordered=True)
     idx = df.index.names.index('odor')
-    df.index = df.index.set_levels(df.index.levels[idx].astype(cat_odor),
-                                   level='odor')
+    df.index = df.index.set_levels(
+        df.index.levels[idx].astype(cat_odor), level='odor'
+    )
     # df = df.sort_values('odor') # this alters the order of other levels
     groups = []
     keys = []
@@ -240,19 +268,25 @@ def sort_odors(df, odor_list):
 def select_time_points(df, window):
     """Select trace dataframe in a given time window"""
     if 'time' in df.index.names:
-        df_filtered = df[(df.index.get_level_values('time') >= window[0])
-                        & (df.index.get_level_values('time') <= window[1])]
+        df_filtered = df[
+            (df.index.get_level_values('time') >= window[0])
+            & (df.index.get_level_values('time') <= window[1])
+        ]
     elif 'time_bin' in df.index.names:
         df_filtered = select_binned_time_points(df, window)
     else:
-        raise ValueError('Dataframe index names should contain time or time_bin')
+        raise ValueError(
+            'Dataframe index names should contain time or time_bin'
+        )
 
     return df_filtered
 
 
 def select_binned_time_points(df, window):
     interval = pd.Interval(left=window[0], right=window[1])
-    selected_index = [tb.overlaps(interval) for tb in df.index.get_level_values('time_bin')]
+    selected_index = [
+        tb.overlaps(interval) for tb in df.index.get_level_values('time_bin')
+    ]
     df_sel = df[selected_index]
     return df_sel
 
@@ -261,7 +295,9 @@ def select_binned_time_points(df, window):
 @dataclass
 class SelectDfConfig:
     odors: list[str]
-    time_window: list[str] # although named time window, by far it corresponds to the frame window
+    time_window: list[
+        str
+    ]  # although named time window, by far it corresponds to the frame window
     sort: bool = False
 
 
@@ -281,18 +317,25 @@ def get_select_tag(config: SelectDfConfig):
 
 
 def compute_average_timecourse(dff):
-    avgdf = dff.groupby(level=['odor', 'time'], observed=True).mean().mean(axis=1)
+    avgdf = (
+        dff.groupby(level=['odor', 'time'], observed=True).mean().mean(axis=1)
+    )
     avgdf = avgdf.unstack('time').T
     return avgdf
 
 
 def compute_deviation(dff):
-    nrn_mean = dff.T.mean() # mean across neurons at each time point
-    nrn_std = dff.T.std() # std across neurons at each time point
-    nrn_cv = nrn_std/nrn_mean
+    nrn_mean = dff.T.mean()  # mean across neurons at each time point
+    nrn_std = dff.T.std()  # std across neurons at each time point
+    nrn_cv = nrn_std / nrn_mean
 
     def _make_df(nrn):
-        df = nrn.groupby(level=['odor', 'time'], observed=True).mean().unstack('time').T
+        df = (
+            nrn.groupby(level=['odor', 'time'], observed=True)
+            .mean()
+            .unstack('time')
+            .T
+        )
         return df
 
     meandf = _make_df(nrn_mean)
@@ -308,6 +351,7 @@ def select_cell_type_wrapper(func):
             dff = dff.xs(cell_type, level='cell_type', axis=1)
         dff = ptt.sort_odors(dff, odors)
         return func(dff, **kwargs)
+
     return wrapped_func
 
 
@@ -339,8 +383,7 @@ def shift_timepoints(dff, offset):
         level_values_list.append(level_values)
 
     dff.index = pd.MultiIndex.from_arrays(
-        level_values_list + [new_time],
-        names=levels + ['time']
+        level_values_list + [new_time], names=levels + ['time']
     )
     # # Append the new 'time' level to the existing MultiIndex
     # dff.index = pd.MultiIndex.from_arrays(
