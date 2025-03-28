@@ -30,7 +30,7 @@ Statistical analysis tools are provided to detect difference between experimenta
 ### Prerequisites
 
 The dependent python packages will automatically be installed by pip. Here a few dependent package is highlighted for important features:
-- **CASCADE**: CASCADE is a toolbox by **[Rupprecht et al. 2021]** that translates calcium imaging ΔF/F traces into spiking probabilities or discrete spikes using deep learning models. CaTrace depends on it to deconvolve the ΔF/F time traces.
+- **Cascade**: Cascade is a toolbox by **[Rupprecht et al. 2021]** that translates calcium imaging ΔF/F traces into spiking probabilities or discrete spikes using deep learning models. CaTrace depends on it to deconvolve the ΔF/F time traces.
 - **GLUE**: This is a package by **[Chou et al. 2024]** for manifold capacity analysis. The connector to this package will be accessible after the official release of GLUE.
 
 ### Installation
@@ -43,6 +43,21 @@ or clone the repository locally and install with
 git clone git@github.com:aloejhb/catrace
 cd catrace; pip install -e .
 ```
+
+To be able to use [Cascade](https://github.com/HelmchenLabSoftware/Cascade) for spike inference, you need to first install the depedency specified in `requirements-spikeinf.txt`
+```
+pip install -r requirements-spikeinf.txt
+```
+Then install CaTrace with spike inference enabled:
+```
+pip install "catrace[spikeinf] @ git+https://github.com/aloejhb/catrace.git"
+```
+or clone the repository locally and install with
+```
+git clone git@github.com:aloejhb/catrace
+cd catrace; pip install -e .[spikeinf]
+```
+Note that currently in requirements-spikeinf.txt, a forked version of original Cascade is specified, to ensure compatibility with CaTrace. If you use Cascade for your paper, you can cite the original publication by **[Rupprecht et al. 2021]**.
 
 ### Usage
 You can use CaTrace to run analysis on a single experiment or batch your analysis across a set of experiments.
