@@ -3,3 +3,5 @@ __pycache__/
 notebooks/
 catrace.egg-info/
 .ipynb_checkpoints/
+build/
+catrace/_version.py
