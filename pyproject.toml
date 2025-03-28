@@ -6,5 +6,57 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "catrace"
+description = "CaTrace: Toolbox for analyzing calcium imaging time traces"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
+authors = [{name = "Bo Hu", email="bo.hu@fmi.ch"}]
+classifiers = [  # List of https://pypi.org/classifiers/
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["calcium imaging", "neuroscience", "time series"]
+
+# pip dependencies of the project
+# Installed locally with `pip install -e .`
+dependencies = [
+  "numpy",
+  "pandas",
+  "scikit-learn",
+]
+# `version` is automatically set to use `catrace.__version__`
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/aloejhb/catrace"
+repository = "https://github.com/aloejhb/catrace"
+
+[project.optional-dependencies]
+# Development deps (unittest, linting, formating,...)
+# Installed through `pip install -e .[dev]`
+dev = [
+    "pytest",
+    "pytest-xdist",
+    "pylint>=2.6.0",
+    "pyink",
+]
+# Infer spike rate from dF/F traces with CASCADE
+spikeinf = [
+    "cascade2p",
+]
+
+[tool.setuptools]
+packages = ["catrace"]
+
 [tool.setuptools_scm]
-write_to = "catrace/_version.py"
+version_file = "catrace/_version.py"
+
+[tool.pyink]
+# Formatting configuration
+line-length = 80
+unstable = true
+pyink-indentation = 4
+pyink-use-majority-quotes = true
