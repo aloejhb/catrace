@@ -34,6 +34,7 @@ The dependent python packages will automatically be installed by pip. Here a few
 - **GLUE**: This is a package by **[Chou et al. 2024]** for manifold capacity analysis. The connector to this package will be accessible after the official release of GLUE.
 
 ### Installation
+#### Default installation
 Install CaTrace:
 ```
 pip install git+https://github.com/aloejhb/catrace
@@ -43,8 +44,8 @@ or clone the repository locally and install with
 git clone git@github.com:aloejhb/catrace
 cd catrace; pip install -e .
 ```
-
-To be able to use [Cascade](https://github.com/HelmchenLabSoftware/Cascade) for spike inference, you need to first install the depedency specified in `requirements-spikeinf.txt`
+#### Installation with spike inference feature
+To use [Cascade](https://github.com/HelmchenLabSoftware/Cascade) for spike inference, you need to first install the depedency specified in `requirements-spikeinf.txt`
 ```
 pip install -r requirements-spikeinf.txt
 ```
