@@ -30,14 +30,16 @@ class AnalysisParams:
     window: Tuple[int, int]
     N: int
     M: int
-    global_center: bool
-    bias: bool
     seed: int
-    repeat: int
+    n_hyperplanes: int = 1000
+    shuffle: bool = True
+    analysis_type: str = 'FIRST_VERSUS_REST'
+    scale: int = 1
+    geometry: bool = True
+    gaussianize: bool = False
     odors: Optional[List[str]] = None
     overwrite_computation: bool = False
     debug: bool = False
-    gaussianize: bool = False
 
 
 def get_manifolds(dff):
@@ -115,10 +117,6 @@ def analysis_one_vs_one(params: AnalysisParams):
         if np.isnan(XtotT[i]).any():
             print(f'input_manifolds[{i}] contains NaN')
 
-    # This is a place holder until the centering and bias is clear to BoHu
-    assert params.global_center == True
-    assert params.bias == True
-
     # Step 2: Conduct analysis
     P = XtotT[0].shape[0]
     df_result = gcmc_analysis_dataframe(
@@ -133,11 +131,11 @@ def analysis_one_vs_one(params: AnalysisParams):
         ),
         ['fish_id', 'condition', 'odor1', 'odor2', 'window_0', 'window_1'],
         seed=params.seed,
-        n_hyperplanes=1000,
-        shuffle=True,
-        analysis_type='FIRST_VERSUS_REST',
-        scale=1,
-        geometry=True,
+        n_hyperplanes=params.n_hyperplanes,
+        shuffle=params.shuffle,
+        analysis_type=params.analysis_type,
+        scale=params.scale,
+        geometry=params.geometry,
         gaussianize=params.gaussianize,
     )
 
