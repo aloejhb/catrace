@@ -78,8 +78,8 @@ def get_group_vs_group(
     if (
         len(new_index_names) >= 2
     ):  # Ensure there are at least two levels to rename
-        new_index_names[0] = 'odor'  # First level becomes 'odor'
-        new_index_names[1] = 'ref_odor'  # Second level becomes 'ref_odor'
+        new_index_names[0] = 'sample_manifold'  # First level becomes 'sample_manifold'
+        new_index_names[1] = 'ref_manifold'  # Second level becomes 'ref_manifold'
 
     # Apply the new index names
     gvg = gvg.rename_axis(new_index_names, axis=0)
