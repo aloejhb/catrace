@@ -199,7 +199,7 @@ def truncate_df_window(df, frame_window):
     return df_trunc
 
 
-def mean_pattern_in_time_window(df, time_window, frame_rate=None):
+def mean_pattern_in_time_window(df, time_window, frame_rate=None, xname='time'):
     """Compute pattern of neuron responses averaged within a time window"""
     time_window = np.array(time_window)
     if frame_rate is None:
@@ -207,11 +207,11 @@ def mean_pattern_in_time_window(df, time_window, frame_rate=None):
     else:
         fwindow = frame_time.convert_sec_to_frame(time_window, frame_rate)
     df_filtered = df[
-        (df.index.get_level_values('time') >= fwindow[0])
-        & (df.index.get_level_values('time') <= fwindow[1])
+        (df.index.get_level_values(xname) >= fwindow[0])
+        & (df.index.get_level_values(xname) <= fwindow[1])
     ]
     all_levels = list(df.index.names)
-    all_levels.remove('time')
+    all_levels.remove(xname)
     # Group by except time, sort=False keeps the original order
     pattern = df_filtered.groupby(
         level=all_levels, sort=False, observed=True
@@ -231,7 +231,7 @@ def permute_odors(df):
     return df.reindex(odor_list, level='odor')
 
 
-def select_odors_df(df, odors):
+def select_odors_df(df, odors, xname='time'):
     sedf = df.loc[df.index.get_level_values('odor').isin(odors)].copy()
     odor_idxs = sedf.index.get_level_values('odor')
     if not isinstance(odor_idxs.dtype, pd.CategoricalDtype):
@@ -242,9 +242,9 @@ def select_odors_df(df, odors):
     sedf.index = sedf.index.droplevel('odor')
     sedf.rename_axis(index={'new_odor': 'odor'}, inplace=True)
     # If time in levels
-    if 'time' in sedf.index.names:
-        sedf = sedf.reorder_levels(['odor', 'trial', 'time'])
-    else:
+    if xname in sedf.index.names:
+        sedf = sedf.reorder_levels(['odor', 'trial', xname])
+    elif 'trial' in sedf.index.names:
         sedf = sedf.reorder_levels(['odor', 'trial'])
     return sedf
 
@@ -265,15 +265,16 @@ def sort_odors(df, odor_list):
     return df_sorted
 
 
-def select_time_points(df, window):
+def select_time_points(df, window, time_name='time'):
     """Select trace dataframe in a given time window"""
-    if 'time' in df.index.names:
+    if time_name == 'time_bin':
+        if time_name in df.index.names:
+            df_filtered = select_binned_time_points(df, window)
+    elif time_name in df.index.names:
         df_filtered = df[
-            (df.index.get_level_values('time') >= window[0])
-            & (df.index.get_level_values('time') <= window[1])
+            (df.index.get_level_values(time_name) >= window[0])
+            & (df.index.get_level_values(time_name) <= window[1])
         ]
-    elif 'time_bin' in df.index.names:
-        df_filtered = select_binned_time_points(df, window)
     else:
         raise ValueError(
             'Dataframe index names should contain time or time_bin'

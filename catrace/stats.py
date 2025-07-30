@@ -718,6 +718,7 @@ class PlotRegressionParams:
     fit_line_width: int = 0.5
     reg_tex_fontsize: int = 5
     color_dict: dict = None
+    marker_alpha: float = 1.0
 
 
 def plot_regression(
@@ -734,6 +735,7 @@ def plot_regression(
     fit_line_width=1,
     reg_tex_fontsize=5,
     color_dict=None,
+    marker_alpha=1.0,
 ):
     """
     Plots a scatter plot with a regression line on the provided axes, including statistical annotations.
@@ -760,6 +762,7 @@ def plot_regression(
         ax=ax,
         s=marker_size,
         palette=color_dict,
+        alpha=marker_alpha,
     )
 
     # Fit linear model using statsmodels to extract R-squared and p-value
