@@ -1,7 +1,7 @@
-from .utils import load_config
-
+from typing import Optional
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
+from .utils import load_config
 
 
 @dataclass_json
@@ -13,14 +13,14 @@ class DatasetConfig:
     conditions: list[str]
     frame_rate: float
     num_trials: int
-    fig_dir: str = None
-    processed_trace_dir: str = None
-    odors_stimuli: list[str] = None
-    odors_aa: list[str] = None
-    odors_ba: list[str] = None
-    odors_learned: list[str] = None
-    odors_novel: list[str] = None
-    onsets: list[int] = None
+    fig_dir: Optional[str] = None
+    processed_trace_dir: Optional[str] = None
+    odors_stimuli: Optional[list[str]] = None
+    odors_aa: Optional[list[str]] = None
+    odors_ba: Optional[list[str]] = None
+    odors_learned: Optional[list[str]] = None
+    odors_novel: Optional[list[str]] = None
+    onsets: Optional[list[int]] = None
 
 
 def load_dataset_config(file_path):
