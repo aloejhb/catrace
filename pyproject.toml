@@ -30,6 +30,7 @@ dependencies = [
   "matplotlib",
   "umap-learn",
   "seaborn",
+  "h5py",
   "kagglehub"
 ]
 # `version` is automatically set to use `catrace.__version__`
