@@ -29,7 +29,8 @@ dependencies = [
   "dataclasses_json",
   "matplotlib",
   "umap-learn",
-  "seaborn"
+  "seaborn",
+  "kagglehub"
 ]
 # `version` is automatically set to use `catrace.__version__`
 dynamic = ["version"]
