@@ -6,6 +6,9 @@ import pandas as pd
 
 import itertools
 
+import h5py
+
+
 # plane_num in Python environment start with 0, plane_num in MATLAB files start with 1
 # Useful way of deleting a neuron in all trials
 # yy = xx.drop(xx.loc[idx[:, :, 0, 2],:].index)
@@ -116,3 +119,71 @@ def load_experiment(root_dir, exp_subdir, exp_name=None):
     exp_info['num_trial'] = exp_info_struct[3][0, 0]
     exp_info['num_plane'] = exp_info_struct[4][0, 0]
     return exp_info
+
+
+def tracedf_to_hdf5_data(dff: pd.DataFrame):
+    """
+    Extracts arrays and metadata from the MultiIndex DataFrame exactly as in the notebook.
+    """
+    axis0 = dff.index.droplevel('time').unique().values
+    axis1 = dff.index.get_level_values('time').unique().values
+    axis2 = dff.columns.values
+
+    levels_axis0 = dff.index.droplevel('time').names
+    levels_axis1 = ['frame']
+    levels_axis2 = dff.columns.names
+
+    num_trials = len(axis0)
+    num_frames = len(axis1)
+    num_rois = len(axis2)
+
+    traces = np.empty((num_trials, num_frames, num_rois))
+    for i, trial_key in enumerate(axis0):
+        traces[i, :, :] = dff.xs(trial_key, level=('odor', 'trial')).values
+
+    return traces, axis0, axis1, axis2, levels_axis0, levels_axis1, levels_axis2
+
+
+def save_tracedf_to_hdf5(dff: pd.DataFrame, filepath: str):
+    """
+    Saves the MultiIndex DataFrame to HDF5 exactly as in the notebook.
+    """
+    traces, axis0, axis1, axis2, levels_axis0, levels_axis1, levels_axis2 = tracedf_to_hdf5_data(dff)
+
+    with h5py.File(filepath, 'w') as f:
+        f.create_dataset('traces', data=traces, compression='gzip')
+        f.create_dataset('axis0', data=np.array(axis0.tolist(), dtype='S'))
+        f.create_dataset('axis1', data=np.array(axis1.tolist()))
+        f.create_dataset('axis2', data=np.array(axis2.tolist()))
+        f.create_dataset('levels_axis0', data=np.array(levels_axis0, dtype='S'))
+        f.create_dataset('levels_axis1', data=np.array(levels_axis1, dtype='S'))
+        f.create_dataset('levels_axis2', data=np.array(levels_axis2, dtype='S'))
+
+
+def load_tracedf_from_hdf5(filepath: str) -> pd.DataFrame:
+    """
+    Loads the HDF5 file back into the original MultiIndex DataFrame exactly as in the notebook.
+    """
+    with h5py.File(filepath, 'r') as f:
+        traces = f['traces'][:]
+        axis0 = f['axis0'][:].astype(str)
+        axis1 = f['axis1'][:]
+        axis2 = f['axis2'][:]
+        levels_axis0 = f['levels_axis0'][:].astype(str)
+        levels_axis1 = f['levels_axis1'][:].astype(str)
+        levels_axis2 = f['levels_axis2'][:].astype(str)
+
+    dfs = []
+    for i, trial_key in enumerate(axis0):
+        odor, trial = trial_key
+        trial = int(trial)  # convert trial to int if needed
+        df_temp = pd.DataFrame(traces[i], index=axis1)
+        df_temp.index = pd.MultiIndex.from_product(
+            [[odor], [trial], df_temp.index],
+            names=list(levels_axis0) + list(levels_axis1)
+        )
+        dfs.append(df_temp)
+
+    dff_reconstructed = pd.concat(dfs)
+    dff_reconstructed.columns = pd.MultiIndex.from_arrays(axis2.T, names=levels_axis2)
+    return dff_reconstructed
