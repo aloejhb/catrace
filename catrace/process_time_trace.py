@@ -231,7 +231,16 @@ def permute_odors(df):
     return df.reindex(odor_list, level='odor')
 
 
-def select_odors_df(df, odors, xname='time'):
+def select_odors_df(df, odors, xname=None):
+    if xname is None:
+        if 'time' in df.index.names:
+            xname = 'time'
+        elif 'frame' in df.index.names:
+            xname = 'frame'
+        else:
+            raise ValueError(
+                'Dataframe index names should contain time or frame if xname is not specified'
+            )
     sedf = df.loc[df.index.get_level_values('odor').isin(odors)].copy()
     odor_idxs = sedf.index.get_level_values('odor')
     if not isinstance(odor_idxs.dtype, pd.CategoricalDtype):
@@ -241,7 +250,6 @@ def select_odors_df(df, odors, xname='time'):
     sedf.set_index('new_odor', append=True, inplace=True)
     sedf.index = sedf.index.droplevel('odor')
     sedf.rename_axis(index={'new_odor': 'odor'}, inplace=True)
-    # If time in levels
     if xname in sedf.index.names:
         sedf = sedf.reorder_levels(['odor', 'trial', xname])
     elif 'trial' in sedf.index.names:
