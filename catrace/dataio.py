@@ -185,5 +185,10 @@ def load_tracedf_from_hdf5(filepath: str) -> pd.DataFrame:
         dfs.append(df_temp)
 
     dff_reconstructed = pd.concat(dfs)
-    dff_reconstructed.columns = pd.MultiIndex.from_arrays(axis2.T, names=levels_axis2)
+    if len(axis2.shape) == 1:
+        # If axis2 is a single level, we can use it directly
+        dff_reconstructed.columns = pd.Index(axis2, name=levels_axis2[0])
+    else:
+        # If axis2 is multi-level, we need to create a MultiIndex
+        dff_reconstructed.columns = pd.MultiIndex.from_arrays(axis2.T, names=levels_axis2)
     return dff_reconstructed
