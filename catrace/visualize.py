@@ -1044,7 +1044,7 @@ def plot_boxplot_with_significance_by_cond(
 def plot_measure_by_cond(
     mdff: pd.DataFrame,
     measure_name: str,
-    y_label: str = None,
+    ylabel: str = None,
     test_type: str = 'kruskal',
     ax=None,
     params: PlotBoxplotByCondParams = PlotBoxplotByCondParams(),
@@ -1054,7 +1054,7 @@ def plot_measure_by_cond(
     # delta = (submadf_by_cond - naive_mean) / naive_mean * 100
     delta = submadf_by_cond
     yname = measure_name
-    if y_label is None:
+    if ylabel is None:
         ylabel = yname
 
     results = apply_test_by_cond(delta, measure_name, test_type=test_type)
