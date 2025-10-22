@@ -1050,16 +1050,13 @@ def plot_measure_by_cond(
     params: PlotBoxplotByCondParams = PlotBoxplotByCondParams(),
 ):
     submadf_by_cond = mdff[[measure_name]]
-    # naive_mean = submadf_by_cond.xs('naive', level=cond_name).mean()
-    # delta = (submadf_by_cond - naive_mean) / naive_mean * 100
-    delta = submadf_by_cond
     yname = measure_name
     if ylabel is None:
         ylabel = yname
 
-    results = apply_test_by_cond(delta, measure_name, test_type=test_type)
+    results = apply_test_by_cond(submadf_by_cond, measure_name, test_type=test_type)
 
-    datadf = delta.reset_index()
+    datadf = submadf_by_cond.reset_index()
     datadf.rename(columns={0: yname}, inplace=True)
 
     params_dict = params.to_dict()

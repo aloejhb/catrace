@@ -28,6 +28,7 @@ from ..similarity import (
     plot_mean_delta_mat,
     PlotMeanDeltaMatParams,
 )
+from ..manifold_distance import ShuffleConfig
 
 from ..visualize import (
     PlotBoxplotParams,
@@ -38,7 +39,7 @@ from ..visualize import (
     plot_measure_multi_odor_cond,
     PlotBoxplotMultiOdorCondParams,
 )
-from .run_utils import plot_avg_trace_with_window
+from .run_utils import plot_avg_trace_with_window, get_group_vs_group
 
 
 # dataclass for compute dist
@@ -59,6 +60,7 @@ class ComputeDistParams:
     do_shuffle_manifold_pair_labels: bool = False
     do_shuffle_manifold_labels_global: bool = False
     shuffle_master_seed: int = None
+    manifold_level: str = 'manifold'
 
 
 def compute_dist(params: ComputeDistParams):
@@ -82,6 +84,7 @@ def compute_dist(params: ComputeDistParams):
     odors = params.odors
     overwrite_computation = params.overwrite_computation
     parallelism = params.parallelism
+    manifold_level = params.manifold_level
 
     dist_dir_name = (
         f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
@@ -109,22 +112,16 @@ def compute_dist(params: ComputeDistParams):
 
         for k in range(num_repeats):
             out_dir = pjoin(dist_dir, f'repeat{k:02d}')
-            dist_params = dict(
-                odor_list=odors,
-                window=time_window,
-                do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
-                do_shuffle_manifold_labels_global=params.do_shuffle_manifold_labels_global,
-            )
-            extra_params_list = [
-                dict(shuffle_seed_value=shuffle_seed_values[k][i])
-                for i in range(num_exp)
-            ]
-            if metric in ['mahal', 'euclidean']:
-                dist_params.update(dict(metric=metric, reg=reg))
+            extra_params_list = [dict(shuffle_config= ShuffleConfig(do_pair=params.do_shuffle_manifold_pair_labels,
+                                           do_global=params.do_shuffle_manifold_labels_global,
+                                           seed_value=shuffle_seed_values[k][i])) for i in range(num_exp)]
             sample_and_dist_params = dict(
                 sample_size=sample_size,
                 metric=params.metric,
-                params=dist_params,
+                reg=reg,
+                ordered_manifold_labels=odors,
+                time_window=time_window,
+                manifold_level=manifold_level,
             )
             ecl.process_data_db_parallel(
                 sample_neuron_and_comopute_distance_mat,
@@ -290,7 +287,7 @@ def normalize_to_percent(pooled_subsimdf, normalize=True):
     ]
     # Compute the mean of naive
     pooled_subsimdf_naive_mean = pooled_subsimdf_naive.groupby(
-        ['odor', 'ref_odor']
+        ['sample_manifold', 'ref_manifold']
     ).mean()
     # Subtract the pooled_subsimdf_naive_mean from pooled_subsimdf and then normalize by the pooled_subsimdf_naive_mean
     pooled_subsimdf_normailized = pooled_subsimdf - pooled_subsimdf_naive_mean
@@ -422,6 +419,7 @@ class RunDistanceParams:
     do_shuffle_manifold_pair_labels: bool = False
     do_shuffle_manifold_labels_global: bool = False
     shuffle_master_seed: int = None
+    manifold_level: str = 'manifold'
 
 
 def run_distance(params: RunDistanceParams):
@@ -457,6 +455,7 @@ def run_distance(params: RunDistanceParams):
         do_shuffle_manifold_pair_labels=params.do_shuffle_manifold_pair_labels,
         do_shuffle_manifold_labels_global=params.do_shuffle_manifold_labels_global,
         shuffle_master_seed=params.shuffle_master_seed,
+        manifold_level=params.manifold_level,
     )
 
     print('Plotting average trace...')

@@ -1,6 +1,6 @@
 import pandas as pd
 from os.path import join as pjoin
-from .process_time_trace import select_time_points, select_odors_and_sort
+from .process_time_trace import select_time_points, select_odors_and_sort, select_odors_df
 from .exp_collection import update_df
 
 
@@ -63,8 +63,11 @@ def get_assembly_positions(df, method='top_indices', **kwargs):
     return assemblies
 
 
-def select_neuron_by_assembly(dff, window, method='top_indices', **kwargs):
+def select_neuron_by_assembly(dff, window, method='top_indices', criterium_odors=None, **kwargs):
     dff_in_window = select_time_points(dff, window)
+    if criterium_odors is not None:
+        print(f'select criterium odors: {criterium_odors}')
+        dff_in_window = select_odors_df(dff_in_window, criterium_odors)
     response = dff_in_window.groupby(level='odor', sort=False).mean()
 
     # Assembly dictionary mapping odors to neuron_ids
@@ -127,6 +130,7 @@ class SelectNeuronParams:
     assembly_size: Optional[int] = None
     threshold: Optional[float] = None
     percentile: Optional[float] = None
+    criterium_odors: Optional[List[str]] = None
 
     def __post_init__(self):
         if self.method == 'top_indices':

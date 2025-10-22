@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
 from .dataio import load_trace_file
-from .process_time_trace import mean_pattern_in_time_window
+from .process_time_trace import mean_pattern_in_time_window, select_time_points
 from .process_neuron import sample_neuron
-from .manifold_distance import compute_distances_mat, compute_center_euclidean_distance_mat
+from .manifold_distance import (compute_distances_mat, compute_center_euclidean_distance_mat, DistanceConfig, ShuffleConfig)
 
 
 def cosine_distance(mat):
@@ -332,15 +332,26 @@ def sample_neuron_and_comopute_distance_mat(
     sample_size,
     seed=None,
     metric='center_euclidean',
-    params={},
-    shuffle_seed_value=None,
+    reg=1e-5,
+    ordered_manifold_labels=None,
+    manifold_level: str = 'manifold',
+    time_window=None,
+    shuffle_config=ShuffleConfig(),
 ):
     df = sample_neuron(df, sample_size=sample_size, seed=seed)
-    params['shuffle_seed_value'] = shuffle_seed_value
+    if time_window is not None:
+        df = select_time_points(df, time_window, time_name='time')
     if metric in ['euclidean', 'mahal']:
-        dist_mat = compute_distances_mat(df, **params)
+        distance_config = DistanceConfig(metric=metric, reg=reg)
+        dist_mat = compute_distances_mat(df,
+                                         distance_config=distance_config,
+                                         shuffle_config=shuffle_config,
+                                         manifold_level=manifold_level)
     elif metric == 'center_euclidean':
-        dist_mat = compute_center_euclidean_distance_mat(df, **params)
+        dist_mat = compute_center_euclidean_distance_mat(df,
+                                                         ordered_manifold_labels=ordered_manifold_labels,
+                                                         shuffle_config=shuffle_config,
+                                                         manifold_level=manifold_level)
     else:
         raise ValueError(
             'Invalid metric. Choose from "euclidean", "mahal",'
@@ -392,12 +403,14 @@ def extract_upper_triangle_similarities(simdf):
 
 
 # Statisitcs on CS odors
-def reorder_cs(df, odor_to_cs, odor_orders):
+def reorder_cs(df, odor_to_cs, odor_orders, manifold_level='manifold'):
+    # manifold_level = 'manifold' or 'odor'(in older version)
     df = df.rename(index=odor_to_cs, level='odor')
-    if 'ref_odor' in df.columns.names:
-        df = df.rename(columns=odor_to_cs, level='ref_odor')
+    ref_name = 'ref_'+manifold_level
+    if ref_name in df.columns.names:
+        df = df.rename(columns=odor_to_cs, level=ref_name)
     else:
-        df = df.rename(columns=odor_to_cs, level='odor')
+        df = df.rename(columns=odor_to_cs, level=manifold_level)
     df = df.loc[odor_orders, odor_orders]
     return df
 

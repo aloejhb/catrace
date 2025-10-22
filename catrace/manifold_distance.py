@@ -194,7 +194,8 @@ def compute_mean_pointwise_distance(
 def compute_distances_df(
     dff: pd.DataFrame,
     distance_config: DistanceConfig = DistanceConfig(),
-    shuffle_config: ShuffleConfig = ShuffleConfig()
+    shuffle_config: ShuffleConfig = ShuffleConfig(),
+    manifold_level: str = 'manifold',
 ) -> pd.DataFrame:
     """
     Compute distances between all pairs of manifolds in a DataFrame.
@@ -219,7 +220,7 @@ def compute_distances_df(
             If both pairwise and global shuffling are enabled.
             If an invalid distance metric is specified.
     """
-    manifold_label_list = list(dff.index.unique('manifold'))
+    manifold_label_list = list(dff.index.unique(manifold_level))
     num_manifolds = len(manifold_label_list)
 
     if shuffle_config.do_global:
@@ -235,8 +236,8 @@ def compute_distances_df(
     distances_dict = dict()
     for label1 in manifold_label_list:
         for label2 in manifold_label_list:
-            m1 = dff.xs(label1, level='manifold')
-            m2 = dff.xs(label2, level='manifold')
+            m1 = dff.xs(label1, level=manifold_level)
+            m2 = dff.xs(label2, level=manifold_level)
 
             if shuffle_config.do_pair and label1 != label2:
                 m1, m2 = shuffle_manifold_pair_labels(
@@ -382,7 +383,8 @@ def shuffle_manifold_labels_global(dff, seed=None):
 def compute_center_euclidean_distance_mat(
     dff,
     ordered_manifold_labels = None,
-    shuffle_config: ShuffleConfig = ShuffleConfig()
+    shuffle_config: ShuffleConfig = ShuffleConfig(),
+    manifold_level: str = 'manifold',
 ):
     """
     Compute the distance matrix between the centers of all pairs of manifolds.
@@ -396,7 +398,7 @@ def compute_center_euclidean_distance_mat(
             The level name is 'sample_manifold' for the index and 'ref_manifold' for the columns, just to be consistent from the 'assymetric' distance matrix from the averaged point-to-manifold distances (`compute_distances_mat`).
     """
     if ordered_manifold_labels is None:
-        ordered_manifold_labels = list(dff.index.unique('manifold'))
+        ordered_manifold_labels = list(dff.index.unique(manifold_level))
 
     num_manifolds = len(ordered_manifold_labels)
     # Compute euclidean distance between centers
@@ -421,8 +423,8 @@ def compute_center_euclidean_distance_mat(
 
     for ml1 in ordered_manifold_labels:
         for ml2 in ordered_manifold_labels:
-            manifold1 = dff.xs(ml1, level='manifold')
-            manifold2 = dff.xs(ml2, level='manifold')
+            manifold1 = dff.xs(ml1, level=manifold_level)
+            manifold2 = dff.xs(ml2, level=manifold_level)
             if shuffle_config.do_pair and ml1 != ml2:
                 manifold1, manifold2 = shuffle_manifold_pair_labels(
                     manifold1, manifold2, seed_value=seed_values.pop(0)

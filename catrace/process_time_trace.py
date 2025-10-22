@@ -174,31 +174,6 @@ def bin_tracedf(tracedf, bin_size, axis=0):
     return binned_dfovf
 
 
-def truncate_binned_df(df, frame_window):
-    frame_interval = pd.Interval(left=frame_window[0], right=frame_window[1])
-    selected_index = [
-        tb.overlaps(frame_interval)
-        for tb in df.index.get_level_values('time_bin')
-    ]
-    df_trunc = df[selected_index]
-    return df_trunc
-
-
-def truncate_tracedf(df, frame_window):
-    df = restack_as_pattern(df)
-    times = df.index.get_level_values('time')
-    df_trunc = df[(times >= frame_window[0]) & (times <= frame_window[1])]
-    return df_trunc
-
-
-def truncate_df_window(df, frame_window):
-    if 'time_bin' in df.index.names:
-        df_trunc = truncate_binned_df(df, frame_window)
-    else:
-        df_trunc = truncate_tracedf(df, frame_window)
-    return df_trunc
-
-
 def mean_pattern_in_time_window(df, time_window, frame_rate=None, xname='time'):
     """Compute pattern of neuron responses averaged within a time window"""
     time_window = np.array(time_window)
