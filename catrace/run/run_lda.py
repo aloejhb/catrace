@@ -34,12 +34,12 @@ class ComputeLdaManifoldPairParams:
     parallelism: int
     manifold_level: str
     manifold_names: list
+    metric: str = 'lda_cv_acc_manifold_pair'
 
 
 def compute_lda_manifold_pair(params: ComputeLdaManifoldPairParams):
     in_dir = params.in_dir
     exp_list = params.exp_list
-    metric = 'lda_cv_acc_manifold_pair'
     time_window = params.time_window
     seed = params.seed
     num_repeats = params.num_repeats
@@ -47,7 +47,7 @@ def compute_lda_manifold_pair(params: ComputeLdaManifoldPairParams):
     manifold_level = params.manifold_level
 
     out_dir_name = (
-        f'{metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
+        f'{params.metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
     )
     out_dir = os.path.join(in_dir, out_dir_name)
 
@@ -86,7 +86,7 @@ def compute_lda_manifold_pair(params: ComputeLdaManifoldPairParams):
     return out_dir
 
 
-def read_dfs_from_dir(dist_dir, exp_list, num_repeats):
+def read_dfs_from_dir(dist_dir, exp_list, num_repeats, metric, manifold_names):
     # Multiply sample numbers with exp_list
     keys = list(product(exp_list, range(num_repeats)))
     keys = [(exp[0], exp[1], k) for exp, k in keys]
@@ -95,11 +95,21 @@ def read_dfs_from_dir(dist_dir, exp_list, num_repeats):
     for exp_name, condition, k in keys:
         in_dir = os.path.join(dist_dir, f'repeat{k:02d}')
         simdf = read_df(in_dir, exp_name, verbose=False)
-        simdf_lists.append(simdf)
+        simdf_mat = reshape_pair_df_to_matrix(simdf, metric, manifold_names)
+        simdf_lists.append(simdf_mat)
+
     all_simdf = pd.concat(
         simdf_lists, keys=keys, names=['fish_id', 'condition', 'sample']
     )
     return all_simdf
+
+def reshape_pair_df_to_matrix(pair_df, metric, manifold_names=None):
+    mat = pair_df.pivot_table(
+        index='manifold1', columns='manifold2', values=metric
+    )
+    if manifold_names is not None:
+        mat = mat.reindex(index=manifold_names, columns=manifold_names)
+    return mat
 
 
 @dataclass_json
@@ -130,16 +140,16 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
     )
 
     print('Computing distance matrices...')
-    lda_dir = compute_lda_manifold_pair(params.compute_lda_params)
+    out_dir = compute_lda_manifold_pair(params.compute_lda_params)
 
-    all_lda_df = read_dfs_from_dir(
-        lda_dir, exp_list, params.compute_lda_params.num_repeats
+    all_dfs = read_dfs_from_dir(
+        out_dir, exp_list, params.compute_lda_params.num_repeats,
+        params.compute_lda_params.metric, dsconfig.odors_stimuli
     )
-    avg_lda_df = average_over_repeats(all_lda_df)
+    avg_dfs = average_over_repeats(all_dfs)
 
     # Reshape the dataframes into matrix forms
-    # TODO
-    avg_simdf = reshape_pair_df_to_matrix(lda_df)
+    avg_simdf = reshape_pair_df_to_matrix(avg_dfs)
 
     print('Plotting per condition...')
     per_cond_params = params.plot_params.per_cond
@@ -186,7 +196,7 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
                 group2,
                 dsconfig.conditions,
                 avg_simdf,
-                metric,
+                params.compute_lda_paramsmetric,
                 naive_name=params.naive_name,
             )
         except Exception as err:
@@ -199,7 +209,7 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
     )
     fig_multi_vs, ax, test_results = plot_measure_multi_odor_cond(
         vsdff,
-        measure_name,
+        params.compute_lda_params.metric,
         odor_name='vsname',
         condition_name='condition',
         params=params.plot_params.vs_measure,
@@ -212,4 +222,4 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
         fig_multi_vs=fig_multi_vs,
     )
 
-    return output_figs, test_results, concat_subsimdf
+    return output_figs, test_results
