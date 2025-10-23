@@ -5,6 +5,10 @@ from scipy.stats import mannwhitneyu, kruskal, ttest_ind, bootstrap, norm
 from scikit_posthocs import posthoc_dunn
 import pandas as pd
 
+from scipy.stats import kruskal
+import pingouin as pg
+
+
 
 def incremental_histogram(data, bins, chunk_size=10000, normalize=True):
     """
@@ -337,9 +341,8 @@ def apply_test_by_cond(
     cond_name='condition',
     test_type='kruskal',
     return_all_pairs=False,
+    padjust='bonf',
 ):
-    from scipy.stats import kruskal
-    import pingouin as pg
 
     test_results = {}
 
@@ -365,11 +368,28 @@ def apply_test_by_cond(
         statdf.groupby(cond_name)[yname].agg(['mean', 'std', 'count']).to_dict()
     )
 
-    # Perform Dunn's posthoc test using pingouin
-    dunn_results = pg.pairwise_tests(
-        data=statdf, dv=yname, between=cond_name, padjust='bonf'
+    # --- Dunn’s test ---
+    all_pairs = pg.pairwise_tests(
+        data=statdf, dv=yname, between=cond_name, padjust=None
     )
-    print(dunn_results)
+    print(all_pairs)
+    
+    if return_all_pairs:
+        # Keep all comparisons and correct across all pairs
+        dunn_results = all_pairs.copy()
+        dunn_results['p-corr'] = pg.multicomp(
+            dunn_results['p-unc'].values, method=padjust
+        )[1]
+        key_name = "all_pairs"
+    else:
+        # Filter only control vs. others and correct among those
+        dunn_results = all_pairs[
+            (all_pairs['A'] == naive_name) | (all_pairs['B'] == naive_name)
+        ].copy()
+        dunn_results['p-corr'] = pg.multicomp(
+            dunn_results['p-unc'].values, method=padjust
+        )[1]
+        key_name = f"{naive_name}_vs_others"
 
     # Extract p-values, z-statistics, n-values, and key name
     p_values, z_statistics, n_values, key_name = extract_dunn_statistics(
@@ -399,41 +419,54 @@ def apply_test_by_cond(
 
 
 def extract_dunn_statistics(
-    dunn_results, statdf, cond_name, naive_name, return_all_pairs
+    dunn_results,
+    statdf,
+    cond_name,
+    naive_name,
+    return_all_pairs,
 ):
+    """
+    Extracts p-values, z-statistics, and n-values from the filtered and
+    corrected Dunn's test results produced by apply_test_by_cond().
+
+    Output format remains identical to the original version.
+    """
+
     p_values = {}
     z_statistics = {}
     n_values = {}
 
+    # Sanity check for control condition
     if not return_all_pairs and naive_name not in statdf[cond_name].unique():
         raise ValueError('No naive condition present')
 
+    # Iterate through Dunn’s test results
     for _, row in dunn_results.iterrows():
         group_A = row['A']
         group_B = row['B']
-        z_stat = row['T']  # Z statistic
-        p_val = row['p-corr']  # Corrected p-value
+        z_stat = row['T']          # Z statistic
+        p_val = row['p-corr']      # Corrected p-value
 
-        # Store sample sizes for both groups
+        # Sample sizes
         n1 = statdf[statdf[cond_name] == group_A].shape[0]
         n2 = statdf[statdf[cond_name] == group_B].shape[0]
 
-        # In 'Dunn_naive' mode, only include comparisons involving the naive group
         if not return_all_pairs:
+            # Expect only comparisons with naive_name (already filtered upstream)
             if group_A == naive_name:
                 cond = group_B
-                z_stat = -z_stat  # Negate if naive is A
+                z_stat = -z_stat  # Keep same sign convention
             elif group_B == naive_name:
                 cond = group_A
-                # z_stat remains the same
+                # z_stat remains as is
             else:
-                continue  # Skip comparisons not involving naive
-            # Store results with condition as key
+                # Normally shouldn't happen since apply_test_by_cond filtered it
+                continue
             p_values[cond] = p_val
             z_statistics[cond] = z_stat
             n_values[cond] = (n1, n2)
         else:
-            # In 'Dunn_all_pairs' mode, store all comparisons
+            # Store all pairs in tuple form
             p_values[(group_A, group_B)] = p_val
             z_statistics[(group_A, group_B)] = z_stat
             n_values[(group_A, group_B)] = (n1, n2)
