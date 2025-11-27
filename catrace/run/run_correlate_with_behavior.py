@@ -151,11 +151,6 @@ def load_distance_per_fish(
     return subsimdf_per_fish
 
 
-# def merge_with_behavior(subsimdf_per_fish, behavior_measure_df):
-#     merged_behavior_df = pd.concat([subsimdf_per_fish.set_index('fish_id'), behavior_measure_df.set_index('fish_id')], axis=1, join='inner').reset_index()
-#     return merged_behavior_df
-
-
 def merge_with_behavior(subsimdf_per_fish, behavior_measure_df):
     merged_behavior_df = pd.merge(
         subsimdf_per_fish, behavior_measure_df, on='fish_id', how='inner'
@@ -163,12 +158,8 @@ def merge_with_behavior(subsimdf_per_fish, behavior_measure_df):
     return merged_behavior_df
 
 
-# from catrace.stats import plot_regression
-# plot_regression(merged_behavior_df, 'auc_zeta_diff_per_day', 'mahal', hue='condition')
-
-
 from ..dataset import load_dataset_config
-from ..stats import plot_regression
+from ..visualize import plot_regression
 
 
 def regression_distance_with_behavior(
@@ -225,5 +216,81 @@ def regression_simdf_per_fish_with_behavior(subsimdf_per_fish,
         **plot_regression_params,
     )
 
+    fig.tight_layout()
+    return fig, model, text_str
+
+def select_cs_plus_vs_cs_minus(all_simdf, metric, cs_single_direction=1):
+    all_simdf = all_simdf[
+        all_simdf.index.get_level_values('condition') != 'naive'
+    ]
+    # Group by condition
+    cond_subsimdfs = []
+    for condition, condition_subdf in all_simdf.groupby('condition'):
+        # Get CS+ and CS- from the condition name. Condition name is formated as {cs_plus}-{cs_minus}
+        odors = condition.split('-')
+        # capitialize the first letter of each odor
+        odors = [odor.capitalize() for odor in odors]
+
+        if cs_single_direction == 0:
+            # Both CS+ to CS- and CS- to CS+
+            odor_group1 = odors
+            odor_group2 = odors
+        elif cs_single_direction == 1:
+            # Only CS+ to CS-
+            odor_group1 = [odors[0]]
+            odor_group2 = [odors[1]]
+        elif cs_single_direction == -1:
+            # Only CS- to CS-
+            odor_group1 = [odors[1]]
+            odor_group2 = [odors[0]]
+        else:
+            raise ValueError('cs_single_direction should be 0, 1 or -1')
+
+        cond_subsimdf = get_group_vs_group(
+            condition_subdf,
+            odor_group1,
+            odor_group2,
+            measure_name=metric,
+            deduplicate=False
+        )
+
+        cond_subsimdfs.append(cond_subsimdf)
+        subsimdf = pd.concat(cond_subsimdfs)
+
+    subsimdf_per_fish = subsimdf.groupby(level=['fish_id', 'condition']).mean()
+    subsimdf_per_fish.reset_index(level=['fish_id', 'condition'], inplace=True)
+    # repace each string in the fish_id column with '_Dp' to ''
+    subsimdf_per_fish['fish_id'] = subsimdf_per_fish['fish_id'].str.replace(
+        '_Dp', ''
+    )
+    subsimdf_per_fish = subsimdf_per_fish.reset_index()
+    return subsimdf_per_fish
+
+from ..visualize import PlotRegressionParams
+def regression_with_behavior(metric_df: pd.DataFrame,
+                             metric: str,
+                             behavior_measure_df: pd.DataFrame,
+                             behavior_measure_name: str,
+                             cs_single_direction=1,
+                             selected_conditions=None,
+                             plot_regression_params: PlotRegressionParams=PlotRegressionParams()):
+    subsimdf_per_fish = select_cs_plus_vs_cs_minus(metric_df, metric, cs_single_direction=cs_single_direction)
+    if selected_conditions is not None:
+        subsimdf_per_fish = subsimdf_per_fish[
+            subsimdf_per_fish['condition'].isin(selected_conditions)
+        ]
+
+    sub_behavior_measure_df = behavior_measure_df[['fish_id', behavior_measure_name]]
+    merged_behavior_df = merge_with_behavior(
+        subsimdf_per_fish, sub_behavior_measure_df
+    )
+    plot_regression_params = plot_regression_params.to_dict() or {}
+    fig, model, text_str = plot_regression(
+        merged_behavior_df,
+        metric,
+        behavior_measure_name,
+        hue='condition',
+        **plot_regression_params,
+    )
     fig.tight_layout()
     return fig, model, text_str

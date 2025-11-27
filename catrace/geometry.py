@@ -116,3 +116,33 @@ def plot_matrix(matrix, ax=None, vmin=None, vmax=None):
         yticklabels=matrix.index,
     )
     return ax
+
+
+def participation_ratio(X: np.ndarray) -> float:
+    """
+    Compute the participation ratio (effective dimensionality) of a point cloud.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Array of shape (n_samples, n_features), where each row is a point
+        and each column is a feature dimension.
+
+    Returns
+    -------
+    float
+        The participation ratio value.
+    """
+    # Center the data (subtract mean of each feature)
+    X_centered = X - X.mean(axis=0)
+
+    # Covariance matrix
+    cov = np.cov(X_centered, rowvar=False)
+
+    # Eigenvalues (use eigvalsh since covariance matrix is symmetric)
+    eigvals = np.linalg.eigvalsh(cov)
+
+    # Compute participation ratio
+    pr = (eigvals.sum() ** 2) / np.sum(eigvals ** 2)
+
+    return pr

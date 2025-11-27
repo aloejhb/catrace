@@ -11,10 +11,10 @@ from dataclasses_json import dataclass_json
 @dataclass_json
 @dataclass
 class LdaCrossValParameters:
-    num_neurons: int = None
-    sample_neuron_seed: int = None
     k: int = 5
     manifold_level: str = 'manifold'
+    solver: str = 'svd'
+    shrinkage: float = None
 
 def lda_crossval(dff, params):
     """
@@ -32,18 +32,12 @@ def lda_crossval(dff, params):
     scores : np.ndarray
         Cross-validation accuracies (one per fold).
     """
-    if params.num_neurons is not None:
-        # Randomly select num_neurons if specified
-        if params.num_neurons > dff.shape[1]:
-            raise ValueError("num_neurons exceeds the number of available neurons.")
-        dff = dff.sample(n=params.num_neurons, axis=1, random_state=params.sample_neuron_seed)
-
     # Prepare data
     y = dff.index.get_level_values(params.manifold_level).to_numpy()
     X = dff.to_numpy()
 
     # Fit LDA with cross-validation
-    lda = LinearDiscriminantAnalysis()
+    lda = LinearDiscriminantAnalysis(solver=params.solver, shrinkage=params.shrinkage)
     scores = cross_val_score(lda, X, y, cv=params.k)
 
     return scores

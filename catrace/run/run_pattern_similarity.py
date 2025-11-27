@@ -236,6 +236,7 @@ class RunPatternSimilarityParams:
     naive_name: str = 'naive'
     plot_params: PlotPatternSimilarityParams = PlotPatternSimilarityParams()
     vsnames: list[str] = None
+    manifold_level: str = 'manifold'
 
 
 def run_pattern_similarity(params: RunPatternSimilarityParams):
@@ -282,6 +283,7 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
             params.odor_orders,
             dsconfig.odors_aa,
             naive_name=params.naive_name,
+            manifold_level=params.manifold_level,
         )
     else:
         mean_delta_mat = compute_diff_to_naive(
@@ -289,6 +291,7 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
             exp_cond_list,
             do_reorder_cs=params.do_reorder_cs,
             naive_name=params.naive_name,
+            manifold_level=params.manifold_level,
         )
     print(params.plot_params.mean_delta)
     fig_delta, ax = plot_mean_delta_mat(

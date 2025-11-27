@@ -144,7 +144,7 @@ def compute_similarity_mat_timecourse(
 
 
 def plot_correlation_timecourse(
-    corrmat_df, row_col_indices, ax=None, color='blue', label='Mean'
+    corrmat_df, row_col_indices, ax=None, color='blue', label='Mean', linewidth=1
 ):
     """
     Plot the mean and standard deviation of correlation time traces across time.
@@ -164,9 +164,12 @@ def plot_correlation_timecourse(
             col_idx, level=['odor', 'trial'], axis=1
         )
         time_traces.append(trace)
-
     # Convert list of time traces into a DataFrame
     time_traces_df = pd.concat(time_traces, axis=1)
+
+    if 'fish_id' in time_traces_df.index.names and 'condition' in time_traces_df.index.names:
+        # unstack fish_id and condition to have time as the only index
+        time_traces_df = time_traces_df.unstack(['fish_id', 'condition'])
 
     # Calculate mean and standard deviation across time
     mean_trace = time_traces_df.mean(axis=1)
@@ -183,6 +186,7 @@ def plot_correlation_timecourse(
         label=label,
         ax=ax,
         color=color,
+        linewidth=linewidth,
     )
 
     # Plot standard deviation as shaded area
@@ -201,7 +205,7 @@ def plot_correlation_timecourse(
     ax.legend()
 
 
-def get_same_odor_diff_trial(corrmat_df):
+def get_same_odor_diff_trial(corrmat_df, num_trials):
     """
     Generate row_col_indices for upper right corners of sub-matrices in corrmat_df.
     These correspond to the entries between different trials but the same odors.
@@ -219,11 +223,7 @@ def get_same_odor_diff_trial(corrmat_df):
     odors = corrmat_df.index.get_level_values('odor').unique()
 
     for odor in odors:
-        trials = (
-            corrmat_df.loc[(slice(None), slice(None), odor, slice(None))]
-            .index.get_level_values('trial')
-            .unique()
-        )
+        trials = np.arange(num_trials)
         trial_pairs = [
             (trials[i], trials[j])
             for i in range(len(trials))
@@ -236,10 +236,9 @@ def get_same_odor_diff_trial(corrmat_df):
     return row_col_indices
 
 
-def plot_same_odor_diff_trial(corrmat_df, **kwargs):
+def plot_same_odor_diff_trial(corrmat_df, num_trials, **kwargs):
     # Get the row_col_indices for same odor but different trials
-    row_col_indices = get_same_odor_diff_trial(corrmat_df)
-
+    row_col_indices = get_same_odor_diff_trial(corrmat_df, num_trials)
     # Plot the correlation timecourse using the calculated indices
     plot_correlation_timecourse(corrmat_df, row_col_indices, **kwargs)
 
@@ -405,7 +404,7 @@ def extract_upper_triangle_similarities(simdf):
 # Statisitcs on CS odors
 def reorder_cs(df, odor_to_cs, odor_orders, manifold_level='manifold'):
     # manifold_level = 'manifold' or 'odor'(in older version)
-    df = df.rename(index=odor_to_cs, level='odor')
+    df = df.rename(index=odor_to_cs, level=manifold_level)
     ref_name = 'ref_'+manifold_level
     if ref_name in df.columns.names:
         df = df.rename(columns=odor_to_cs, level=ref_name)
@@ -423,6 +422,7 @@ def compute_diff_to_naive(
     odor_orders=None,
     odors_aa=None,
     naive_name='naive',
+    manifold_level='manifold',
 ):
     if do_reorder_cs:
         if odor_orders is None or odors_aa is None:
@@ -455,9 +455,9 @@ def compute_diff_to_naive(
                     aa3: 'aa3',
                 }
                 # Permute such that the amino acids order is CS+, CS-, AA3
-                newdf = reorder_cs(simdf, odor_to_cs, odor_orders)
+                newdf = reorder_cs(simdf, odor_to_cs, odor_orders, manifold_level=manifold_level)
                 new_naive_mat = reorder_cs(
-                    mean_naive_mat, odor_to_cs, odor_orders
+                    mean_naive_mat, odor_to_cs, odor_orders, manifold_level=manifold_level
                 )
             else:
                 newdf = simdf

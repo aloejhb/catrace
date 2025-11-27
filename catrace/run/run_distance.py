@@ -240,7 +240,8 @@ def pool_odor_pair(
     elif metric == 'center_euclidean':
         measure_name = 'center D_E'
     else:
-        raise ValueError(f'Unknown metric: {metric}')
+        measure_name = metric
+        # raise ValueError(f'Unknown metric: {metric}')
 
     subsimdf = get_group_vs_group(
         avg_simdf,

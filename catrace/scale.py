@@ -35,11 +35,13 @@ def quantile_all(df, q=0.999):
     return df_out
 
 
-def centering(df):
+def centering(df, return_model=False):
     scaler = StandardScaler(copy=True, with_mean=True, with_std=False)
     scaler.fit(df)
     df_centered = scaler.transform(df)
     df_out = pd.DataFrame(data=df_centered, columns=df.columns, index=df.index)
+    if return_model:
+        return df_out, scaler
     return df_out
 
 

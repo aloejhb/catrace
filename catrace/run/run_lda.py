@@ -5,17 +5,14 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 import pandas as pd
 from ..dataset import load_dataset_config
-from .run_distance import PlotDistanceParams
+from .run_distance import (PlotDistanceParams,
+                           compute_diff_to_naive_from_simdfdf,
+                           plot_mean_delta_mat,
+                           plot_matrix_per_condition,
+                           pool_odor_pair,
+                           average_over_repeats)
 from ..exp_collection import process_data_db_parallel, read_df
-from ..visualize import (
-    PlotBoxplotParams,
-    PlotPerCondMatParams,
-    plot_measure,
-    plot_conds_mat,
-    move_pvalue_indicator,
-    plot_measure_multi_odor_cond,
-    PlotBoxplotMultiOdorCondParams,
-)
+from ..visualize import plot_measure_multi_odor_cond
 from .run_utils import plot_avg_trace_with_window, get_group_vs_group
 from ..lda import sample_and_compute_lda, LdaCrossValParameters
 
@@ -45,14 +42,18 @@ def compute_lda_manifold_pair(params: ComputeLdaManifoldPairParams):
     num_repeats = params.num_repeats
     sample_size = params.sample_size
     manifold_level = params.manifold_level
+    params.lda_cross_val_params.manifold_level = manifold_level
 
-    out_dir_name = (
-        f'{params.metric}_seed{seed}_window{time_window[0]}to{time_window[1]}'
+    out_parent_dir_name = (
+        f'{params.metric}_sample_size{sample_size}_seed{seed}_window{time_window[0]}to{time_window[1]}'
     )
-    out_dir = os.path.join(in_dir, out_dir_name)
+    if params.lda_cross_val_params.solver is not None:
+        out_parent_dir_name += f'_solver_{params.lda_cross_val_params.solver}_shrinkage_{params.lda_cross_val_params.shrinkage}'
+    out_parent_dir_name += f'_k_{params.lda_cross_val_params.k}'
+    out_parent_dir = os.path.join(in_dir, out_parent_dir_name)
 
-    if not os.path.exists(out_dir) or params.overwrite_computation:
-        os.makedirs(out_dir, exist_ok=True)
+    if not os.path.exists(out_parent_dir) or params.overwrite_computation:
+        os.makedirs(out_parent_dir, exist_ok=True)
         num_exp = len(exp_list)
         master_rng = np.random.default_rng(seed)
         seeds = [
@@ -61,13 +62,7 @@ def compute_lda_manifold_pair(params: ComputeLdaManifoldPairParams):
         ]
 
         for k in range(num_repeats):
-            out_dir = os.path.join(out_dir, f'repeat{k:02d}')
-            sample_and_dist_params = dict(
-                sample_size=sample_size,
-                ordered_manifold_labels=params.manifold_names,
-                time_window=time_window,
-                manifold_level=manifold_level,
-            )
+            out_dir = os.path.join(out_parent_dir, f'repeat{k:02d}')
             sample_and_compute_params = dict(
                 lda_params=params.lda_cross_val_params,
                 manifold_names=params.manifold_names,
@@ -83,7 +78,7 @@ def compute_lda_manifold_pair(params: ComputeLdaManifoldPairParams):
                 seeds=seeds[k],
                 params=sample_and_compute_params,
             )
-    return out_dir
+    return out_parent_dir
 
 
 def read_dfs_from_dir(dist_dir, exp_list, num_repeats, metric, manifold_names):
@@ -104,8 +99,10 @@ def read_dfs_from_dir(dist_dir, exp_list, num_repeats, metric, manifold_names):
     return all_simdf
 
 def reshape_pair_df_to_matrix(pair_df, metric, manifold_names=None):
+    # Rename the last column to metric
+    pair_df = pair_df.rename(columns={pair_df.columns[-1]: metric, 'manifold1': 'odor', 'manifold2':'manifold'})
     mat = pair_df.pivot_table(
-        index='manifold1', columns='manifold2', values=metric
+        index='odor', columns='manifold', values=metric
     )
     if manifold_names is not None:
         mat = mat.reindex(index=manifold_names, columns=manifold_names)
@@ -116,11 +113,10 @@ def reshape_pair_df_to_matrix(pair_df, metric, manifold_names=None):
 @dataclass
 class RunLdaManifoldPairParams:
     config_file: str
-    do_reorder_cs: bool
     compute_lda_params: ComputeLdaManifoldPairParams
+    do_reorder_cs: bool
     odor_orders: list = None
     naive_name: str = 'naive'
-    overwrite_computation: bool = False
     vs_same_ylim: list = None
     do_compare_cs: bool = False
     vsdict: dict = None
@@ -133,6 +129,8 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
     trace_dir = dsconfig.processed_trace_dir
     time_window = np.array(params.compute_lda_params.time_window)
     in_dir = trace_dir
+    params.compute_lda_params.in_dir = in_dir
+    params.compute_lda_params.exp_list = exp_list
 
     print('Plotting average trace...')
     fig_avg_trace, ax = plot_avg_trace_with_window(
@@ -146,10 +144,7 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
         out_dir, exp_list, params.compute_lda_params.num_repeats,
         params.compute_lda_params.metric, dsconfig.odors_stimuli
     )
-    avg_dfs = average_over_repeats(all_dfs)
-
-    # Reshape the dataframes into matrix forms
-    avg_simdf = reshape_pair_df_to_matrix(avg_dfs)
+    avg_simdf = average_over_repeats(all_dfs)
 
     print('Plotting per condition...')
     per_cond_params = params.plot_params.per_cond
@@ -196,7 +191,7 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
                 group2,
                 dsconfig.conditions,
                 avg_simdf,
-                params.compute_lda_paramsmetric,
+                params.compute_lda_params.metric,
                 naive_name=params.naive_name,
             )
         except Exception as err:

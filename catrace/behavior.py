@@ -113,13 +113,10 @@ def compute_auc_for_all_parameters(
     return aucs
 
 
-def prepare_juvenile_behavior_df(num_baseline_days=None):
-    behavior_dir = '/tungstenfs/scratch/gfriedri/hubo/behavior/data'
-    mat_file = pjoin(behavior_dir, 'juvenile_behavior_params.mat')
-    num_trials_per_day = 9
+def prepare_juvenile_behavior_df(behavior_mat_file, num_baseline_days=None, num_trials_per_day=9):
 
     # Load the .mat file
-    mat = scipy.io.loadmat(mat_file)
+    mat = scipy.io.loadmat(behavior_mat_file)
 
     # Extract fish_ids, training days, and param names
     fish_ids = [str(fish_id[0][0]) for fish_id in mat['fishIds']]
@@ -230,12 +227,9 @@ def compute_behavior_measures_per_day(
     return behavior_measure_df
 
 
-def prepare_juvenile_behavior_timecourse_df(behavior_dir):
-    mat_file = pjoin(behavior_dir, 'juvenile_behavior_params.mat')
-    num_trials_per_day = 9
-
+def prepare_juvenile_behavior_timecourse_df(behavior_mat_file, num_trials_per_day=9):
     # Load the .mat file
-    mat = scipy.io.loadmat(mat_file)
+    mat = scipy.io.loadmat(behavior_mat_file)
 
     # Extract fish_ids, training days, and param names
     fish_ids = [str(fish_id[0][0]) for fish_id in mat['fishIds']]

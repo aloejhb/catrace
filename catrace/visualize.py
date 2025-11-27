@@ -1112,3 +1112,165 @@ def move_pvalue_indicator(ax, line_new_y, text_new_y=None):
 
 def set_yticks_interval(ax, tick_interval):
     ax.yaxis.set_major_locator(plt.MultipleLocator(tick_interval))
+
+
+
+import matplotlib.lines as mlines
+
+def reformat_legend(ax, desired_order, labelspacing=None, loc='lower right'):
+    # Get existing legend entries from seaborn
+    handles, labels = ax.get_legend_handles_labels()
+
+    # Pick your desired order (an ordered list of label names)
+    # desired_order = ["naive", "arg-phe", "phe-arg", "phe-trp"]
+
+    # Reorder handles and labels
+    ordered_handles = []
+    ordered_labels = []
+
+    for name in desired_order:
+        idx = labels.index(name)        # find the index for that label
+        ordered_handles.append(handles[idx])
+        ordered_labels.append(labels[idx])
+
+    # Create invisible handles (no line markers in legend)
+    dummy_handles = [mlines.Line2D([], [], linestyle='none') for _ in ordered_handles]
+
+    # Build the legend
+    legend = ax.legend(
+        dummy_handles,
+        ordered_labels,
+        title=None,
+        frameon=False,
+        fontsize=7,
+        loc=loc,
+        labelspacing=labelspacing
+    )
+
+    # Color the text to match the actual line colors
+    for text_obj, real_handle in zip(legend.get_texts(), ordered_handles):
+        try:
+            color = real_handle.get_color()
+        except AttributeError:
+            color = real_handle.get_facecolor()
+        text_obj.set_color(color)
+
+
+
+import statsmodels.api as sm
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+from .utils import format_number
+from .stats import format_p_value
+
+
+@dataclass_json
+@dataclass
+class PlotRegressionParams:
+    figsize: tuple = (2, 2)
+    marker_size: int = 1
+    label_fontsize: int = 7
+    tick_label_fontsize: int = 6
+    fit_line_width: int = 0.5
+    reg_tex_fontsize: int = 5
+    color_dict: dict = None
+    marker_alpha: float = 1.0
+
+
+def plot_regression(
+    dff,
+    x_measure,
+    y_measure,
+    hue=None,
+    ax=None,
+    hue_order=None,
+    figsize=(5, 5),
+    marker_size=1,
+    label_fontsize=7,
+    tick_label_fontsize=6,
+    fit_line_width=1,
+    reg_tex_fontsize=5,
+    color_dict=None,
+    marker_alpha=1.0,
+):
+    """
+    Plots a scatter plot with a regression line on the provided axes, including statistical annotations.
+
+    Parameters:
+    - dff: DataFrame containing the data.
+    - x_measure: String, name of the column to use for the x-axis.
+    - y_measure: String, name of the column to use for the y-axis.
+    - hue: String, name of the column to color data points.
+    - ax: Axes object on which to draw the plot.
+    - hue_order: List or None, specifies the order of categorical hue variable.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+    # Create scatter plot
+    sns.scatterplot(
+        data=dff,
+        x=x_measure,
+        y=y_measure,
+        hue=hue,
+        hue_order=hue_order,
+        ax=ax,
+        s=marker_size,
+        palette=color_dict,
+        alpha=marker_alpha,
+    )
+
+    # Fit linear model using statsmodels to extract R-squared and p-value
+    X = sm.add_constant(
+        dff[x_measure]
+    )  # Add a constant to the model for the intercept
+    model = sm.OLS(dff[y_measure], X).fit()
+    predictions = model.predict(X)
+
+    # Get p-value, R-squared, and slope
+    p_value = model.f_pvalue
+    r_squared = model.rsquared
+    corr_coeff = dff[[x_measure, y_measure]].corr().iloc[0, 1]
+    slope = model.params[x_measure]
+
+    # Plot the regression line
+    ax.plot(dff[x_measure], predictions, color='black', lw=fit_line_width)
+
+    p_value_srt = format_p_value(p_value)
+    print(p_value_srt)
+    # Annotate the plot with slope, R², and p-value
+    # text_str = f'Slope: {format_number(slope, sig=3)}\nR²: {r_squared:.2f}\np-value: {p_value_srt}'
+    text_str = f'r={corr_coeff:.2f}\n{p_value_srt}'
+    if slope < 0:
+        text_pos = (0.05, 0.25)
+    else:
+        text_pos = (0.5, 0.25)
+    ax.text(
+        text_pos[0],
+        text_pos[1],
+        text_str,
+        transform=ax.transAxes,
+        verticalalignment='top',
+        bbox=dict(
+            boxstyle='round', facecolor='white', alpha=0.5, linewidth=0.5
+        ),
+        fontsize=reg_tex_fontsize,
+    )
+
+    # Enhancing the plot
+    ax.set_xlabel(x_measure, fontsize=label_fontsize)
+    ax.set_ylabel(y_measure, fontsize=label_fontsize)
+    ax.legend(title=hue, fontsize=tick_label_fontsize)
+    # Set legend title font size
+    legend = ax.get_legend()
+    legend.set_title(
+        legend.get_title().get_text(), prop={'size': tick_label_fontsize}
+    )
+
+    # Set tick label font size
+    ax.tick_params(axis='both', which='major', labelsize=tick_label_fontsize)
+    return fig, model, text_str

@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import matplotlib.patches as patches
+
 from scipy.ndimage.filters import gaussian_filter1d
 
 
@@ -206,3 +208,71 @@ def plot_mean_with_std(
     ax.legend()
 
     return fig, ax
+
+
+def add_time_range_rectangle(ax, time_range, color='gray', alpha=0.6, text=None, fontsize=6, text_offset=0.02):
+    # Retrieve the current y-limits of the axes
+    ylim = ax.get_ylim()
+    
+    # Create a rectangle that spans from ylim[0] to ylim[1]
+    rect = patches.Rectangle(
+        (time_range[0], ylim[0]),
+        width=time_range[1] - time_range[0],
+        height=ylim[1] - ylim[0],
+        color=color,
+        alpha=alpha,
+        linewidth=0
+    )
+    ax.add_patch(rect)
+    
+    if text is not None:
+        # Place the text at the center of the rectangle
+        ax.text(
+            x=time_range[0] + (time_range[1] - time_range[0]) / 2,
+            y=ylim[1] + text_offset,
+            s=text,
+            ha='center',
+            va='center',
+            color=color,
+            fontsize=fontsize
+        )
+
+
+def plot_example_trace_heatmap(edff, frame_rate, figsize=(7, 5), vmin=0, vmax=1, cmap='viridis', gamma=None, ax=None):
+    if cmap == 'clut2b':
+        cmap = load_colormap('clut2b', remove_top_white=True)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+        plot_colorbar = True
+    else:
+        fig = ax.get_figure()
+        plot_colorbar = False
+    # Power normalize the heatmap
+    from matplotlib.colors import PowerNorm
+    if gamma is not None: # For example gamma=0.5
+        norm = PowerNorm(gamma=gamma, vmin=vmin, vmax=vmax)
+        img = ax.matshow(edff, aspect='auto', cmap=cmap, norm=norm)
+    else:
+        img = ax.matshow(edff, aspect='auto', cmap=cmap)
+
+    # Convert x axis from frame to time
+    xticks = np.arange(0, edff.shape[1], 2.5 * frame_rate)
+    # append 2*frame_rate to xticks
+    xticks = np.append(xticks, 2 * frame_rate)
+    ax.set_xticks(xticks)
+    xticklabels = xticks / frame_rate
+    ax.set_xticklabels(xticklabels)
+
+    # Put the x tick label at the bottom
+    ax.xaxis.set_ticks_position('bottom')
+    # remove x tick label at the top
+    ax.tick_params(axis='x', which='both', bottom=True, top=False)
+
+    # Remove y ticks
+    ax.set_yticks([])
+    ax.set_yticklabels([])
+
+    if plot_colorbar:
+        colorbar = fig.colorbar(img)
+        return fig, ax, img, colorbar
+    return fig, ax, img

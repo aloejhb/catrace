@@ -150,13 +150,16 @@ def select_and_pca(df, odor_list, window, n_components):
     return embeddf, model
 
 
-def compute_umap(df, umap_params, scale=False):
+def compute_umap(df, umap_params, scale=False, return_model=False):
     if scale:
         scaled_df = standard_scale(df)
     else:
         scaled_df = df
-    latent = umap.UMAP(**umap_params).fit_transform(scaled_df)
+    umap_model = umap.UMAP(**umap_params)
+    latent = umap_model.fit_transform(scaled_df)
     embeddf = get_embeddf(latent, scaled_df.index)
+    if return_model:
+        return embeddf, umap_model
     return embeddf
 
 
@@ -168,6 +171,60 @@ def compute_pca_umap(df, n_components, umap_params, scale=False):
     pca_latent = compute_pca(scaled_df, n_components)
     umap_latent = compute_umap(pca_latent, umap_params)
     return umap_latent
+
+
+import numpy as np
+import pandas as pd
+from sklearn import decomposition
+
+def get_pca_axes_points(pattern):
+    """
+    Compute a 2D PCA model and return the four points along the first two principal axes:
+    center ± PC1, center ± PC2.
+
+    Parameters
+    ----------
+    pattern : pd.DataFrame
+        Input data with shape (n_samples, n_features).
+    n_components : int, optional
+        Number of PCA components to compute (default=2).
+
+    Returns
+    -------
+    pca : sklearn.decomposition.PCA
+        The fitted PCA model.
+    axis_points : pd.DataFrame
+        DataFrame containing the four displaced points:
+        center+PC1, center-PC1, center+PC2, center-PC2.
+    """
+
+    # Fit PCA
+    pca = decomposition.PCA(n_components=2)
+    pca.fit(pattern)
+
+    # Extract mean (center) and components (directions)
+    center = pca.mean_
+    pc1_dir = pca.components_[0]
+    pc2_dir = pca.components_[1]
+
+    # Amplitudes (standard deviation along each PC)
+    pc1_amp = np.sqrt(pca.explained_variance_[0])
+    pc2_amp = np.sqrt(pca.explained_variance_[1])
+
+    # Compute the four points in feature space
+    center_plus_pc1  = center + pc1_dir * pc1_amp
+    center_minus_pc1 = center - pc1_dir * pc1_amp
+    center_plus_pc2  = center + pc2_dir * pc2_amp
+    center_minus_pc2 = center - pc2_dir * pc2_amp
+
+    # Assemble into DataFrame
+    axis_points = pd.DataFrame(
+        [center, center_plus_pc1, center_minus_pc1, center_plus_pc2, center_minus_pc2],
+        index=["center", "center_plus_pc1", "center_minus_pc1", "center_plus_pc2", "center_minus_pc2"],
+        columns=pattern.columns
+    )
+
+    return pca, axis_points
 
 
 def get_embeddf(latent, index):

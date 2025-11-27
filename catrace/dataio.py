@@ -3,11 +3,8 @@ import numpy as np
 import scipy.io as sio
 import glob
 import pandas as pd
-
 import itertools
-
 import h5py
-
 
 # plane_num in Python environment start with 0, plane_num in MATLAB files start with 1
 # Useful way of deleting a neuron in all trials
