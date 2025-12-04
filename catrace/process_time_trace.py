@@ -213,9 +213,7 @@ def select_odors_df(df, odors, xname=None):
         elif 'frame' in df.index.names:
             xname = 'frame'
         else:
-            raise ValueError(
-                'Dataframe index names should contain time or frame if xname is not specified'
-            )
+            xname = None
     sedf = df.loc[df.index.get_level_values('odor').isin(odors)].copy()
     odor_idxs = sedf.index.get_level_values('odor')
     if not isinstance(odor_idxs.dtype, pd.CategoricalDtype):
@@ -225,7 +223,7 @@ def select_odors_df(df, odors, xname=None):
     sedf.set_index('new_odor', append=True, inplace=True)
     sedf.index = sedf.index.droplevel('odor')
     sedf.rename_axis(index={'new_odor': 'odor'}, inplace=True)
-    if xname in sedf.index.names:
+    if xname in sedf.index.names: # This also excludes when xname is None
         sedf = sedf.reorder_levels(['odor', 'trial', xname])
     elif 'trial' in sedf.index.names:
         sedf = sedf.reorder_levels(['odor', 'trial'])

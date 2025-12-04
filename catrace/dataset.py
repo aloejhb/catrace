@@ -13,8 +13,9 @@ class DatasetConfig:
     conditions: list[str]
     frame_rate: float
     num_trials: int
-    fig_dir: Optional[str] = None
     processed_trace_dir: Optional[str] = None
+    results_dir: Optional[str] = None
+    fig_dir: Optional[str] = None
     odors_stimuli: Optional[list[str]] = None
     odors_aa: Optional[list[str]] = None
     odors_ba: Optional[list[str]] = None

@@ -250,7 +250,11 @@ def plot_juv(
         'trained': 'Trained',
     }
     xtick_labels = [mapping[label.get_text()] for label in xtick_labels]
-    ax.set_xticklabels(xtick_labels)
+    ax.set_xticklabels(xtick_labels, fontsize=7)
+    # Color individual tick labels
+    ticks = ax.get_xticklabels()
+    ticks[0].set_color('tab:blue')    # "naive"
+    ticks[1].set_color('tab:orange')  # "trained"
     return fig, ax, test_results
 
 
@@ -345,7 +349,7 @@ def plot_cap_and_save(
                 )
 
         ylabel = ax.get_ylabel()
-        if ylabel == 'Axes_alignment' or ylabel == 'axes_alignment':
+        if ylabel == 'Axes_alignment' or ylabel == 'axes_alignment' or ylabel == 'Axis_alignment' or ylabel == 'axis_alignment':
             new_ylabel = 'Axes alignment'
             ax.set_ylabel(new_ylabel)
         elif ylabel == 'Center_alignment' or ylabel == 'center_alignment':

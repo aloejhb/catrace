@@ -18,7 +18,7 @@ def plot_trace(trace, n_trial, n_odor):
 
 
 def plot_trace_heatmap(trace, ax):
-    im = ax.matshow(trace, aspect='auto')
+    im = ax.matshow(trace, aspect='auto', interpolation='none')
     return im
 
 

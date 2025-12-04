@@ -132,53 +132,6 @@ def plot_explist_decorator(
     return plot_explist_wrapper
 
 
-def get_data_dict_decorator(exp_list, region_list, dfovf_dict, data_func):
-    def get_data_dict(*args, **kwargs):
-        data_dict = dict()
-        for region in region_list:
-            data_dict[region] = dict()
-            for exp in exp_list:
-                exp_name = exp[0]
-                print(exp_name, region)
-                dfovf = dfovf_dict[region][exp_name]
-                data_dict[region][exp_name] = data_func(dfovf, *args, **kwargs)
-        return data_dict
-
-    return get_data_dict
-
-
-def process_data_dict_decorator(
-    data_func, exp_list, region_list, db_dir, in_collect_name
-):
-    def get_data_dict(*args, **kwargs):
-        data_dict = dict()
-        for exp in exp_list:
-            exp_name = exp[0]
-            data_dict[exp_name] = dict()
-            for region in region_list:
-                print(exp_name, region)
-                df = read_df(in_collect_name, exp_name, region, db_dir)
-                data_dict[exp_name][region] = data_func(df, *args, **kwargs)
-        return data_dict
-
-    return get_data_dict
-
-
-def process_data_list_decorator(data_func, exp_list, in_dir):
-
-    def process_func(*args, **kwargs):
-        result_dfs = []
-        for exp in exp_list:
-            exp_name = exp[0]
-            print(exp_name)
-            df = read_df(in_dir, exp_name)
-            outdf = data_func(df, *args, **kwargs)
-            result_dfs.append(outdf)
-        return result_dfs
-
-    return process_func
-
-
 def process_data_db_decorator(data_func, exp_list, out_dir, in_dir=None):
     def process_data_db(*args, **kwargs):
         for exp in exp_list:

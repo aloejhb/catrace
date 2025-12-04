@@ -404,11 +404,12 @@ def extract_upper_triangle_similarities(simdf):
 # Statisitcs on CS odors
 def reorder_cs(df, odor_to_cs, odor_orders, manifold_level='manifold'):
     # manifold_level = 'manifold' or 'odor'(in older version)
-    df = df.rename(index=odor_to_cs, level=manifold_level)
     ref_name = 'ref_'+manifold_level
     if ref_name in df.columns.names:
+        df = df.rename(index=odor_to_cs, level='odor')
         df = df.rename(columns=odor_to_cs, level=ref_name)
     else:
+        df = df.rename(index=odor_to_cs, level=manifold_level)
         df = df.rename(columns=odor_to_cs, level=manifold_level)
     df = df.loc[odor_orders, odor_orders]
     return df
