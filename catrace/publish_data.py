@@ -218,25 +218,23 @@ def sort_capacity_unstacked_into_matrix(capacity_unstacked_df, ordered_manifold_
     return capacity_unstacked_df
 
 
-
-def convert_capacity_df_to_matrix(capacity_df, ordered_manifold_labels, exp_list, manifold_lables):
-    capdf_unshuffled = capacity_df.xs(False, level='shuffle')
-    capcap = capdf_unshuffled['capacity']
-    capcap.index = capcap.index.droplevel(['window_0', 'window_1', 'seed'])
-    capcap_mean = capcap.groupby(level=['fish_id', 'condition', 'odor1', 'odor2']).mean().unstack('odor2')
+def convert_manifold_pair_df_to_matrix(manifold_pair_df, exp_list, manifold_lables, manifold_level_name='manifold'):
+    manifold1 = f'{manifold_level_name}1'
+    manifold2 = f'{manifold_level_name}2'
+    manifold_pair_mean = manifold_pair_df.groupby(level=['fish_id', 'condition', manifold1, manifold2]).mean().unstack(manifold2)
 
     num_fish = len(exp_list)
     num_manifolds = len(manifold_lables)
     simmat = np.zeros((num_fish, num_manifolds, num_manifolds))
 
     for idx, (exp_name, condition) in enumerate(exp_list):
-        single_fish = capcap_mean.xs((exp_name, condition), level=('fish_id', 'condition')).copy()
+        single_fish = manifold_pair_mean.xs((exp_name, condition), level=('fish_id', 'condition')).copy()
         single_fish_mat = sort_capacity_unstacked_into_matrix(single_fish, ordered_manifold_labels=manifold_lables)
         simmat[idx, :, :] = single_fish_mat.values
 
     levels_axis0 = ['fish_id', 'condition']
-    levels_axis1 = ['odor']
-    levels_axis2 = ['odor']
+    levels_axis1 = [manifold_level_name]
+    levels_axis2 = [manifold_level_name]
 
     axis0 = exp_list
     axis1 = manifold_lables
@@ -258,8 +256,11 @@ def save_capacity_results_as_h5(capacity_file, exp_list, manifold_lables, output
     # Read the capacity DataFrame
     capdf = pd.read_pickle(capacity_file)
     # Convert the capacity DataFrame to a matrix
-    simmat, axis0, axis1, axis2, levels_axis0, levels_axis1, levels_axis2 = convert_capacity_df_to_matrix(
-        capdf, manifold_lables, exp_list, manifold_lables
+    capdf_unshuffled = capdf.xs(False, level='shuffle')
+    capcap = capdf_unshuffled['capacity']
+    capcap.index = capcap.index.droplevel(['window_0', 'window_1', 'seed'])
+    simmat, axis0, axis1, axis2, levels_axis0, levels_axis1, levels_axis2 = convert_manifold_pair_df_to_matrix(
+        capcap, exp_list, manifold_lables, manifold_level_name='odor'
     )
     metric_name = 'capacity'
     output_h5file = os.path.join(output_dir, f'{metric_name}.h5')
@@ -272,3 +273,13 @@ def save_capacity_results_as_h5(capacity_file, exp_list, manifold_lables, output
         h5f.create_dataset('levels_axis1', data=np.array(levels_axis1, dtype='S'))
         h5f.create_dataset('levels_axis2', data=np.array(levels_axis2, dtype='S'))
 
+
+def save_simmat_as_h5(simmat, axis0, axis1, axis2, levels_axis0, levels_axis1, levels_axis2, output_path):
+    with h5py.File(output_path, 'w') as h5f:
+        h5f.create_dataset('simmat', data=simmat)
+        h5f.create_dataset('axis0', data=np.array(axis0, dtype='S'))
+        h5f.create_dataset('axis1', data=np.array(axis1, dtype='S'))
+        h5f.create_dataset('axis2', data=np.array(axis2, dtype='S'))
+        h5f.create_dataset('levels_axis0', data=np.array(levels_axis0, dtype='S'))
+        h5f.create_dataset('levels_axis1', data=np.array(levels_axis1, dtype='S'))
+        h5f.create_dataset('levels_axis2', data=np.array(levels_axis2, dtype='S'))

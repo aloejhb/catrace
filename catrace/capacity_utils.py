@@ -350,7 +350,7 @@ def plot_cap_and_save(
 
         ylabel = ax.get_ylabel()
         if ylabel == 'Axes_alignment' or ylabel == 'axes_alignment' or ylabel == 'Axis_alignment' or ylabel == 'axis_alignment':
-            new_ylabel = 'Axes alignment'
+            new_ylabel = 'Axis alignment'
             ax.set_ylabel(new_ylabel)
         elif ylabel == 'Center_alignment' or ylabel == 'center_alignment':
             new_ylabel = 'Center alignment'

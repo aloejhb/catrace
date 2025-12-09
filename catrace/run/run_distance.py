@@ -406,9 +406,6 @@ class RunDistanceParams:
     odor_orders: list = None
     naive_name: str = 'naive'
     overwrite_computation: bool = False
-    report_dir: str = None
-    summary_name: str = None
-    save_output: bool = False
     vs_same_ylim: list = None
     do_compare_cs: bool = False
     reg: float = 1e-5
@@ -431,8 +428,6 @@ def run_distance(params: RunDistanceParams):
     seed = params.seed
     do_normalize_simdf = params.do_normalize_simdf
     overwrite_computation = params.overwrite_computation
-    report_dir = params.report_dir
-    summary_name = params.summary_name
 
     dsconfig = load_config(params.config_file, DatasetConfig)
     exp_list = dsconfig.exp_list
@@ -556,18 +551,6 @@ def run_distance(params: RunDistanceParams):
         params=params.plot_params.vs_measure,
     )
 
-    if params.vsdict is None:
-        # Compare percentage changes
-        vskeys = ['aa_vs_aa', 'aa_vs_ba']
-        fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
-        vskeys = ['ba_vs_aa', 'aa_vs_ba']
-        fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
-        if params.do_compare_cs:
-            vskeys = ['cs_vs_ba', 'cs_plus_vs_cs_minus']
-            fig, ax, _ = compare_vs(vskeys, subsimdfs, measure_name)
-    else:
-        concat_subsimdf = None
-
     if params.vs_same_ylim is not None:
         # move_pvalue_indicator(vsax, params.vs_same_ylim[1])
         pass
@@ -575,23 +558,6 @@ def run_distance(params: RunDistanceParams):
     print('Plotting per fish...')
     if params.do_plot_per_fish:
         fig_per_fish, axs = plot_matrix_per_fish(avg_simdf, cmap=params.cmap)
-
-    if params.save_output:
-        print('Saving stats...')
-        # Save stats as json
-        # print(stats)
-        # stats_file = pjoin(report_dir, f'{summary_name}.json')
-        # with open(stats_file, 'w') as file:
-        #     json.dump(stats, file)
-
-        print('Saving summary...')
-        with PdfPages(pjoin(report_dir, f'{summary_name}.pdf')) as pdf_pages:
-            # Combine fig_per_cond, fig_delta vsfigs into one page
-            figs = [fig_per_cond, fig_delta] + [None, fig_avg_trace]
-            fig_combined = combine_figures_to_grid(figs, nrows=2, ncols=3)
-            pdf_pages.savefig(fig_combined)
-            if params.do_plot_per_fish:
-                pdf_pages.savefig(fig_per_fish)
 
     output_figs = dict(
         fig_avg_trace=fig_avg_trace,
@@ -601,4 +567,4 @@ def run_distance(params: RunDistanceParams):
     )
     if params.do_plot_per_fish:
         output_figs['fig_per_fish'] = fig_per_fish
-    return output_figs, test_results, concat_subsimdf
+    return output_figs, test_results
