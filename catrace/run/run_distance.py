@@ -551,6 +551,18 @@ def run_distance(params: RunDistanceParams):
         params=params.plot_params.vs_measure,
     )
 
+    if params.vsdict is None:
+        # Compare percentage changes
+        vskeys = ['aa_vs_aa', 'aa_vs_ba']
+        fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
+        vskeys = ['ba_vs_aa', 'aa_vs_ba']
+        fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
+        if params.do_compare_cs:
+            vskeys = ['cs_vs_ba', 'cs_plus_vs_cs_minus']
+            fig, ax, _ = compare_vs(vskeys, subsimdfs, measure_name)
+    else:
+        concat_subsimdf = None
+
     if params.vs_same_ylim is not None:
         # move_pvalue_indicator(vsax, params.vs_same_ylim[1])
         pass
@@ -567,4 +579,4 @@ def run_distance(params: RunDistanceParams):
     )
     if params.do_plot_per_fish:
         output_figs['fig_per_fish'] = fig_per_fish
-    return output_figs, test_results
+    return output_figs, test_results, concat_subsimdf
