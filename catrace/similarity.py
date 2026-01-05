@@ -344,6 +344,7 @@ def sample_neuron_and_comopute_distance_mat(
         distance_config = DistanceConfig(metric=metric, reg=reg)
         dist_mat = compute_distances_mat(df,
                                          distance_config=distance_config,
+                                         ordered_manifold_labels=ordered_manifold_labels,
                                          shuffle_config=shuffle_config,
                                          manifold_level=manifold_level)
     elif metric == 'center_euclidean':

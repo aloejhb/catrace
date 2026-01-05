@@ -900,6 +900,7 @@ class PlotBoxplotByCondParams:
     ylim: Optional[tuple] = None
     box_colors: Optional[list[str]] = None
     hline_y: Optional[float] = None
+    naive_name: str = 'naive'
 
 
 def plot_boxplot_with_significance_by_cond(
@@ -927,6 +928,7 @@ def plot_boxplot_with_significance_by_cond(
     hline_linewidth=1,
     show_ns=False,
     do_capitalize_labels=True,
+    naive_name='naive',
 ):
     datadf = datadf.reset_index()
 
@@ -1018,7 +1020,7 @@ def plot_boxplot_with_significance_by_cond(
     ymax = ylevel_scale * (current_ylim[1] - current_ylim[0]) + current_ylim[0]
     if test_results is not None:
         for cond, p_value in test_results['Dunn_naive']['p_values'].items():
-            if cond != 'naive':
+            if cond != naive_name:
                 cond_pos = xtick_labels.index(cond)
                 position = cond_pos
                 marker, xoffset = pvalue_to_marker(p_value)
@@ -1054,7 +1056,7 @@ def plot_measure_by_cond(
     if ylabel is None:
         ylabel = yname
 
-    results = apply_test_by_cond(submadf_by_cond, measure_name, test_type=test_type)
+    results = apply_test_by_cond(submadf_by_cond, measure_name, test_type=test_type, naive_name=params.naive_name)
 
     datadf = submadf_by_cond.reset_index()
     datadf.rename(columns={0: yname}, inplace=True)
@@ -1274,3 +1276,122 @@ def plot_regression(
     # Set tick label font size
     ax.tick_params(axis='both', which='major', labelsize=tick_label_fontsize)
     return fig, model, text_str
+
+
+
+from matplotlib.colors import LinearSegmentedColormap
+
+def mk_colormap_with_steepness(colormap, pick_locs, place_locs, num_colors=256):
+    """
+    Create a custom colormap by picking colors from specified locations between middle and extremes,
+    and placing them at specified locations between middle and extremes in the new colormap.
+
+    Parameters:
+    -----------
+    colormap : str or matplotlib.colors.Colormap
+        Either a colormap name (string) or a colormap object from which to extract colors.
+
+    pick_locs : list of floats
+        A list of relative positions (between 0 and 1) from which the colors are extracted.
+        - 1: Picked color from extreme (left or right).
+        - 0: Picked color from middle.
+        - Values between 0 and 1 will extract colors between middle and extremes.
+
+    place_locs : list of floats
+        A list of relative positions (between 0 and 1) defining where the picked colors will be placed in the new colormap.
+        - 1: Place the picked color at the extreme (left or right).
+        - 0: Place the picked color at the middle.
+
+    Returns:
+    --------
+    LinearSegmentedColormap
+        A matplotlib LinearSegmentedColormap object representing the custom colormap.
+
+    Example:
+    --------
+    cmap = mk_colormap_with_steepness('coolwarm', pick_locs=[0.8, 0.5], place_locs=[0.9, 0.3])
+    """
+
+    # Ensure pick_locs and place_locs are lists of the same length
+    if len(pick_locs) != len(place_locs):
+        raise ValueError("pick_locs and place_locs must have the same length.")
+    
+    # Ensure each pick_loc and place_loc are between 0 and 1
+    if any([not (0 <= loc <= 1) for loc in pick_locs + place_locs]):
+        raise ValueError("All values in pick_locs and place_locs must be between 0 and 1.")
+
+    # If a colormap name is provided, get the colormap
+    if isinstance(colormap, str):
+        cmap = plt.get_cmap(colormap)
+    else:
+        cmap = colormap
+
+    num_colors = int(num_colors)
+    rwb = np.zeros((num_colors, 4))
+    mid_idx = num_colors // 2
+    middle_color = np.array(cmap(0.5))
+    rwb[mid_idx] = middle_color
+
+    # Initialize lists to store positions and colors for left and right halves
+    left_positions = []
+    left_colors = []
+    right_positions = []
+    right_colors = []
+
+    # Collect positions and colors
+    for pick_loc, place_loc in zip(pick_locs, place_locs):
+        # Left pick position and color
+        left_pick_pos = 0.5 * (1 - pick_loc)  # From middle (0.5) towards 0.0
+        left_color = np.array(cmap(left_pick_pos))
+
+        # Right pick position and color
+        right_pick_pos = 0.5 + 0.5 * pick_loc  # From middle (0.5) towards 1.0
+        right_color = np.array(cmap(right_pick_pos))
+
+        # Left place position
+        left_place_pos = int((1 - place_loc) * mid_idx)
+        # Right place position
+        right_place_pos = int(mid_idx + place_loc * (num_colors - mid_idx - 1))
+
+        left_positions.append(left_place_pos)
+        left_colors.append(left_color)
+        right_positions.append(right_place_pos)
+        right_colors.append(right_color)
+
+    # Sort positions and colors for left and right halves
+    left_positions, left_colors = zip(*sorted(zip(left_positions, left_colors), reverse=True))
+    right_positions, right_colors = zip(*sorted(zip(right_positions, right_colors)))
+
+    # Build left half of the colormap
+    prev_pos = mid_idx
+    prev_color = middle_color
+    for pos, color in zip(left_positions, left_colors):
+        n_steps = prev_pos - pos
+        if n_steps > 0:
+            rwb[pos:prev_pos] = np.linspace(color, prev_color, n_steps, endpoint=False)
+        prev_pos = pos
+        prev_color = color
+
+    # Interpolate from the last position to the extreme left color
+    if prev_pos > 0:
+        left_extreme_color = np.array(cmap(0.0))
+        rwb[0:prev_pos] = np.linspace(left_extreme_color, prev_color, prev_pos, endpoint=False)
+
+    # Build right half of the colormap
+    prev_pos = mid_idx
+    prev_color = middle_color
+    for pos, color in zip(right_positions, right_colors):
+        n_steps = pos - prev_pos
+        if n_steps > 0:
+            rwb[prev_pos:pos] = np.linspace(prev_color, color, n_steps, endpoint=False)
+        prev_pos = pos
+        prev_color = color
+
+    # Interpolate from the last position to the extreme right color
+    if prev_pos < num_colors - 1:
+        right_extreme_color = np.array(cmap(1.0))
+        n_steps = num_colors - prev_pos
+        rwb[prev_pos:] = np.linspace(prev_color, right_extreme_color, n_steps, endpoint=False)
+
+    # Return the final colormap
+    return LinearSegmentedColormap.from_list('custom_cmap', rwb)

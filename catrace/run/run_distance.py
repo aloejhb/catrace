@@ -417,7 +417,10 @@ class RunDistanceParams:
     do_shuffle_manifold_pair_labels: bool = False
     do_shuffle_manifold_labels_global: bool = False
     shuffle_master_seed: int = None
+    vsnames: list[str] = None
     manifold_level: str = 'manifold'
+
+from .run_utils import get_vs_tuple
 
 
 def run_distance(params: RunDistanceParams):
@@ -462,6 +465,8 @@ def run_distance(params: RunDistanceParams):
     print('Computing distance matrices...')
     dist_dir = compute_dist(compute_dist_params)
 
+    print(dist_dir)
+
     all_simdf = read_mats_from_dir(
         dist_dir, exp_list, compute_dist_params.num_repeats
     )
@@ -505,24 +510,8 @@ def run_distance(params: RunDistanceParams):
         raise ValueError(f'Unknown metric: {metric}')
 
     print('Plotting vs statistics...')
-    if params.vsdict is None:
-        vsdict = {
-            'aa_vs_aa': (dsconfig.odors_aa, dsconfig.odors_aa),
-            'aa_vs_ba': (dsconfig.odors_aa, dsconfig.odors_ba),
-            'ba_vs_aa': (dsconfig.odors_ba, dsconfig.odors_aa),
-            'ba_vs_ba': (dsconfig.odors_ba, dsconfig.odors_ba),
-        }
-        if params.do_compare_cs:
-            vsdict.update({
-                'cs_vs_ba': (dsconfig.odors_cs, dsconfig.odors_ba),
-                'ba_vs_cs': (dsconfig.odors_ba, dsconfig.odors_cs),
-                'cs_plus_vs_cs_minus': (
-                    [dsconfig.odors_cs[0]],
-                    [dsconfig.odors_cs[1]],
-                ),
-            })
-    else:
-        vsdict = params.vsdict
+    vsdict = {vsname: get_vs_tuple(dsconfig, vsname) for vsname in params.vsnames}
+
 
     subsimdfs = {}
     for vsname, (group1, group2) in vsdict.items():
@@ -551,18 +540,6 @@ def run_distance(params: RunDistanceParams):
         params=params.plot_params.vs_measure,
     )
 
-    if params.vsdict is None:
-        # Compare percentage changes
-        vskeys = ['aa_vs_aa', 'aa_vs_ba']
-        fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
-        vskeys = ['ba_vs_aa', 'aa_vs_ba']
-        fig, ax, concat_subsimdf = compare_vs(vskeys, subsimdfs, measure_name)
-        if params.do_compare_cs:
-            vskeys = ['cs_vs_ba', 'cs_plus_vs_cs_minus']
-            fig, ax, _ = compare_vs(vskeys, subsimdfs, measure_name)
-    else:
-        concat_subsimdf = None
-
     if params.vs_same_ylim is not None:
         # move_pvalue_indicator(vsax, params.vs_same_ylim[1])
         pass
@@ -579,4 +556,5 @@ def run_distance(params: RunDistanceParams):
     )
     if params.do_plot_per_fish:
         output_figs['fig_per_fish'] = fig_per_fish
-    return output_figs, test_results, concat_subsimdf
+
+    return output_figs, test_results

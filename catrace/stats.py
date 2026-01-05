@@ -438,6 +438,8 @@ def extract_dunn_statistics(
 
     # Sanity check for control condition
     if not return_all_pairs and naive_name not in statdf[cond_name].unique():
+        print(naive_name)
+        print(statdf[cond_name].unique())
         raise ValueError('No naive condition present')
 
     # Iterate through Dunn’s test results
