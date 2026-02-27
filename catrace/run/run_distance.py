@@ -214,8 +214,8 @@ def plot_matrix_per_condition(
         cmin = min([mat.min().min() for mat in avg_mats.values()])
         cmax = max([mat.max().max() for mat in avg_mats.values()])
         clim = (cmin, cmax)
-        print(f'clim: {clim}')
         params.clim = clim
+    print(f'clim: {params.clim}')
     params.ncol = 2
 
     fig, axs = plot_conds_mat(
