@@ -156,9 +156,11 @@ import numpy as np
 
 
 def compute_fish_similarity_over_time(
-    dsconfig, fish_id, odor_trial, bin_size, similarity_method
+    dsconfig, fish_id, odor_trial, bin_size, similarity_method, select_neurons_by_indices_params=None
 ):
     dff = read_df(dsconfig.processed_trace_dir, fish_id)
+    if select_neurons_by_indices_params is not None:
+        dff = select_neurons_by_index(dff, select_neurons_by_indices_params.neuron_indices)
     trial_traces = dff.xs(odor_trial, level=('odor', 'trial'))
     trial_similarity = compute_trial_similarity_over_time(
         trial_traces, bin_size=bin_size, similarity_method=similarity_method
@@ -176,12 +178,24 @@ def get_slicing_from_trial_similarity(trial_similarity, slicing_frame):
 
 
 def compute_population_trial_similarity_over_time(
-    dsconfig, odor_trial, exp_list, bin_size, similarity_method
+    dsconfig, odor_trial, exp_list, bin_size, similarity_method, select_neurons_by_indices_params=None
 ):
     trial_similarities = []
     for exp_name, condition in exp_list:
+        # Subselect index by exp_name
+        if select_neurons_by_indices_params is not None:
+            assert exp_name in select_neurons_by_indices_params.neuron_indices.get_level_values('fish_id'), f"{exp_name} not in neuron indices"
+            mask = select_neurons_by_indices_params.neuron_indices.get_level_values('fish_id') == exp_name
+            new_idx = select_neurons_by_indices_params.neuron_indices[mask]
+            new_idx = new_idx.droplevel(level=['fish_id', 'condition'])
+            select_neurons_by_indices_params_fish = SelectNeuronsByIndicesParams(
+                neuron_indices=new_idx
+            )
+        else:
+            select_neurons_by_indices_params_fish = None
+
         trial_similarity = compute_fish_similarity_over_time(
-            dsconfig, exp_name, odor_trial, bin_size, similarity_method
+            dsconfig, exp_name, odor_trial, bin_size, similarity_method, select_neurons_by_indices_params=select_neurons_by_indices_params_fish
         )
         trial_similarities.append(trial_similarity)
 
@@ -192,12 +206,12 @@ def compute_population_trial_similarity_over_time(
 
 
 def compute_population_multitrial_similarity_over_time(
-    dsconfig, odor_trials, exp_list, bin_size, similarity_method
+    dsconfig, odor_trials, exp_list, bin_size, similarity_method, select_neurons_by_indices_params=None
 ):
     simdfs = []
     for odor_trial in odor_trials:
         simdf = compute_population_trial_similarity_over_time(
-            dsconfig, odor_trial, exp_list, bin_size, similarity_method
+            dsconfig, odor_trial, exp_list, bin_size, similarity_method, select_neurons_by_indices_params=select_neurons_by_indices_params
         )
         simdfs.append(simdf)
     multi_trial_simdf = pd.concat(
@@ -328,10 +342,26 @@ import pandas as pd
 import numpy as np
 
 
+def select_neurons_by_index(dff, neuron_indices):
+    dff_selected = dff[neuron_indices]
+    return dff_selected
+
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json
+@dataclass_json
+@dataclass
+class SelectNeuronsByIndicesParams:
+    # neuron indices should be pandas index
+    neuron_indices: pd.Index
+
 def compute_fish_similarity_over_time_to_template(
-    dsconfig, fish_id, odor_trial, sim_params: SimToTemplateParams
+    dsconfig, fish_id, odor_trial, sim_params: SimToTemplateParams,
+    select_neurons_by_indices_params=None
 ):
     dff = read_df(dsconfig.processed_trace_dir, fish_id)
+    if select_neurons_by_indices_params is not None:
+        dff = select_neurons_by_index(dff, select_neurons_by_indices_params.neuron_indices)
+
     trial_traces = dff.xs(odor_trial, level=('odor', 'trial'))
     sim_to_template = compute_trial_similarity_over_time_to_template(
         trial_traces, **sim_params.to_dict()
@@ -343,12 +373,22 @@ def compute_fish_similarity_over_time_to_template(
 
 
 def compute_population_trial_similarity_over_time_to_template(
-    dsconfig, odor_trial, exp_list, sim_params
+    dsconfig, odor_trial, exp_list, sim_params, select_neurons_by_indices_params=None
 ):
     sim_to_templates = []
     for exp_name, condition in exp_list:
+        if select_neurons_by_indices_params is not None:
+            assert exp_name in select_neurons_by_indices_params.neuron_indices.get_level_values('fish_id'), f"{exp_name} not in neuron indices"
+            mask = select_neurons_by_indices_params.neuron_indices.get_level_values('fish_id') == exp_name
+            new_idx = select_neurons_by_indices_params.neuron_indices[mask]
+            new_idx = new_idx.droplevel(level=['fish_id', 'condition'])
+            select_neurons_by_indices_params_fish = SelectNeuronsByIndicesParams(
+                neuron_indices=new_idx
+            )
+        else:
+            select_neurons_by_indices_params_fish = None
         sim_to_template = compute_fish_similarity_over_time_to_template(
-            dsconfig, exp_name, odor_trial, sim_params
+            dsconfig, exp_name, odor_trial, sim_params, select_neurons_by_indices_params=select_neurons_by_indices_params_fish
         )
         sim_to_templates.append(sim_to_template.T)
 
@@ -359,12 +399,12 @@ def compute_population_trial_similarity_over_time_to_template(
 
 
 def compute_population_multitrial_similarity_over_time_to_template(
-    dsconfig, odor_trials, exp_list, sim_params
+    dsconfig, odor_trials, exp_list, sim_params, select_neurons_by_indices_params=None
 ):
     simtempdfs = []
     for odor_trial in odor_trials:
         simtempdf = compute_population_trial_similarity_over_time_to_template(
-            dsconfig, odor_trial, exp_list, sim_params
+            dsconfig, odor_trial, exp_list, sim_params, select_neurons_by_indices_params=select_neurons_by_indices_params
         )
         simtempdfs.append(simtempdf)
     multiodor_simtempdfs = pd.concat(
