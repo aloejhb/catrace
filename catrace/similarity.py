@@ -89,16 +89,52 @@ def pattern_correlation_to_template(mat, template):
     return correlations
 
 
-def compute_similarity_mat(dfovf, time_window, frame_rate, similarity_func):
+def compute_similarity_mat(dfovf, time_window, frame_rate, similarity_func, xname='time'):
     """
-    Compute of similarity matrix from response patterns of neurons
-        Args:
-            dfovf
-            time_window
-            frame_rate
-            similarity_func: np.corrcoef or scipy.spatial.distance.cosine
+    Compute a pairwise similarity or distance matrix between mean activity patterns.
+
+    Activity patterns are first computed by averaging `dfovf` within `time_window`.
+
+    Pairwise similarity or distance is then computed between every pair of
+    averaged activity patterns.
+
+    Parameters
+    ----------
+    dfovf : pandas.DataFrame
+        Fluorescence trace data with a MultiIndex that includes a `time` level.
+        Rows are observations indexed by time and other grouping variables, such
+        as odor, trial, fish, or condition. Columns are features, typically
+        neurons.
+
+        Activity is averaged over the `time` level after grouping by all other
+        index levels. Therefore, each resulting activity pattern corresponds to
+        one unique combination of the non-time index levels. Pairwise comparisons
+        are performed between these resulting activity patterns.
+
+    time_window : tuple or array-like of float
+        Time window over which to average activity, given as
+        `(start_time, end_time)`. If `frame_rate` is provided, values are
+        interpreted as seconds and converted to frame indices. If `frame_rate`
+        is `None`, values are used directly as values of the `time` index level.
+
+    frame_rate : float or None
+        Sampling frame rate in Hz. Passed to `mean_pattern_in_time_window`.
+
+    similarity_func : callable
+        Function used to compute pairwise similarity or distance between rows of
+        the averaged activity-pattern matrix. It must accept a 2D NumPy array of
+        shape `(n_patterns, n_features)` and return a square array of shape
+        `(n_patterns, n_patterns)`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Square pairwise similarity or distance matrix with shape
+        `(n_patterns, n_patterns)`. Its index and columns are both the labels of
+        the averaged activity patterns, where each label is a unique combination
+        of the non-time index levels in `dfovf`.
     """
-    pattern = mean_pattern_in_time_window(dfovf, time_window, frame_rate)
+    pattern = mean_pattern_in_time_window(dfovf, time_window, frame_rate, xname=xname)
     pattern_mat = pattern.to_numpy()
     sim_mat = similarity_func(pattern_mat)
     sim_mat = pd.DataFrame(sim_mat, index=pattern.index, columns=pattern.index)
@@ -256,6 +292,7 @@ def plot_similarity_mat(
     ylabels=None,
     title='',
     color_norm: Normalize = None,
+    manifold_level: str = 'manifold',
 ):
     """
     Plot similarity matrix heatmap
@@ -266,6 +303,7 @@ def plot_similarity_mat(
         **ax**: plot Axis object. Axis to plot the matrix heatmap.
         **clim**: List. Color limit of the heatmap. Default ``None``.
         **title**: str. Title of the plot. Default ``''``.
+        **manifold_level**: str. Level of the manifold to use for labeling. Default ``'manifold'``.
 
     Returns:
         Image object.
@@ -284,9 +322,9 @@ def plot_similarity_mat(
             '#7f7f7f',
         ]
     if ylabels is None:
-        ylabels = [label for label in df.index.get_level_values('odor')]
+        ylabels = [label for label in df.index.get_level_values(manifold_level)]
 
-    ylabel_unique = df.index.unique('odor')
+    ylabel_unique = df.index.unique(manifold_level)
     color_dict = dict(zip(ylabel_unique, ylabel_colors[: len(ylabels)]))
     tick_pos = np.arange(df.shape[0])
     ax.yaxis.set_tick_params(length=0)
@@ -336,10 +374,11 @@ def sample_neuron_and_comopute_distance_mat(
     manifold_level: str = 'manifold',
     time_window=None,
     shuffle_config=ShuffleConfig(),
+    time_name='time',
 ):
     df = sample_neuron(df, sample_size=sample_size, seed=seed)
     if time_window is not None:
-        df = select_time_points(df, time_window, time_name='time')
+        df = select_time_points(df, time_window, time_name=time_name)
     if metric in ['euclidean', 'mahal']:
         distance_config = DistanceConfig(metric=metric, reg=reg)
         dist_mat = compute_distances_mat(df,

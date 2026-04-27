@@ -93,6 +93,7 @@ def plot_matrix_per_fish(simdf_list, exp_cond_list):
         plot_similarity_mat,
         clim=(cmin, cmax),
         cmap='turbo',
+        manifold_level='odor',
     )
     ax = axes[-1, 0]
     img = ax.get_children()[0]

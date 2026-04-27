@@ -194,7 +194,7 @@ def compute_mean_pointwise_distance(
 def compute_distances_df(
     dff: pd.DataFrame,
     distance_config: DistanceConfig = DistanceConfig(),
-    shuffle_config: ShuffleConfig = ShuffleConfig(),
+    shuffle_config: ShuffleConfig = None,
     manifold_level: str = 'manifold',
 ) -> pd.DataFrame:
     """
@@ -223,15 +223,16 @@ def compute_distances_df(
     manifold_label_list = list(dff.index.unique(manifold_level))
     num_manifolds = len(manifold_label_list)
 
-    if shuffle_config.do_global:
-        dff = shuffle_manifold_labels_global(dff, seed=shuffle_config.seed_value)
+    if shuffle_config is not None:
+        if shuffle_config.do_global:
+            dff = shuffle_manifold_labels_global(dff, seed=shuffle_config.seed_value)
 
-    if shuffle_config.do_pair:
-        if shuffle_config.seed_value is not None:
-            master_rng = np.random.default_rng(shuffle_config.seed_value)
-            seed_values = master_rng.integers(0, 1e9, size=num_manifolds ** 2).tolist()
-        else:
-            seed_values = [None] * (num_manifolds ** 2)
+        if shuffle_config.do_pair:
+            if shuffle_config.seed_value is not None:
+                master_rng = np.random.default_rng(shuffle_config.seed_value)
+                seed_values = master_rng.integers(0, 1e9, size=num_manifolds ** 2).tolist()
+            else:
+                seed_values = [None] * (num_manifolds ** 2)
 
     distances_dict = dict()
     for label1 in manifold_label_list:
@@ -239,10 +240,11 @@ def compute_distances_df(
             m1 = dff.xs(label1, level=manifold_level)
             m2 = dff.xs(label2, level=manifold_level)
 
-            if shuffle_config.do_pair and label1 != label2:
-                m1, m2 = shuffle_manifold_pair_labels(
-                    m1, m2, seed_value=seed_values.pop(0)
-                )
+            if shuffle_config is not None:
+                if shuffle_config.do_pair and label1 != label2:
+                    m1, m2 = shuffle_manifold_pair_labels(
+                        m1, m2, seed_value=seed_values.pop(0)
+                    )
 
             center2 = m2.mean(axis=0)
 
@@ -383,7 +385,7 @@ def shuffle_manifold_labels_global(dff, seed=None):
 def compute_center_euclidean_distance_mat(
     dff,
     ordered_manifold_labels = None,
-    shuffle_config: ShuffleConfig = ShuffleConfig(),
+    shuffle_config: ShuffleConfig = None,
     manifold_level: str = 'manifold',
 ):
     """
@@ -409,26 +411,28 @@ def compute_center_euclidean_distance_mat(
     dist_mat.index.name = 'sample_manifold'
     dist_mat.columns.name = 'ref_manifold'
 
-    if shuffle_config.do_global:
-        dff = shuffle_manifold_labels_global(dff, seed=shuffle_config.seed_value)
+    if shuffle_config is not None:
+        if shuffle_config.do_global:
+            dff = shuffle_manifold_labels_global(dff, seed=shuffle_config.seed_value)
 
-    if shuffle_config.do_pair:
-        if shuffle_config.seed_value is not None:
-            master_rng = np.random.default_rng(shuffle_config.seed_value)
-            seed_values = master_rng.integers(
-                0, 1e9, size=num_manifolds * num_manifolds
-            ).tolist()
-        else:
-            seed_values = [None] * num_manifolds * num_manifolds
+        if shuffle_config.do_pair:
+            if shuffle_config.seed_value is not None:
+                master_rng = np.random.default_rng(shuffle_config.seed_value)
+                seed_values = master_rng.integers(
+                    0, 1e9, size=num_manifolds * num_manifolds
+                ).tolist()
+            else:
+                seed_values = [None] * num_manifolds * num_manifolds
 
     for ml1 in ordered_manifold_labels:
         for ml2 in ordered_manifold_labels:
             manifold1 = dff.xs(ml1, level=manifold_level)
             manifold2 = dff.xs(ml2, level=manifold_level)
-            if shuffle_config.do_pair and ml1 != ml2:
-                manifold1, manifold2 = shuffle_manifold_pair_labels(
-                    manifold1, manifold2, seed_value=seed_values.pop(0)
-                )
+            if shuffle_config is not None:
+                if shuffle_config.do_pair and ml1 != ml2:
+                    manifold1, manifold2 = shuffle_manifold_pair_labels(
+                        manifold1, manifold2, seed_value=seed_values.pop(0)
+                    )
             dist = compute_center_euclidean(manifold1, manifold2)
             dist_mat.loc[ml1, ml2] = dist
 
@@ -471,6 +475,7 @@ def get_mean_dist_mat(dist_df, ordered_manifold_labels=None):
     dist_mat.index = pd.Categorical(
         dist_mat.index, categories=ordered_manifold_labels, ordered=True
     )
+    dist_mat.index.name = 'sample_manifold'
     dist_mat = dist_mat.sort_index()
     dist_mat = dist_mat[ordered_manifold_labels]
     return dist_mat
