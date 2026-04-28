@@ -66,6 +66,7 @@ You can use CaTrace to run analysis on a single experiment or batch your analysi
 Refer to the [demos](demos/) for examples.
 
 The jupyter notebooks generating figures for the Hu, Temiz et al. paper can be found at [pDp_manifold_analysis](https://github.com/aloejhb/pDp_manifold_analysis).
+
 ---
 
 ## Features
@@ -81,8 +82,6 @@ The jupyter notebooks generating figures for the Hu, Temiz et al. paper can be f
 | **Dimensionality reduction**     | Reduce dimensionality of neuronal population activity patterns, including PCA, isomap, UMAP etc., using scikit-learn              |
 | **Statistics and plotting**      | Perform statistical tests on experimental group data, including Mann-Whitney U, Kruskal-Wallis, t-test and plot relevant plots|
 | **Correlation with behavior**    | Correlate geometric properties of neuronal representations with behavior parameters, e.g. behavior discrimination score           |
-
-
 
 ---
 
