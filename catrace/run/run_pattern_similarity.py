@@ -240,7 +240,7 @@ class RunPatternSimilarityParams:
     manifold_level: str = 'manifold'
 
 
-def run_pattern_similarity(params: RunPatternSimilarityParams):
+def run_pattern_similarity(params: RunPatternSimilarityParams, return_data=False):
     dsconfig = load_config(params.config_file, DatasetConfig)
     exp_list = dsconfig.exp_list
     trace_dir = dsconfig.processed_trace_dir
@@ -267,6 +267,9 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
     if params.do_plot_per_fish:
         plot_matrix_per_fish(simdf_list, exp_cond_list)
 
+
+    # Add manifold_level to plot_params.per_cond
+    params.plot_params.per_cond.manifold_level = params.manifold_level
     if params.do_plot_per_condition:
         fig_per_cond = plot_matrix_per_cond(
             simdf_list,
@@ -294,6 +297,7 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
             naive_name=params.naive_name,
             manifold_level=params.manifold_level,
         )
+    params.plot_params.mean_delta.manifold_level = params.manifold_level
     print(params.plot_params.mean_delta)
     fig_delta, ax = plot_mean_delta_mat(
         mean_delta_mat, params.plot_params.mean_delta
@@ -327,6 +331,10 @@ def run_pattern_similarity(params: RunPatternSimilarityParams):
     if params.do_save_cross_trial:
         cross_trial_df = extract_cross_trial_similarity(simdf_list, exp_list)
         cross_trial_path = save_cross_trial_similarity(cross_trial_df, sim_dir)
+        if return_data:
+            return sim_dir, output_figs, test_results, cross_trial_path, all_simdf
         return sim_dir, output_figs, test_results, cross_trial_path
 
+    if return_data:
+        return sim_dir, output_figs, test_results, all_simdf
     return sim_dir, output_figs, test_results

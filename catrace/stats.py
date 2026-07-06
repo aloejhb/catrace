@@ -373,12 +373,21 @@ def apply_test_by_cond(
         data=statdf, dv=yname, between=cond_name, padjust=None
     )
     print(all_pairs)
-    
+
+    if 'p-unc' in all_pairs.columns:
+        p_unc_key = 'p-unc'
+    elif 'p_unc' in all_pairs.columns:
+        p_unc_key = 'p_unc'
+    else:
+        raise ValueError(
+            "Dunn's test results do not contain an uncorrected p-value column, with name 'p-unc' or 'p_unc'."
+        )
+
     if return_all_pairs:
         # Keep all comparisons and correct across all pairs
         dunn_results = all_pairs.copy()
         dunn_results['p-corr'] = pg.multicomp(
-            dunn_results['p-unc'].values, method=padjust
+            dunn_results[p_unc_key].values, method=padjust
         )[1]
         key_name = "all_pairs"
     else:
@@ -387,7 +396,7 @@ def apply_test_by_cond(
             (all_pairs['A'] == naive_name) | (all_pairs['B'] == naive_name)
         ].copy()
         dunn_results['p-corr'] = pg.multicomp(
-            dunn_results['p-unc'].values, method=padjust
+            dunn_results[p_unc_key].values, method=padjust
         )[1]
         key_name = f"{naive_name}_vs_others"
 

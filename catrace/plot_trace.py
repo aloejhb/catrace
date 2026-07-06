@@ -61,6 +61,7 @@ def plot_trace_avg(
     tick_label_fontsize=6,
     odor_colors=None,
     alpha=1,
+    return_data=False
 ):
     """
     Plot averaged time trace for each odor
@@ -127,6 +128,9 @@ def plot_trace_avg(
     sns.despine(ax=ax)
 
     fig.tight_layout()
+
+    if return_data:
+        return fig, ax, odor_avg
 
     return fig, ax
 

@@ -98,18 +98,20 @@ def run_average_timecourse(params: RunAverageTimecourseParams):
     trained_dff = dff.loc[
         :, dff.columns.get_level_values('condition') != params.naive_name
     ]
-    fig_naive_time, ax = plot_trace_avg(
+    fig_naive_time, ax, odor_avg_naive_time = plot_trace_avg(
         naive_dff,
         frame_rate=dsconfig.frame_rate,
         cut_time=params.cut_time,
         show_legend=True,
+        return_data=True,
         **sub_params,
     )
-    fig_trained_time, ax = plot_trace_avg(
+    fig_trained_time, ax, odor_avg_trained_time = plot_trace_avg(
         trained_dff,
         frame_rate=dsconfig.frame_rate,
         cut_time=params.cut_time,
         show_legend=True,
+        return_data=True,
         **sub_params,
     )
 
@@ -127,4 +129,4 @@ def run_average_timecourse(params: RunAverageTimecourseParams):
             ax = fig.get_axes()[0]
             ax.set_ylim(params.ylim)
 
-    return dff, outfigs
+    return dff, outfigs, odor_avg_naive_time, odor_avg_trained_time

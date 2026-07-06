@@ -58,7 +58,7 @@ class PlotPerCondMatParams:
     clim: tuple = None
     color_norm: Normalize = None
     cbar_interval: float = None
-
+    manifold_level: str = 'manifold'
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 

@@ -519,6 +519,7 @@ class PlotMeanDeltaMatParams:
     ylabel_colors: list = None
     cmap: str = 'coolwarm'
     clim: tuple = None
+    manifold_level: str = 'manifold'
 
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
