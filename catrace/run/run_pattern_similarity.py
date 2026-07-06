@@ -102,7 +102,7 @@ def plot_matrix_per_fish(simdf_list, exp_cond_list):
 
 
 def plot_matrix_per_cond(
-    simdf_list, exp_cond_list, conditions, params: PlotPerCondMatParams
+    simdf_list, exp_cond_list, conditions, params: PlotPerCondMatParams, plot_similarity_mat_params={}
 ):
     avg_mats = mean_mat_over_cond(simdf_list, exp_cond_list, conditions)
     cmin = min([mat.min().min() for mat in avg_mats.values()])
@@ -110,7 +110,7 @@ def plot_matrix_per_cond(
     if params.clim is None:
         params.clim = (cmin, cmax)
     fig, axes = plot_conds_mat(
-        avg_mats, conditions, plot_similarity_mat, **params.to_dict()
+        avg_mats, conditions, plot_similarity_mat, **params.to_dict(), **plot_similarity_mat_params
     )
     return fig
 
@@ -276,6 +276,7 @@ def run_pattern_similarity(params: RunPatternSimilarityParams, return_data=False
             exp_cond_list,
             dsconfig.conditions,
             params=params.plot_params.per_cond,
+            plot_similarity_mat_params=dict(manifold_level=params.manifold_level),
         )
 
     print('Plotting delta matrix...')
@@ -300,7 +301,7 @@ def run_pattern_similarity(params: RunPatternSimilarityParams, return_data=False
     params.plot_params.mean_delta.manifold_level = params.manifold_level
     print(params.plot_params.mean_delta)
     fig_delta, ax = plot_mean_delta_mat(
-        mean_delta_mat, params.plot_params.mean_delta
+        mean_delta_mat, params.plot_params.mean_delta,
     )
 
     avgsimdf_list = [average_mat_over_trials(simdf) for simdf in simdf_list]
