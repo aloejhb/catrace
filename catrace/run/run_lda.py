@@ -148,6 +148,7 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
 
     print('Plotting per condition...')
     per_cond_params = params.plot_params.per_cond
+    per_cond_params.manifold_level = params.compute_lda_params.manifold_level
     print(per_cond_params.to_dict())
     fig_per_cond, axs = plot_matrix_per_condition(
         avg_simdf, dsconfig.conditions, params=per_cond_params
@@ -168,6 +169,7 @@ def run_lda_manifold_pair(params: RunLdaManifoldPairParams):
             do_reorder_cs=params.do_reorder_cs,
             naive_name=params.naive_name,
         )
+    params.plot_params.mean_delta.manifold_level = params.compute_lda_params.manifold_level
     fig_delta, ax = plot_mean_delta_mat(
         mean_delta_mat, params.plot_params.mean_delta
     )

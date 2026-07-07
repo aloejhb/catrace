@@ -423,7 +423,7 @@ class RunDistanceParams:
 from .run_utils import get_vs_tuple
 
 
-def run_distance(params: RunDistanceParams):
+def run_distance(params: RunDistanceParams, return_data=False):
     assembly_name = params.assembly_name
     time_window = params.time_window
     sample_size = params.sample_size
@@ -476,6 +476,7 @@ def run_distance(params: RunDistanceParams):
 
     print('Plotting per condition...')
     per_cond_params = params.plot_params.per_cond
+    per_cond_params.manifold_level = params.manifold_level
     print(per_cond_params.to_dict())
     fig_per_cond, axs = plot_matrix_per_condition(
         avg_simdf, dsconfig.conditions, params=per_cond_params
@@ -496,6 +497,8 @@ def run_distance(params: RunDistanceParams):
             do_reorder_cs=params.do_reorder_cs,
             naive_name=params.naive_name,
         )
+
+    params.plot_params.mean_delta.manifold_level = params.manifold_level
     fig_delta, ax = plot_mean_delta_mat(
         mean_delta_mat, params.plot_params.mean_delta
     )
@@ -557,4 +560,7 @@ def run_distance(params: RunDistanceParams):
     if params.do_plot_per_fish:
         output_figs['fig_per_fish'] = fig_per_fish
 
-    return output_figs, test_results
+    if return_data:
+        return output_figs, test_results, avg_simdf
+    else:
+        return output_figs, test_results
